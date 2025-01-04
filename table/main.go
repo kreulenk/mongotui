@@ -43,7 +43,7 @@ func initialModel(client *mongo.Client) model {
 	if err != nil {
 		w = 80
 	}
-	colWidth := (w - 6) / 3
+	colWidth := getColumnWidth(w, 3)
 	columns := []table.Column{
 		{Title: "Databases", Width: colWidth},
 		{Title: "Collections", Width: colWidth},
@@ -114,7 +114,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tea.WindowSizeMsg:
 		for i := range m.table.Columns() {
-			m.table.Columns()[i].Width = (msg.Width - 6) / 3
+			m.table.Columns()[i].Width = getColumnWidth(msg.Width, len(m.table.Columns()))
 		}
 		m.table.SetWidth(msg.Width - 6) // TODO look into a more intelligent way of getting this 6 value
 		m.table.SetHeight(msg.Height - 6)
@@ -122,6 +122,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	m.table, cmd = m.table.Update(msg)
 	return m, cmd
+}
+
+func getColumnWidth(windowWidth int, columns int) int {
+	return (windowWidth - 7) / columns
 }
 
 func (m model) View() string {
