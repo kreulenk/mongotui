@@ -50,7 +50,7 @@ in a more intuitive way.`,
 	cmd.Flags().IntVar(&portFlag, "port", 0, "Port to connect to")
 	cmd.Flags().StringVarP(&usernameFlag, "username", "u", "", "Username for authentication")
 	cmd.Flags().StringVarP(&passwordFlag, "password", "p", "", "Password for authentication")
-	cmd.Flags().StringVar(&authMechanismFlag, "authenticationMechanism ", "", "Authentication mechanism to use")
+	cmd.Flags().StringVar(&authMechanismFlag, "authenticationMechanism ", "", "Authentication mechanism to use") // TODO restrict this to a set of valid values
 
 	return cmd
 }

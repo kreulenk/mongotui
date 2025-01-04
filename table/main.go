@@ -19,9 +19,7 @@ var baseStyle = lipgloss.NewStyle().
 	BorderForeground(lipgloss.Color("240"))
 
 type model struct {
-	table        table.Model
-	windowWidth  int
-	windowHeight int
+	table table.Model
 }
 
 func InitializeTui(client *mongo.Client) {
@@ -41,11 +39,11 @@ func initialModel(client *mongo.Client) model {
 		os.Exit(1)
 	}
 
-	w, _, err := term.GetSize(os.Stdout.Fd())
+	w, h, err := term.GetSize(os.Stdout.Fd())
 	if err != nil {
 		w = 80
 	}
-	colWidth := w / 3
+	colWidth := (w - 6) / 3
 	columns := []table.Column{
 		{Title: "Databases", Width: colWidth},
 		{Title: "Collections", Width: colWidth},
@@ -75,7 +73,8 @@ func initialModel(client *mongo.Client) model {
 		table.WithColumns(columns),
 		table.WithRows(rows),
 		table.WithFocused(true),
-		table.WithHeight(7),
+		table.WithHeight(h-6), // TODO look into a more intelligent way of getting this 6 value
+		table.WithWidth(w-6),
 	)
 
 	s := table.DefaultStyles()
@@ -104,7 +103,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "esc":
+		case "esc": // TODO use the focus/blur for when we are opening any modals
 			if m.table.Focused() {
 				m.table.Blur()
 			} else {
@@ -114,11 +113,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 	case tea.WindowSizeMsg:
-		m.windowWidth = msg.Width
-		m.windowHeight = msg.Height
-		m.table.SetWidth(msg.Width)
-		m.table.SetHeight(msg.Height)
-		return m, nil
+		for i := range m.table.Columns() {
+			m.table.Columns()[i].Width = (msg.Width - 6) / 3
+		}
+		m.table.SetWidth(msg.Width - 6) // TODO look into a more intelligent way of getting this 6 value
+		m.table.SetHeight(msg.Height - 6)
+		return m, tea.ClearScreen // Necessary for resizes
 	}
 	m.table, cmd = m.table.Update(msg)
 	return m, cmd
