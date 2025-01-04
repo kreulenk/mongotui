@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/x/term"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"os"
@@ -39,15 +38,10 @@ func initialModel(client *mongo.Client) model {
 		os.Exit(1)
 	}
 
-	w, h, err := term.GetSize(os.Stdout.Fd())
-	if err != nil {
-		w = 80
-	}
-	colWidth := getColumnWidth(w, 3)
 	columns := []table.Column{
-		{Title: "Databases", Width: colWidth},
-		{Title: "Collections", Width: colWidth},
-		{Title: "Records", Width: colWidth},
+		{Title: "Databases"},
+		{Title: "Collections"},
+		{Title: "Records"},
 	}
 
 	var rows []table.Row
@@ -73,8 +67,6 @@ func initialModel(client *mongo.Client) model {
 		table.WithColumns(columns),
 		table.WithRows(rows),
 		table.WithFocused(true),
-		table.WithHeight(h-6), // TODO look into a more intelligent way of getting this 6 value
-		table.WithWidth(w-6),
 	)
 
 	s := table.DefaultStyles()
@@ -125,7 +117,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func getColumnWidth(windowWidth int, columns int) int {
-	return (windowWidth - 7) / columns
+	return (windowWidth - 8) / columns
 }
 
 func (m model) View() string {
