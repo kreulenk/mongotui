@@ -3,9 +3,9 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"mtui/table"
 	"net"
 	"net/url"
 	"os"
@@ -43,14 +43,7 @@ in a more intuitive way.`,
 			defer cancel()
 			client, err := mongo.Connect(ctx, clientOps)
 			cobra.CheckErr(err)
-
-			listCtx, listCancel := context.WithTimeout(context.Background(), 20*time.Second)
-			defer listCancel()
-			dbNames, err := client.ListDatabaseNames(listCtx, bson.D{})
-			if err != nil {
-				cobra.CheckErr(fmt.Errorf("could not fetch databases: %w", err))
-			}
-			fmt.Printf("Databases: %v\n", dbNames)
+			table.InitializeTui(client)
 		},
 	}
 
