@@ -35,7 +35,6 @@ in a more intuitive way.`,
 
 			parsedConStr, err := getConnectionString(dbAddress, hostFlag, portFlag)
 			cobra.CheckErr(err)
-			fmt.Printf("Connecting to: %s\n", parsedConStr)
 			clientOps, err := generateConnectionOptions(parsedConStr, usernameFlag, passwordFlag)
 			cobra.CheckErr(err)
 

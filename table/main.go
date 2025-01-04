@@ -3,6 +3,9 @@ package table
 import (
 	"context"
 	"fmt"
+	"github.com/charmbracelet/bubbles/table"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/term"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"os"
@@ -11,16 +14,20 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+var baseStyle = lipgloss.NewStyle().
+	BorderStyle(lipgloss.NormalBorder()).
+	BorderForeground(lipgloss.Color("240"))
+
 type model struct {
-	choices  []string         // items on the to-do list
-	cursor   int              // which to-do list item our cursor is pointing at
-	selected map[int]struct{} // which to-do items are selected
+	table        table.Model
+	windowWidth  int
+	windowHeight int
 }
 
 func InitializeTui(client *mongo.Client) {
 	p := tea.NewProgram(initialModel(client))
 	if _, err := p.Run(); err != nil {
-		fmt.Printf("Alas, there's been an error: %v", err)
+		fmt.Printf("Error: %v", err)
 		os.Exit(1)
 	}
 }
@@ -34,85 +41,89 @@ func initialModel(client *mongo.Client) model {
 		os.Exit(1)
 	}
 
+	w, _, err := term.GetSize(os.Stdout.Fd())
+	if err != nil {
+		w = 80
+	}
+	colWidth := w / 3
+	columns := []table.Column{
+		{Title: "Databases", Width: colWidth},
+		{Title: "Collections", Width: colWidth},
+		{Title: "Records", Width: colWidth},
+	}
+
+	var rows []table.Row
+	for _, dbName := range dbNames {
+		db := client.Database(dbName)
+		collNames, err := db.ListCollectionNames(context.Background(), bson.D{})
+		if err != nil {
+			fmt.Printf("could not fetch collections: %v", err)
+			os.Exit(1)
+		}
+		for _, collName := range collNames {
+			coll := db.Collection(collName)
+			count, err := coll.CountDocuments(context.Background(), bson.D{})
+			if err != nil {
+				fmt.Printf("could not fetch count: %v", err)
+				os.Exit(1)
+			}
+			rows = append(rows, table.Row{dbName, collName, fmt.Sprintf("%d", count)})
+		}
+	}
+
+	t := table.New(
+		table.WithColumns(columns),
+		table.WithRows(rows),
+		table.WithFocused(true),
+		table.WithHeight(7),
+	)
+
+	s := table.DefaultStyles()
+	s.Header = s.Header.
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("240")).
+		BorderBottom(true).
+		Bold(false)
+	s.Selected = s.Selected.
+		Foreground(lipgloss.Color("229")).
+		Background(lipgloss.Color("57")).
+		Bold(false)
+	t.SetStyles(s)
+
 	return model{
-		choices:  dbNames,
-		selected: make(map[int]struct{}),
+		table: t,
 	}
 }
 
 func (m model) Init() tea.Cmd {
-	// Just return `nil`, which means "no I/O right now, please."
 	return nil
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
 	switch msg := msg.(type) {
-
-	// Is it a key press?
 	case tea.KeyMsg:
-
-		// Cool, what was the actual key pressed?
 		switch msg.String() {
-
-		// These keys should exit the program.
-		case "ctrl+c", "q":
-			return m, tea.Quit
-
-		// The "up" and "k" keys move the cursor up
-		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
-			}
-
-		// The "down" and "j" keys move the cursor down
-		case "down", "j":
-			if m.cursor < len(m.choices)-1 {
-				m.cursor++
-			}
-
-		// The "enter" key and the spacebar (a literal space) toggle
-		// the selected state for the item that the cursor is pointing at.
-		case "enter", " ":
-			_, ok := m.selected[m.cursor]
-			if ok {
-				delete(m.selected, m.cursor)
+		case "esc":
+			if m.table.Focused() {
+				m.table.Blur()
 			} else {
-				m.selected[m.cursor] = struct{}{}
+				m.table.Focus()
 			}
+		case "q", "ctrl+c":
+			return m, tea.Quit
 		}
+	case tea.WindowSizeMsg:
+		m.windowWidth = msg.Width
+		m.windowHeight = msg.Height
+		m.table.SetWidth(msg.Width)
+		m.table.SetHeight(msg.Height)
+		return m, nil
 	}
-
-	// Return the updated model to the Bubble Tea runtime for processing.
-	// Note that we're not returning a command.
-	return m, nil
+	m.table, cmd = m.table.Update(msg)
+	return m, cmd
 }
 
 func (m model) View() string {
-	// The header
-	s := "Please select a database\n\n"
-
-	// Iterate over our choices
-	for i, choice := range m.choices {
-
-		// Is the cursor pointing at this choice?
-		cursor := " " // no cursor
-		if m.cursor == i {
-			cursor = ">" // cursor!
-		}
-
-		// Is this choice selected?
-		checked := " " // not selected
-		if _, ok := m.selected[i]; ok {
-			checked = "x" // selected!
-		}
-
-		// Render the row
-		s += fmt.Sprintf("%s [%s] %s\n", cursor, checked, choice)
-	}
-
-	// The footer
-	s += "\nPress q to quit.\n"
-
-	// Send the UI for rendering
-	return s
+	return baseStyle.Render(m.table.View()) + "\n  " + m.table.HelpView() + "\n"
 }
