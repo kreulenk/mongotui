@@ -1,23 +1,26 @@
 package table
 
 import (
-	"context"
 	"fmt"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"os"
-	"time"
-
-	tea "github.com/charmbracelet/bubbletea"
 )
 
 var baseStyle = lipgloss.NewStyle().
 	BorderStyle(lipgloss.NormalBorder()).
 	BorderForeground(lipgloss.Color("240"))
 
-type model struct {
-	table Model
+type dataEngine struct {
+	client *mongo.Client
+	dbData *mongoData
+}
+
+type baseModel struct {
+	table  tableModel
+	engine *dataEngine
+	err    error // TODO handle how to display errors
 }
 
 func InitializeTui(client *mongo.Client) {
@@ -28,43 +31,23 @@ func InitializeTui(client *mongo.Client) {
 	}
 }
 
-func initialModel(client *mongo.Client) model {
-	listCtx, listCancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer listCancel()
-	dbNames, err := client.ListDatabaseNames(listCtx, bson.D{})
+func initialModel(client *mongo.Client) baseModel {
+	engine := &dataEngine{
+		client: client,
+		dbData: &mongoData{
+			databases: make(map[string]mongoDatabase),
+		},
+	}
+
+	err := engine.setDatabases()
 	if err != nil {
-		fmt.Printf("could not fetch databases: %v", err)
+		fmt.Printf("could not initialize data: %v", err)
 		os.Exit(1)
 	}
 
-	columns := []Column{
-		{Title: "Databases"},
-		{Title: "Collections"},
-		{Title: "Records"},
-	}
-
-	var rows []Row
-	for _, dbName := range dbNames {
-		db := client.Database(dbName)
-		collNames, err := db.ListCollectionNames(context.Background(), bson.D{})
-		if err != nil {
-			fmt.Printf("could not fetch collections: %v", err)
-			os.Exit(1)
-		}
-		for _, collName := range collNames {
-			coll := db.Collection(collName)
-			count, err := coll.CountDocuments(context.Background(), bson.D{})
-			if err != nil {
-				fmt.Printf("could not fetch count: %v", err)
-				os.Exit(1)
-			}
-			rows = append(rows, Row{dbName, collName, fmt.Sprintf("%d", count)})
-		}
-	}
-
 	t := New(
+		engine,
 		WithColumns(columns),
-		WithRows(rows),
 		WithFocused(true),
 	)
 
@@ -79,17 +62,19 @@ func initialModel(client *mongo.Client) model {
 		Background(lipgloss.Color("57")).
 		Bold(false)
 	t.SetStyles(s)
+	t.updateTableRows()
 
-	return model{
-		table: t,
+	return baseModel{
+		table:  t,
+		engine: engine,
 	}
 }
 
-func (m model) Init() tea.Cmd {
+func (m baseModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m baseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -119,6 +104,6 @@ func getColumnWidth(windowWidth int, columns int) int {
 	return (windowWidth - 8) / columns
 }
 
-func (m model) View() string {
+func (m baseModel) View() string {
 	return baseStyle.Render(m.table.View()) + "\n  " + m.table.HelpView() + "\n"
 }
