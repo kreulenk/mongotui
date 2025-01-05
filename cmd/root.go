@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"mtui/table"
+	"mtui/pkg/table"
 	"net"
 	"net/url"
 	"os"
