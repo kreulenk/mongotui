@@ -413,6 +413,10 @@ func (m *Model) SetCursor(n int) {
 // It can not go above the first row.
 func (m *Model) MoveUp(n int) {
 	m.cursorRow = clamp(m.cursorRow-n, 0, len(m.rows)-1)
+	if m.cursorColumn == databasesColumn {
+		m.selectedDbIndex = m.cursorRow
+	}
+
 	switch {
 	case m.start == 0:
 		m.viewport.SetYOffset(clamp(m.viewport.YOffset, 0, m.cursorRow))
@@ -429,6 +433,10 @@ func (m *Model) MoveUp(n int) {
 // It can not go below the last row.
 func (m *Model) MoveDown(n int) {
 	m.cursorRow = clamp(m.cursorRow+n, 0, len(m.rows)-1)
+	if m.cursorColumn == databasesColumn {
+		m.selectedDbIndex = m.cursorRow
+	}
+
 	m.updateTableRows()
 	m.UpdateViewport()
 
@@ -506,7 +514,7 @@ func (m *Model) renderRow(r int) string {
 		}
 		style := lipgloss.NewStyle().Width(m.cols[i].Width).MaxWidth(m.cols[i].Width).Inline(true)
 		renderedCell := m.styles.Cell.Render(style.Render(runewidth.Truncate(value, m.cols[i].Width, "…")))
-		if r == m.cursorRow && cursorColumn(i) == m.cursorColumn {
+		if (r == m.cursorRow && cursorColumn(i) == m.cursorColumn) || m.selectedDbIndex == r {
 			renderedCell = m.styles.Selected.Render(renderedCell)
 		}
 		s = append(s, renderedCell)
