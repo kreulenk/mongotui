@@ -32,7 +32,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
-	"strings"
 )
 
 type cursorColumn int
@@ -53,13 +52,14 @@ type tableModel struct {
 	KeyMap KeyMap
 	Help   help.Model
 
-	cols         []Column
-	rows         []Row
-	cursorColumn cursorColumn
-	cursorRow    int
-	selectedDb   string
-	focus        bool
-	styles       Styles
+	cols            []Column
+	rows            []Row
+	cursorColumn    cursorColumn
+	cursorRow       int
+	selectedDb      string
+	selectedDbIndex int // To remember what database we are on when we go left back from collections row
+	focus           bool
+	styles          Styles
 
 	viewport viewport.Model
 	start    int
@@ -183,11 +183,15 @@ type Option func(*tableModel)
 
 // New creates a new baseModel for the table widget.
 func New(engine *dataEngine, opts ...Option) tableModel {
+	databases := getSortedDatabasesByName(engine.dbData.databases)
+
 	m := tableModel{
-		cursorRow:  0,
-		viewport:   viewport.New(0, 20),
-		rows:       make([]Row, 0),
-		selectedDb: getSortedDatabasesByName(engine.dbData.databases)[0],
+		cursorRow:       0,
+		cursorColumn:    databasesColumn,
+		viewport:        viewport.New(0, 20),
+		selectedDb:      databases[0],
+		selectedDbIndex: 0,
+		rows:            []Row{databases},
 
 		KeyMap: DefaultKeyMap(),
 		Help:   help.New(),
@@ -450,6 +454,7 @@ func (m *tableModel) MoveRight() {
 	if m.cursorColumn == databasesColumn {
 		m.selectedDb = m.SelectedCell()
 		m.cursorColumn = collectionsColumn
+		m.selectedDbIndex = m.cursorRow
 		m.cursorRow = 0
 	}
 	m.updateTableRows()
@@ -460,9 +465,10 @@ func (m *tableModel) MoveRight() {
 func (m *tableModel) MoveLeft() {
 	if m.cursorColumn == collectionsColumn {
 		m.cursorColumn = databasesColumn
-		m.cursorRow = 0
+		m.cursorRow = m.selectedDbIndex
 		m.selectedDb = m.SelectedCell()
 	}
+	m.updateTableRows()
 	m.UpdateViewport()
 }
 
@@ -483,22 +489,6 @@ func (m *tableModel) GoRight() {
 
 func (m *tableModel) GoLeft() {
 	m.MoveLeft()
-}
-
-// FromValues create the table rows from a simple string. It uses `\n` by
-// default for getting all the rows and the given separator for the fields on
-// each row.
-func (m *tableModel) FromValues(value, separator string) {
-	rows := []Row{}
-	for _, line := range strings.Split(value, "\n") {
-		r := Row{}
-		for _, field := range strings.Split(line, separator) {
-			r = append(r, field)
-		}
-		rows = append(rows, r)
-	}
-
-	m.SetRows(rows)
 }
 
 func (m tableModel) headersView() string {

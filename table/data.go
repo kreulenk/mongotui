@@ -79,7 +79,7 @@ func (m *tableModel) updateTableRows() {
 	databaseNames := getSortedDatabasesByName(m.engine.dbData.databases)
 
 	var newRows []Row
-	if m.cursorColumn == databasesColumn { // TODO fix this if lengths are longer for collections than db names
+	if m.cursorColumn == databasesColumn {
 		collectionsNames := getSortedCollectionsByName(m.engine.dbData.databases[m.SelectedCell()].collections)
 		for i, dbName := range databaseNames {
 			if i < len(collectionsNames) {
