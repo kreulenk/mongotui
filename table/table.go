@@ -57,6 +57,7 @@ type tableModel struct {
 	rows         []Row
 	cursorColumn cursorColumn
 	cursorRow    int
+	selectedDb   string
 	focus        bool
 	styles       Styles
 
@@ -183,8 +184,10 @@ type Option func(*tableModel)
 // New creates a new baseModel for the table widget.
 func New(engine *dataEngine, opts ...Option) tableModel {
 	m := tableModel{
-		cursorRow: 0,
-		viewport:  viewport.New(0, 20),
+		cursorRow:  0,
+		viewport:   viewport.New(0, 20),
+		rows:       make([]Row, 0),
+		selectedDb: getSortedDatabasesByName(engine.dbData.databases)[0],
 
 		KeyMap: DefaultKeyMap(),
 		Help:   help.New(),
@@ -197,6 +200,7 @@ func New(engine *dataEngine, opts ...Option) tableModel {
 		opt(&m)
 	}
 
+	m.updateTableRows()
 	m.UpdateViewport()
 
 	return m
@@ -206,13 +210,6 @@ func New(engine *dataEngine, opts ...Option) tableModel {
 func WithColumns(cols []Column) Option {
 	return func(m *tableModel) {
 		m.cols = cols
-	}
-}
-
-// WithRows sets the table rows (data).
-func WithRows(rows []Row) Option {
-	return func(m *tableModel) {
-		m.rows = rows
 	}
 }
 
@@ -451,7 +448,9 @@ func (m *tableModel) MoveDown(n int) {
 // MoveRight moves the column to the right.
 func (m *tableModel) MoveRight() {
 	if m.cursorColumn == databasesColumn {
+		m.selectedDb = m.SelectedCell()
 		m.cursorColumn = collectionsColumn
+		m.cursorRow = 0
 	}
 	m.updateTableRows()
 	m.UpdateViewport()
@@ -461,6 +460,8 @@ func (m *tableModel) MoveRight() {
 func (m *tableModel) MoveLeft() {
 	if m.cursorColumn == collectionsColumn {
 		m.cursorColumn = databasesColumn
+		m.cursorRow = 0
+		m.selectedDb = m.SelectedCell()
 	}
 	m.UpdateViewport()
 }
@@ -528,11 +529,6 @@ func (m *tableModel) renderRow(r int) string {
 	}
 
 	row := lipgloss.JoinHorizontal(lipgloss.Top, s...)
-
-	//if r == m.cursorRow {
-	//	return m.styles.Selected.Render(row)
-	//}
-
 	return row
 }
 

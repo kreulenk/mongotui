@@ -71,16 +71,16 @@ func (m *dataEngine) setCollectionsPerDb(dbName string) error {
 // updateTableRows updates the rows in the table based on the dbData and the current cursorColumn and cursorRow
 // Lots of opportunity for caching with how this function is handled/called, but I like the live data for now
 func (m *tableModel) updateTableRows() {
-	err := m.engine.setCollectionsPerDb(m.SelectedCell())
+	err := m.engine.setCollectionsPerDb(m.selectedDb)
 	if err != nil { // TODO handle errors better
 		fmt.Printf("could not fetch collections: %v", err)
 		os.Exit(1)
 	}
 	databaseNames := getSortedDatabasesByName(m.engine.dbData.databases)
-	collectionsNames := getSortedCollectionsByName(m.engine.dbData.databases[m.SelectedCell()].collections)
 
 	var newRows []Row
-	if m.cursorColumn == databasesColumn {
+	if m.cursorColumn == databasesColumn { // TODO fix this if lengths are longer for collections than db names
+		collectionsNames := getSortedCollectionsByName(m.engine.dbData.databases[m.SelectedCell()].collections)
 		for i, dbName := range databaseNames {
 			if i < len(collectionsNames) {
 				newRows = append(newRows, Row{dbName, collectionsNames[i]})
@@ -89,11 +89,22 @@ func (m *tableModel) updateTableRows() {
 			}
 		}
 	} else if m.cursorColumn == collectionsColumn {
-		for i, collectionName := range collectionsNames {
-			if i < len(databaseNames) {
-				newRows = append(newRows, Row{databaseNames[i], collectionName})
-			} else {
-				newRows = append(newRows, Row{"", collectionName})
+		collectionsNames := getSortedCollectionsByName(m.engine.dbData.databases[m.selectedDb].collections)
+		if len(databaseNames) > len(collectionsNames) {
+			for i, dbName := range databaseNames {
+				if i < len(collectionsNames) {
+					newRows = append(newRows, Row{dbName, collectionsNames[i]})
+				} else {
+					newRows = append(newRows, Row{dbName, ""})
+				}
+			}
+		} else {
+			for i := range collectionsNames {
+				if i < len(databaseNames) {
+					newRows = append(newRows, Row{databaseNames[i], collectionsNames[i]})
+				} else {
+					newRows = append(newRows, Row{"", collectionsNames[i]})
+				}
 			}
 		}
 	}

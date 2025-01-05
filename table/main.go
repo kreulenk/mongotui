@@ -62,7 +62,6 @@ func initialModel(client *mongo.Client) baseModel {
 		Background(lipgloss.Color("57")).
 		Bold(false)
 	t.SetStyles(s)
-	t.updateTableRows()
 
 	return baseModel{
 		table:  t,
