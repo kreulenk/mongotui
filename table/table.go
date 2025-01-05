@@ -55,16 +55,19 @@ type KeyMap struct {
 	HalfPageDown key.Binding
 	GotoTop      key.Binding
 	GotoBottom   key.Binding
+	Right        key.Binding
+	Left         key.Binding
 }
 
 // ShortHelp implements the KeyMap interface.
 func (km KeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{km.LineUp, km.LineDown}
+	return []key.Binding{km.LineUp, km.LineDown, km.Right, km.Left}
 }
 
 // FullHelp implements the KeyMap interface.
 func (km KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
+		{km.Right, km.Left},
 		{km.LineUp, km.LineDown, km.GotoTop, km.GotoBottom},
 		{km.PageUp, km.PageDown, km.HalfPageUp, km.HalfPageDown},
 	}
@@ -105,6 +108,14 @@ func DefaultKeyMap() KeyMap {
 		GotoBottom: key.NewBinding(
 			key.WithKeys("end", "G"),
 			key.WithHelp("G/end", "go to end"),
+		),
+		Right: key.NewBinding(
+			key.WithKeys("right", "l"),
+			key.WithHelp("→/l", "right"),
+		),
+		Left: key.NewBinding(
+			key.WithKeys("left", "h"),
+			key.WithHelp("←/h", "left"),
 		),
 	}
 }
@@ -233,6 +244,10 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			m.GotoTop()
 		case key.Matches(msg, m.KeyMap.GotoBottom):
 			m.GotoBottom()
+		case key.Matches(msg, m.KeyMap.Right):
+			m.GoRight()
+		case key.Matches(msg, m.KeyMap.Left):
+			m.GoLeft()
 		}
 	}
 
@@ -389,6 +404,20 @@ func (m *Model) MoveDown(n int) {
 	}
 }
 
+// TODO finish this function
+// MoveRight moves the column to the right by any number of columns.
+func (m *Model) MoveRight(n int) {
+	m.cursorColumn = cursorColumn(clamp(int(m.cursorColumn)+n, 0, len(m.cols)-1))
+	m.UpdateViewport()
+}
+
+// TODO finish this function
+// MoveLeft moves the column to the left by any number of columns.
+func (m *Model) MoveLeft(n int) {
+	m.cursorColumn = cursorColumn(clamp(int(m.cursorColumn)+n, 0, len(m.cols)-1))
+	m.UpdateViewport()
+}
+
 // GotoTop moves the selection to the first row.
 func (m *Model) GotoTop() {
 	m.MoveUp(m.cursorRow)
@@ -397,6 +426,15 @@ func (m *Model) GotoTop() {
 // GotoBottom moves the selection to the last row.
 func (m *Model) GotoBottom() {
 	m.MoveDown(len(m.rows))
+}
+
+// GoRight moves to the next column.
+func (m *Model) GoRight() {
+	m.MoveRight(1)
+}
+
+func (m *Model) GoLeft() {
+	m.MoveLeft(-1)
 }
 
 // FromValues create the table rows from a simple string. It uses `\n` by
@@ -436,14 +474,17 @@ func (m *Model) renderRow(r int) string {
 		}
 		style := lipgloss.NewStyle().Width(m.cols[i].Width).MaxWidth(m.cols[i].Width).Inline(true)
 		renderedCell := m.styles.Cell.Render(style.Render(runewidth.Truncate(value, m.cols[i].Width, "…")))
+		if r == m.cursorRow && cursorColumn(i) == m.cursorColumn {
+			renderedCell = m.styles.Selected.Render(renderedCell)
+		}
 		s = append(s, renderedCell)
 	}
 
 	row := lipgloss.JoinHorizontal(lipgloss.Top, s...)
 
-	if r == m.cursorRow {
-		return m.styles.Selected.Render(row)
-	}
+	//if r == m.cursorRow {
+	//	return m.styles.Selected.Render(row)
+	//}
 
 	return row
 }
