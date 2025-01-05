@@ -18,7 +18,7 @@ var baseStyle = lipgloss.NewStyle().
 	BorderForeground(lipgloss.Color("240"))
 
 type baseModel struct {
-	table  table.TableModel
+	table  table.Model
 	engine *mongodata.Engine
 	err    error // TODO handle how to display errors
 }
@@ -34,7 +34,7 @@ func Initialize(client *mongo.Client) {
 func initialModel(client *mongo.Client) baseModel {
 	engine := &mongodata.Engine{
 		Client: client,
-		DbData: &mongodata.ServerData{
+		Server: &mongodata.Server{
 			Databases: make(map[string]mongodata.Database),
 		},
 	}

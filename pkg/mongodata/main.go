@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-type ServerData struct {
+type Server struct {
 	Databases map[string]Database
 }
 
@@ -24,7 +24,7 @@ type Collection struct {
 
 type Engine struct {
 	Client *mongo.Client
-	DbData *ServerData
+	Server *Server
 }
 
 func (m *Engine) SetDatabases() error {
@@ -35,7 +35,7 @@ func (m *Engine) SetDatabases() error {
 		return err
 	}
 
-	m.DbData.Databases = make(map[string]Database)
+	m.Server.Databases = make(map[string]Database)
 	for _, dbName := range dbNames {
 		err := m.SetCollectionsPerDb(dbName)
 		if err != nil {
@@ -49,9 +49,6 @@ func (m *Engine) SetDatabases() error {
 
 // SetCollectionsPerDb fetches the Collections for a given database along with the number of records in each collection
 func (m *Engine) SetCollectionsPerDb(dbName string) error {
-	if dbName == "" { // TODO see if better way of handling uninitialized Data
-		return nil
-	}
 	db := m.Client.Database(dbName)
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
@@ -60,14 +57,14 @@ func (m *Engine) SetCollectionsPerDb(dbName string) error {
 		return err
 	}
 
-	m.DbData.Databases[dbName] = Database{Collections: make(map[string]Collection)} // zero out the Data
+	m.Server.Databases[dbName] = Database{Collections: make(map[string]Collection)} // zero out the Data
 	for _, collectionName := range collectionNames {
 		coll := db.Collection(collectionName)
 		c, err := coll.CountDocuments(context.Background(), bson.D{})
 		if err != nil {
 			return err
 		}
-		m.DbData.Databases[dbName].Collections[collectionName] = Collection{Count: c}
+		m.Server.Databases[dbName].Collections[collectionName] = Collection{Count: c}
 	}
 
 	return nil

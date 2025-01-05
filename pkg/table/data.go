@@ -9,17 +9,17 @@ import (
 
 // updateTableRows updates the rows in the table based on the dbData and the current cursorColumn and cursorRow
 // Lots of opportunity for caching with how this function is handled/called, but I like the live data for now
-func (m *TableModel) updateTableRows() {
+func (m *Model) updateTableRows() {
 	err := m.engine.SetCollectionsPerDb(m.selectedDb)
 	if err != nil { // TODO handle errors better
 		fmt.Printf("could not fetch collections: %v", err)
 		os.Exit(1)
 	}
-	databaseNames := getSortedDatabasesByName(m.engine.DbData.Databases)
+	databaseNames := getSortedDatabasesByName(m.engine.Server.Databases)
 
 	var newRows []Row
 	if m.cursorColumn == databasesColumn {
-		collectionsNames := getSortedCollectionsByName(m.engine.DbData.Databases[m.SelectedCell()].Collections)
+		collectionsNames := getSortedCollectionsByName(m.engine.Server.Databases[m.SelectedCell()].Collections)
 		for i, dbName := range databaseNames {
 			if i < len(collectionsNames) {
 				newRows = append(newRows, Row{dbName, collectionsNames[i]})
@@ -28,7 +28,7 @@ func (m *TableModel) updateTableRows() {
 			}
 		}
 	} else if m.cursorColumn == collectionsColumn {
-		collectionsNames := getSortedCollectionsByName(m.engine.DbData.Databases[m.selectedDb].Collections)
+		collectionsNames := getSortedCollectionsByName(m.engine.Server.Databases[m.selectedDb].Collections)
 		if len(databaseNames) > len(collectionsNames) {
 			for i, dbName := range databaseNames {
 				if i < len(collectionsNames) {
