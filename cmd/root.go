@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"mtui/pkg/table"
+	"mtui/pkg/tui"
 	"net"
 	"net/url"
 	"os"
@@ -42,7 +42,7 @@ in a more intuitive way.`,
 			defer cancel()
 			client, err := mongo.Connect(ctx, clientOps)
 			cobra.CheckErr(err)
-			table.InitializeTui(client)
+			tui.Initialize(client)
 		},
 	}
 

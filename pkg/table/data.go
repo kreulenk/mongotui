@@ -1,86 +1,25 @@
 package table
 
 import (
-	"context"
 	"fmt"
-	"go.mongodb.org/mongo-driver/bson"
+	"mtui/pkg/mongodata"
 	"os"
 	"slices"
-	"time"
 )
-
-type mongoData struct {
-	databases map[string]mongoDatabase
-}
-
-type mongoDatabase struct {
-	collections map[string]mongoCollection
-}
-
-type mongoCollection struct {
-	count int64
-	data  []bson.M
-}
-
-func (m *dataEngine) setDatabases() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
-	dbNames, err := m.client.ListDatabaseNames(ctx, bson.D{})
-	if err != nil {
-		return err
-	}
-
-	m.dbData.databases = make(map[string]mongoDatabase)
-	for _, dbName := range dbNames {
-		err := m.setCollectionsPerDb(dbName)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-
-}
-
-// setCollectionsPerDb fetches the collections for a given database along with the number of records in each collection
-func (m *dataEngine) setCollectionsPerDb(dbName string) error {
-	if dbName == "" { // TODO see if better way of handling uninitialized data
-		return nil
-	}
-	db := m.client.Database(dbName)
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
-	collectionNames, err := db.ListCollectionNames(ctx, bson.D{})
-	if err != nil {
-		return err
-	}
-
-	m.dbData.databases[dbName] = mongoDatabase{collections: make(map[string]mongoCollection)} // zero out the data
-	for _, collectionName := range collectionNames {
-		coll := db.Collection(collectionName)
-		c, err := coll.CountDocuments(context.Background(), bson.D{})
-		if err != nil {
-			return err
-		}
-		m.dbData.databases[dbName].collections[collectionName] = mongoCollection{count: c}
-	}
-
-	return nil
-}
 
 // updateTableRows updates the rows in the table based on the dbData and the current cursorColumn and cursorRow
 // Lots of opportunity for caching with how this function is handled/called, but I like the live data for now
-func (m *tableModel) updateTableRows() {
-	err := m.engine.setCollectionsPerDb(m.selectedDb)
+func (m *TableModel) updateTableRows() {
+	err := m.engine.SetCollectionsPerDb(m.selectedDb)
 	if err != nil { // TODO handle errors better
 		fmt.Printf("could not fetch collections: %v", err)
 		os.Exit(1)
 	}
-	databaseNames := getSortedDatabasesByName(m.engine.dbData.databases)
+	databaseNames := getSortedDatabasesByName(m.engine.DbData.Databases)
 
 	var newRows []Row
 	if m.cursorColumn == databasesColumn {
-		collectionsNames := getSortedCollectionsByName(m.engine.dbData.databases[m.SelectedCell()].collections)
+		collectionsNames := getSortedCollectionsByName(m.engine.DbData.Databases[m.SelectedCell()].Collections)
 		for i, dbName := range databaseNames {
 			if i < len(collectionsNames) {
 				newRows = append(newRows, Row{dbName, collectionsNames[i]})
@@ -89,7 +28,7 @@ func (m *tableModel) updateTableRows() {
 			}
 		}
 	} else if m.cursorColumn == collectionsColumn {
-		collectionsNames := getSortedCollectionsByName(m.engine.dbData.databases[m.selectedDb].collections)
+		collectionsNames := getSortedCollectionsByName(m.engine.DbData.Databases[m.selectedDb].Collections)
 		if len(databaseNames) > len(collectionsNames) {
 			for i, dbName := range databaseNames {
 				if i < len(collectionsNames) {
@@ -111,7 +50,7 @@ func (m *tableModel) updateTableRows() {
 	m.rows = newRows
 }
 
-func getSortedDatabasesByName(databases map[string]mongoDatabase) []string {
+func getSortedDatabasesByName(databases map[string]mongodata.Database) []string {
 	databaseNames := make([]string, 0, len(databases))
 	for name := range databases {
 		databaseNames = append(databaseNames, name)
@@ -121,7 +60,7 @@ func getSortedDatabasesByName(databases map[string]mongoDatabase) []string {
 }
 
 // getSortedCollectionsByName returns a slice of collection names sorted alphabetically
-func getSortedCollectionsByName(collections map[string]mongoCollection) []string {
+func getSortedCollectionsByName(collections map[string]mongodata.Collection) []string {
 	collectionNames := make([]string, 0, len(collections))
 	for name := range collections {
 		collectionNames = append(collectionNames, name)

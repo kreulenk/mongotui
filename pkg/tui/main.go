@@ -1,10 +1,15 @@
-package table
+// This package is the main entrypoint of the TUI for mongotui.
+// It initializes the Data engine and loads on the various display elements.
+
+package tui
 
 import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"go.mongodb.org/mongo-driver/mongo"
+	"mtui/pkg/mongodata"
+	"mtui/pkg/table"
 	"os"
 )
 
@@ -12,18 +17,13 @@ var baseStyle = lipgloss.NewStyle().
 	BorderStyle(lipgloss.NormalBorder()).
 	BorderForeground(lipgloss.Color("240"))
 
-type dataEngine struct {
-	client *mongo.Client
-	dbData *mongoData
-}
-
 type baseModel struct {
-	table  tableModel
-	engine *dataEngine
+	table  table.TableModel
+	engine *mongodata.Engine
 	err    error // TODO handle how to display errors
 }
 
-func InitializeTui(client *mongo.Client) {
+func Initialize(client *mongo.Client) {
 	p := tea.NewProgram(initialModel(client))
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error: %v", err)
@@ -32,26 +32,25 @@ func InitializeTui(client *mongo.Client) {
 }
 
 func initialModel(client *mongo.Client) baseModel {
-	engine := &dataEngine{
-		client: client,
-		dbData: &mongoData{
-			databases: make(map[string]mongoDatabase),
+	engine := &mongodata.Engine{
+		Client: client,
+		DbData: &mongodata.ServerData{
+			Databases: make(map[string]mongodata.Database),
 		},
 	}
 
-	err := engine.setDatabases()
+	err := engine.SetDatabases()
 	if err != nil {
-		fmt.Printf("could not initialize data: %v", err)
+		fmt.Printf("could not initialize Data: %v", err)
 		os.Exit(1)
 	}
 
-	t := New(
+	t := table.New(
 		engine,
-		WithColumns(columns),
-		WithFocused(true),
+		table.WithFocused(true),
 	)
 
-	s := DefaultStyles()
+	s := table.DefaultStyles()
 	s.Header = s.Header.
 		BorderStyle(lipgloss.NormalBorder()).
 		BorderForeground(lipgloss.Color("240")).
