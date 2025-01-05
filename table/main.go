@@ -3,7 +3,6 @@ package table
 import (
 	"context"
 	"fmt"
-	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/lipgloss"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -18,7 +17,7 @@ var baseStyle = lipgloss.NewStyle().
 	BorderForeground(lipgloss.Color("240"))
 
 type model struct {
-	table table.Model
+	table Model
 }
 
 func InitializeTui(client *mongo.Client) {
@@ -38,13 +37,13 @@ func initialModel(client *mongo.Client) model {
 		os.Exit(1)
 	}
 
-	columns := []table.Column{
+	columns := []Column{
 		{Title: "Databases"},
 		{Title: "Collections"},
 		{Title: "Records"},
 	}
 
-	var rows []table.Row
+	var rows []Row
 	for _, dbName := range dbNames {
 		db := client.Database(dbName)
 		collNames, err := db.ListCollectionNames(context.Background(), bson.D{})
@@ -59,17 +58,17 @@ func initialModel(client *mongo.Client) model {
 				fmt.Printf("could not fetch count: %v", err)
 				os.Exit(1)
 			}
-			rows = append(rows, table.Row{dbName, collName, fmt.Sprintf("%d", count)})
+			rows = append(rows, Row{dbName, collName, fmt.Sprintf("%d", count)})
 		}
 	}
 
-	t := table.New(
-		table.WithColumns(columns),
-		table.WithRows(rows),
-		table.WithFocused(true),
+	t := New(
+		WithColumns(columns),
+		WithRows(rows),
+		WithFocused(true),
 	)
 
-	s := table.DefaultStyles()
+	s := DefaultStyles()
 	s.Header = s.Header.
 		BorderStyle(lipgloss.NormalBorder()).
 		BorderForeground(lipgloss.Color("240")).
@@ -109,7 +108,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.table.Columns()[i].Width = getColumnWidth(msg.Width, len(m.table.Columns()))
 		}
 		m.table.SetWidth(msg.Width - 6) // TODO look into a more intelligent way of getting this 6 value
-		m.table.SetHeight(msg.Height - 6)
+		m.table.SetHeight(msg.Height - 4)
 		return m, tea.ClearScreen // Necessary for resizes
 	}
 	m.table, cmd = m.table.Update(msg)
