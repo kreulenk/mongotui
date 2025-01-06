@@ -412,7 +412,7 @@ func (m *Model) SetCursor(n int) {
 // MoveUp moves the selection up by any number of rows.
 // It can not go above the first row.
 func (m *Model) MoveUp(n int) {
-	m.cursorRow = max(0, n-1)
+	m.cursorRow = max(0, m.cursorRow-1)
 	if m.cursorColumn == databasesColumn {
 		m.selectedDbIndex = m.cursorRow
 		m.selectedDb = m.SelectedCell()
