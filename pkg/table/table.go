@@ -518,11 +518,9 @@ func (m *Model) renderRow(r int) string {
 		}
 		style := lipgloss.NewStyle().Width(m.cols[i].Width).MaxWidth(m.cols[i].Width).Inline(true)
 		renderedCell := m.styles.Cell.Render(style.Render(runewidth.Truncate(value, m.cols[i].Width, "…")))
-		if cursorColumn(i) == databasesColumn && r == m.cursorRow && m.cursorColumn == databasesColumn {
-			renderedCell = m.styles.Selected.Render(renderedCell)
-		} else if cursorColumn(i) == databasesColumn && r == m.selectedDbIndex && m.cursorColumn == collectionsColumn {
-			renderedCell = m.styles.Selected.Render(renderedCell)
-		} else if cursorColumn(i) == collectionsColumn && m.cursorRow == r && m.cursorColumn == collectionsColumn {
+		if (m.cursorColumn == databasesColumn && cursorColumn(i) == databasesColumn && r == m.cursorRow) ||
+			(m.cursorColumn == collectionsColumn && cursorColumn(i) == databasesColumn && r == m.selectedDbIndex) ||
+			(m.cursorColumn == collectionsColumn && cursorColumn(i) == collectionsColumn && r == m.cursorRow) {
 			renderedCell = m.styles.Selected.Render(renderedCell)
 		}
 		s = append(s, renderedCell)
