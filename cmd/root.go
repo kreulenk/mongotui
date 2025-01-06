@@ -35,7 +35,7 @@ in a more intuitive way.`,
 
 			parsedConStr, err := getConnectionString(dbAddress, hostFlag, portFlag)
 			cobra.CheckErr(err)
-			clientOps, err := generateConnectionOptions(parsedConStr, usernameFlag, passwordFlag)
+			clientOps, err := generateConnectionOptions(parsedConStr, usernameFlag, passwordFlag, authMechanismFlag)
 			cobra.CheckErr(err)
 
 			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
@@ -57,8 +57,14 @@ in a more intuitive way.`,
 
 // generateConnectionOptions takes in the connectionString and any auth based flags and returns the clientOptions
 // necessary to connect to mongodb.
-func generateConnectionOptions(connectionString, usernameFlag, passwordFlag string) (*options.ClientOptions, error) {
+// TODO more flags need to be added to fully support auth. Hardcoded to always use an auth database of admin for now
+func generateConnectionOptions(connectionString, usernameFlag, passwordFlag, authMechanism string) (*options.ClientOptions, error) {
 	clientOps := options.Client().ApplyURI(connectionString)
+	if clientOps.Auth == nil && (usernameFlag != "" || passwordFlag != "") {
+		clientOps.Auth = &options.Credential{
+			AuthSource: "admin",
+		}
+	}
 
 	// Overwrite the host and port from dbAddress if they are provided as flags
 	if usernameFlag != "" {
@@ -66,6 +72,9 @@ func generateConnectionOptions(connectionString, usernameFlag, passwordFlag stri
 	}
 	if passwordFlag != "" {
 		clientOps.Auth.Password = passwordFlag
+	}
+	if authMechanism != "" {
+		clientOps.Auth.AuthMechanism = authMechanism
 	}
 
 	return clientOps, nil
@@ -90,7 +99,7 @@ func getConnectionString(dbAddress, hostFlag string, portFlag int) (string, erro
 		parsedHost = hostFlag
 	}
 	if parsedHost == "" {
-		return "", fmt.Errorf("no host provided")
+		return "", fmt.Errorf("no host provided") // TODO display help menu if this error is displayed
 	}
 
 	if portFlag == 0 && parsedPort == "" {
