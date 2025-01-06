@@ -33,6 +33,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
 	"mtui/pkg/mongodata"
+	"mtui/pkg/renderutils"
 )
 
 type cursorColumn int
@@ -155,6 +156,7 @@ type Styles struct {
 	Header   lipgloss.Style
 	Cell     lipgloss.Style
 	Selected lipgloss.Style
+	Table    lipgloss.Style
 }
 
 // DefaultStyles returns a set of default style definitions for this table.
@@ -163,6 +165,7 @@ func DefaultStyles() Styles {
 		Selected: lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("212")),
 		Header:   lipgloss.NewStyle().Bold(true).Padding(0, 1),
 		Cell:     lipgloss.NewStyle().Padding(0, 1),
+		Table:    lipgloss.NewStyle().BorderStyle(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("240")),
 	}
 }
 
@@ -303,7 +306,7 @@ func (m *Model) Blur() {
 
 // View renders the component.
 func (m Model) View() string {
-	return m.headersView() + "\n" + m.viewport.View()
+	return m.styles.Table.Render(m.headersView() + "\n" + m.viewport.View())
 }
 
 // HelpView is a helper method for rendering the help menu from the keymap.
@@ -322,11 +325,11 @@ func (m *Model) UpdateViewport() {
 	// Constant runtime, independent of number of rows in a table.
 	// Limits the number of renderedRows to a maximum of 2*m.viewport.Height
 	if m.cursorRow >= 0 {
-		m.start = clamp(m.cursorRow-m.viewport.Height, 0, m.cursorRow)
+		m.start = renderutils.Clamp(m.cursorRow-m.viewport.Height, 0, m.cursorRow)
 	} else {
 		m.start = 0
 	}
-	m.end = clamp(m.cursorRow+m.viewport.Height, m.cursorRow, len(m.rows))
+	m.end = renderutils.Clamp(m.cursorRow+m.viewport.Height, m.cursorRow, len(m.rows))
 	for i := m.start; i < m.end; i++ {
 		renderedRows = append(renderedRows, m.renderRow(i))
 	}
@@ -405,14 +408,14 @@ func (m Model) Cursor() int {
 
 // SetCursor sets the cursorRow position in the table.
 func (m *Model) SetCursor(n int) {
-	m.cursorRow = clamp(n, 0, len(m.rows)-1)
+	m.cursorRow = renderutils.Clamp(n, 0, len(m.rows)-1)
 	m.UpdateViewport()
 }
 
 // MoveUp moves the selection up by any number of rows.
 // It can not go above the first row.
 func (m *Model) MoveUp(n int) {
-	m.cursorRow = max(0, m.cursorRow-1)
+	m.cursorRow = renderutils.Max(0, m.cursorRow-1)
 	if m.cursorColumn == databasesColumn {
 		m.selectedDbIndex = m.cursorRow
 		m.selectedDb = m.SelectedCell()
@@ -420,11 +423,11 @@ func (m *Model) MoveUp(n int) {
 
 	switch {
 	case m.start == 0:
-		m.viewport.SetYOffset(clamp(m.viewport.YOffset, 0, m.cursorRow))
+		m.viewport.SetYOffset(renderutils.Clamp(m.viewport.YOffset, 0, m.cursorRow))
 	case m.start < m.viewport.Height:
-		m.viewport.YOffset = (clamp(clamp(m.viewport.YOffset+n, 0, m.cursorRow), 0, m.viewport.Height))
+		m.viewport.YOffset = renderutils.Clamp(renderutils.Clamp(m.viewport.YOffset+n, 0, m.cursorRow), 0, m.viewport.Height)
 	case m.viewport.YOffset >= 1:
-		m.viewport.YOffset = clamp(m.viewport.YOffset+n, 1, m.viewport.Height)
+		m.viewport.YOffset = renderutils.Clamp(m.viewport.YOffset+n, 1, m.viewport.Height)
 	}
 	m.updateTableRows()
 	m.UpdateViewport()
@@ -434,11 +437,11 @@ func (m *Model) MoveUp(n int) {
 // It can not go below the last row.
 func (m *Model) MoveDown(n int) {
 	if m.cursorColumn == databasesColumn {
-		m.cursorRow = clamp(m.cursorRow+n, 0, len(m.engine.Server.Databases)-1)
+		m.cursorRow = renderutils.Clamp(m.cursorRow+n, 0, len(m.engine.Server.Databases)-1)
 		m.selectedDbIndex = m.cursorRow
 		m.selectedDb = m.SelectedCell()
 	} else { // collections column
-		m.cursorRow = clamp(m.cursorRow+n, 0, len(m.engine.Server.Databases[m.selectedDb].Collections)-1)
+		m.cursorRow = renderutils.Clamp(m.cursorRow+n, 0, len(m.engine.Server.Databases[m.selectedDb].Collections)-1)
 	}
 
 	m.updateTableRows()
@@ -446,12 +449,12 @@ func (m *Model) MoveDown(n int) {
 
 	switch {
 	case m.end == len(m.rows) && m.viewport.YOffset > 0:
-		m.viewport.SetYOffset(clamp(m.viewport.YOffset-n, 1, m.viewport.Height))
+		m.viewport.SetYOffset(renderutils.Clamp(m.viewport.YOffset-n, 1, m.viewport.Height))
 	case m.cursorRow > (m.end-m.start)/2 && m.viewport.YOffset > 0:
-		m.viewport.SetYOffset(clamp(m.viewport.YOffset-n, 1, m.cursorRow))
+		m.viewport.SetYOffset(renderutils.Clamp(m.viewport.YOffset-n, 1, m.cursorRow))
 	case m.viewport.YOffset > 1:
 	case m.cursorRow > m.viewport.YOffset+m.viewport.Height-1:
-		m.viewport.SetYOffset(clamp(m.viewport.YOffset+1, 0, 1))
+		m.viewport.SetYOffset(renderutils.Clamp(m.viewport.YOffset+1, 0, 1))
 	}
 }
 
@@ -479,11 +482,13 @@ func (m *Model) MoveLeft() {
 }
 
 // GotoTop moves the selection to the first row.
+// TODO fix this to work with this new split table element
 func (m *Model) GotoTop() {
 	m.MoveUp(m.cursorRow)
 }
 
 // GotoBottom moves the selection to the last row.
+// TODO fix this to work with this new split table element
 func (m *Model) GotoBottom() {
 	m.MoveDown(len(m.rows))
 }
@@ -528,24 +533,4 @@ func (m *Model) renderRow(r int) string {
 
 	row := lipgloss.JoinHorizontal(lipgloss.Top, s...)
 	return row
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-
-	return b
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-
-	return b
-}
-
-func clamp(v, low, high int) int {
-	return min(max(v, low), high)
 }
