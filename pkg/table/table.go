@@ -52,8 +52,8 @@ type Model struct {
 	rows            []Row
 	cursorColumn    cursorColumn
 	cursorRow       int
-	selectedDb      string
-	selectedDbIndex int // To remember what database we are on when we go left back from collections row
+	selectedDb      string // TODO Potentially refactor both of these selected fields into one field
+	selectedDbIndex int    // To remember what database we are on when we go left back from collections row
 	focus           bool
 	styles          Styles
 
@@ -412,9 +412,10 @@ func (m *Model) SetCursor(n int) {
 // MoveUp moves the selection up by any number of rows.
 // It can not go above the first row.
 func (m *Model) MoveUp(n int) {
-	m.cursorRow = clamp(m.cursorRow-n, 0, len(m.rows)-1)
+	m.cursorRow = max(0, n-1)
 	if m.cursorColumn == databasesColumn {
 		m.selectedDbIndex = m.cursorRow
+		m.selectedDb = m.SelectedCell()
 	}
 
 	switch {
@@ -432,9 +433,12 @@ func (m *Model) MoveUp(n int) {
 // MoveDown moves the selection down by any number of rows.
 // It can not go below the last row.
 func (m *Model) MoveDown(n int) {
-	m.cursorRow = clamp(m.cursorRow+n, 0, len(m.rows)-1)
 	if m.cursorColumn == databasesColumn {
+		m.cursorRow = clamp(m.cursorRow+n, 0, len(m.engine.Server.Databases)-1)
 		m.selectedDbIndex = m.cursorRow
+		m.selectedDb = m.SelectedCell()
+	} else { // collections column
+		m.cursorRow = clamp(m.cursorRow+n, 0, len(m.engine.Server.Databases[m.selectedDb].Collections)-1)
 	}
 
 	m.updateTableRows()
@@ -514,7 +518,11 @@ func (m *Model) renderRow(r int) string {
 		}
 		style := lipgloss.NewStyle().Width(m.cols[i].Width).MaxWidth(m.cols[i].Width).Inline(true)
 		renderedCell := m.styles.Cell.Render(style.Render(runewidth.Truncate(value, m.cols[i].Width, "…")))
-		if (r == m.cursorRow && cursorColumn(i) == m.cursorColumn) || m.selectedDbIndex == r {
+		if cursorColumn(i) == databasesColumn && r == m.cursorRow && m.cursorColumn == databasesColumn {
+			renderedCell = m.styles.Selected.Render(renderedCell)
+		} else if cursorColumn(i) == databasesColumn && r == m.selectedDbIndex && m.cursorColumn == collectionsColumn {
+			renderedCell = m.styles.Selected.Render(renderedCell)
+		} else if cursorColumn(i) == collectionsColumn && m.cursorRow == r && m.cursorColumn == collectionsColumn {
 			renderedCell = m.styles.Selected.Render(renderedCell)
 		}
 		s = append(s, renderedCell)
