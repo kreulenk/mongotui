@@ -5,6 +5,7 @@ import "github.com/charmbracelet/bubbles/key"
 // keyMap defines keybindings. It satisfies to the help.KeyMap interface, which
 // is used to render the help menu.
 type keyMap struct {
+	Esc          key.Binding
 	LineUp       key.Binding
 	LineDown     key.Binding
 	PageUp       key.Binding
@@ -38,6 +39,10 @@ func (km keyMap) FullHelp() [][]key.Binding {
 }
 
 var keys = keyMap{
+	Esc: key.NewBinding(
+		key.WithKeys("esc"),
+		key.WithHelp("esc", "back"),
+	),
 	LineUp: key.NewBinding(
 		key.WithKeys("up", "k"),
 		key.WithHelp("↑/k", "up"),

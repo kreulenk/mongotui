@@ -10,16 +10,25 @@ import (
 	"github.com/mattn/go-runewidth"
 	"mtui/pkg/mongodata"
 	"mtui/pkg/renderutils"
+	"os"
 )
+
+type selectedCollection struct {
+	collectionName string
+	databaseName   string
+}
 
 type Model struct {
 	Help help.Model
 
 	docs   []Row
 	styles Styles
-	cursor int
+
+	cursor             int
+	selectedCollection selectedCollection
 
 	viewport viewport.Model
+	focus    bool
 	start    int
 	end      int
 
@@ -46,17 +55,23 @@ func New(engine *mongodata.Engine) Model {
 		engine: engine,
 	}
 
-	//m.updateTableRows() // TODO add so that we actually have some data to display
-	m.UpdateViewport()
+	m.updateTableRows()
+	m.updateViewport()
 
 	return m
 }
 
 // Update is the Bubble Tea update loop.
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+	if !m.focus {
+		return m, nil
+	}
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
+		case key.Matches(msg, keys.Esc):
+			m.blur()
 		case key.Matches(msg, keys.LineUp):
 			m.MoveUp(1)
 		case key.Matches(msg, keys.LineDown):
@@ -85,20 +100,54 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	return m, nil
 }
 
-// View renders the component.
-func (m Model) View() string {
-	return "TODO: implement doc view"
-	//return m.viewport.View()
+// SetSelectedCollection Allows parent components to set what data will be displayed within this component.
+func (m *Model) SetSelectedCollection(collectionName, databaseName string) {
+	m.selectedCollection = selectedCollection{
+		collectionName: collectionName,
+		databaseName:   databaseName,
+	}
 }
 
-// UpdateViewport updates the list content based on the previously defined
-// columns and rows.
-func (m *Model) UpdateViewport() {
-	renderedRows := make([]string, 0, len(m.docs))
+// View renders the component.
+func (m Model) View() string {
+	return m.viewport.View()
+}
 
-	// Render only rows from: m.cursorRow-m.viewport.Height to: m.cursorRow+m.viewport.Height
-	// Constant runtime, independent of number of rows in a table.
-	// Limits the number of renderedRows to a maximum of 2*m.viewport.Height
+func (m *Model) updateTableRows() {
+	docs, err := m.engine.GetData(m.selectedCollection.databaseName, m.selectedCollection.collectionName)
+	if err != nil { // TODO improve how we handle errors
+		fmt.Printf("could not get data: %v", err)
+		os.Exit(1)
+	}
+	var newDocSummaries []Row
+	for _, doc := range docs {
+		var row Row
+		for k, v := range doc {
+			row = append(row, DocSummary{
+				FieldName:  k,
+				FieldType:  "TODO: implement",
+				FieldValue: fmt.Sprintf("%v", v),
+			})
+		}
+		newDocSummaries = append(newDocSummaries, row)
+	}
+	m.docs = newDocSummaries
+}
+
+func (m *Model) Focus() {
+	m.updateTableRows()
+	m.updateViewport()
+	m.focus = true
+}
+
+func (m *Model) blur() {
+	m.focus = false
+}
+
+// updateViewport updates the list content based on the previously defined
+// columns and rows.
+func (m *Model) updateViewport() {
+	renderedRows := make([]string, 0, len(m.docs))
 	if m.cursor >= 0 {
 		m.start = renderutils.Clamp(m.cursor-m.viewport.Height, 0, m.cursor)
 	} else {
@@ -106,7 +155,7 @@ func (m *Model) UpdateViewport() {
 	}
 	m.end = renderutils.Clamp(m.cursor+m.viewport.Height, m.cursor, len(m.docs))
 	for i := m.start; i < m.end; i++ {
-		renderedRows = append(renderedRows, m.renderRow(i))
+		renderedRows = append(renderedRows, m.renderDocSummary(i))
 	}
 
 	m.viewport.SetContent(
@@ -117,27 +166,27 @@ func (m *Model) UpdateViewport() {
 // SetWidth sets the width of the viewport of the table.
 func (m *Model) SetWidth(w int) {
 	m.viewport.Width = w
-	m.UpdateViewport()
+	m.updateViewport()
 }
 
 // SetHeight sets the height of the viewport of the table.
 func (m *Model) SetHeight(h int) {
 	m.viewport.Height = h
-	m.UpdateViewport()
+	m.updateViewport()
 }
 
 // MoveUp moves the selection up by any number of rows.
 // It can not go above the first row.
 func (m *Model) MoveUp(n int) {
 	m.cursor = renderutils.Clamp(m.cursor-n, 0, len(m.docs)-1)
-	m.UpdateViewport()
+	m.updateViewport()
 }
 
 // MoveDown moves the selection down by any number of rows.
 // It can not go below the last row.
 func (m *Model) MoveDown(n int) {
 	m.cursor = renderutils.Clamp(m.cursor+n, 0, len(m.docs)-1)
-	m.UpdateViewport()
+	m.updateViewport()
 }
 
 // GotoTop moves the selection to the first row.
@@ -150,15 +199,19 @@ func (m *Model) GotoBottom() {
 	m.MoveDown(len(m.docs))
 }
 
-func (m *Model) renderRow(r int) string {
-	s := make([]string, 0, len(m.docs))
+// TODO properly render the document summary
+func (m *Model) renderDocSummary(r int) string {
+	var s string
 
-	rowText := fmt.Sprintf("%v", r) // TODO actually render the text of the row. Maybe the first four fields using a template?
+	doc := m.docs[r]
+	//for i := 0; i < 4; i++ { // Render the first 4 items
+	//	s += doc[i].FieldName + " "
+	//}
+
+	s += doc[0].FieldName
 
 	style := lipgloss.NewStyle().Width(m.viewport.Width).MaxWidth(m.viewport.Width).Inline(true)
-	renderedCell := m.styles.Cell.Render(style.Render(runewidth.Truncate(rowText, m.viewport.Width, "…")))
-	s = append(s, renderedCell)
+	renderedRow := m.styles.Doc.Render(style.Render(runewidth.Truncate(s, m.viewport.Width, "…")))
 
-	row := lipgloss.JoinHorizontal(lipgloss.Top, s...)
-	return row
+	return renderedRow
 }

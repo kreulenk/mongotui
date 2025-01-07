@@ -22,8 +22,9 @@ import (
 type baseModel struct {
 	table   table.Model
 	doclist doclist.Model
-	engine  *mongodata.Engine
-	err     error // TODO handle how to display errors
+
+	engine *mongodata.Engine
+	err    error // TODO handle how to display errors
 }
 
 func Initialize(client *mongo.Client) {
@@ -84,11 +85,20 @@ func (m baseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// If a collection is selected, pass off control to the doclist
 	if m.table.CollectionSelected() {
-
+		m.doclist.SetSelectedCollection(m.table.SelectedCollection(), m.table.SelectedDatabase())
+		m.doclist.Focus()
 	}
+	m.doclist, cmd = m.doclist.Update(msg)
+
 	return m, cmd
 }
 
 func (m baseModel) View() string {
-	return lipgloss.JoinHorizontal(lipgloss.Left, lipgloss.JoinVertical(lipgloss.Top, m.table.View(), m.table.HelpView()), m.doclist.View())
+	var leftPanel string
+	if m.table.CollectionSelected() { // Switch
+		leftPanel = lipgloss.JoinVertical(lipgloss.Top, m.table.View(), m.doclist.HelpView())
+	} else {
+		leftPanel = lipgloss.JoinVertical(lipgloss.Top, m.table.View(), m.table.HelpView())
+	}
+	return lipgloss.JoinHorizontal(lipgloss.Left, leftPanel, m.doclist.View())
 }

@@ -110,7 +110,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 // CollectionSelected returns whether or not a collection is currently selected.
 func (m Model) CollectionSelected() bool {
-	return m.focus
+	return !m.focus
 }
 
 // DeselectCollection enables key use on the table so that the user can navigate the table again. This signal would

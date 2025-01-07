@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+const timeout = 5 * time.Second
+
 type Server struct {
 	Databases map[string]Database
 }
@@ -29,7 +31,7 @@ type Engine struct {
 }
 
 func (m *Engine) SetDatabases() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	dbNames, err := m.Client.ListDatabaseNames(ctx, bson.D{})
 	if err != nil {
@@ -51,7 +53,7 @@ func (m *Engine) SetDatabases() error {
 // SetCollectionsPerDb fetches the Collections for a given database along with the number of records in each collection
 func (m *Engine) SetCollectionsPerDb(dbName string) error {
 	db := m.Client.Database(dbName)
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	collectionNames, err := db.ListCollectionNames(ctx, bson.D{})
 	if err != nil {
@@ -69,6 +71,30 @@ func (m *Engine) SetCollectionsPerDb(dbName string) error {
 	}
 
 	return nil
+}
+
+// GetData fetches all the data from a given collection in a given database
+// TODO: add pagination
+func (m *Engine) GetData(dbName, collectionName string) ([]bson.M, error) {
+	if dbName == "" || collectionName == "" {
+		return nil, nil
+	}
+
+	db := m.Client.Database(dbName)
+	coll := db.Collection(collectionName)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	cur, err := coll.Find(ctx, bson.D{})
+	if err != nil {
+		return nil, err
+	}
+
+	var data []bson.M
+	if err = cur.All(ctx, &data); err != nil {
+		return nil, err
+	}
+
+	return data, nil
 }
 
 func GetSortedDatabasesByName(databases map[string]Database) []string {
