@@ -14,6 +14,7 @@ type keyMap struct {
 	HalfPageDown key.Binding
 	GotoTop      key.Binding
 	GotoBottom   key.Binding
+	Left         key.Binding
 	Edit         key.Binding
 	View         key.Binding
 }
@@ -74,6 +75,10 @@ var keys = keyMap{
 	GotoBottom: key.NewBinding(
 		key.WithKeys("end", "G"),
 		key.WithHelp("G/end", "go to end"),
+	),
+	Left: key.NewBinding(
+		key.WithKeys("left", "h"),
+		key.WithHelp("←/h", "left"),
 	),
 	Edit: key.NewBinding(
 		key.WithKeys("e"),

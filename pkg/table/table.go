@@ -227,9 +227,14 @@ func (m *Model) MoveDown(n int) {
 
 // MoveRight moves the column to the right.
 func (m *Model) MoveRight() {
-	m.cursorColumn = collectionsColumn
-	m.updateTableData()
-	m.updateViewport()
+	if m.cursorColumn == collectionsColumn {
+		m.selectCollection()
+		return
+	} else if m.cursorColumn == databasesColumn {
+		m.cursorColumn = collectionsColumn
+		m.updateTableData()
+		m.updateViewport()
+	}
 }
 
 // MoveLeft moves the column to the left.

@@ -19,9 +19,18 @@ import (
 //	BorderStyle(lipgloss.NormalBorder()).
 //	BorderForeground(lipgloss.Color("240"))
 
+type componentSelection int
+
+const (
+	dbColSelection componentSelection = iota
+	docSummarySelection
+)
+
 type baseModel struct {
 	table   table.Model
 	doclist doclist.Model
+
+	componentSelection componentSelection
 
 	engine *mongodata.Engine
 	err    error // TODO handle how to display errors
@@ -53,9 +62,10 @@ func initialModel(client *mongo.Client) baseModel {
 	d := doclist.New(engine)
 
 	return baseModel{
-		table:   t,
-		doclist: d,
-		engine:  engine,
+		table:              t,
+		doclist:            d,
+		componentSelection: dbColSelection,
+		engine:             engine,
 	}
 }
 
@@ -64,7 +74,6 @@ func (m baseModel) Init() tea.Cmd {
 }
 
 func (m baseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -81,16 +90,23 @@ func (m baseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, tea.ClearScreen // Necessary for resizes
 	}
+
 	m.table, _ = m.table.Update(msg)
+	m.doclist, _ = m.doclist.Update(msg)
 
 	// If a collection is selected, pass off control to the doclist
-	if m.table.CollectionSelected() {
+	if m.componentSelection == dbColSelection && m.table.CollectionSelected() {
+		m.componentSelection = docSummarySelection
 		m.doclist.SetSelectedCollection(m.table.SelectedCollection(), m.table.SelectedDatabase())
 		m.doclist.Focus()
 	}
-	m.doclist, cmd = m.doclist.Update(msg)
 
-	return m, cmd
+	if m.componentSelection == docSummarySelection && m.doclist.Focused() == false {
+		m.componentSelection = dbColSelection
+		m.table.DeselectCollection()
+	}
+
+	return m, nil
 }
 
 func (m baseModel) View() string {

@@ -90,6 +90,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			m.GotoTop()
 		case key.Matches(msg, keys.GotoBottom):
 			m.GotoBottom()
+		case key.Matches(msg, keys.Left):
+			m.blur()
 			//case key.Matches(msg, keys.Edit):
 			//	m.EditDoc()
 			//case key.Matches(msg, keys.View):
@@ -108,9 +110,13 @@ func (m *Model) SetSelectedCollection(collectionName, databaseName string) {
 	}
 }
 
+func (m Model) Init() tea.Cmd {
+	return nil
+}
+
 // View renders the component.
 func (m Model) View() string {
-	return m.viewport.View()
+	return m.styles.Table.Render(m.viewport.View())
 }
 
 func (m *Model) updateTableRows() {
@@ -134,13 +140,19 @@ func (m *Model) updateTableRows() {
 	m.docs = newDocSummaries
 }
 
+func (m *Model) Focused() bool {
+	return m.focus
+}
+
 func (m *Model) Focus() {
+	m.styles.Table = m.styles.Table.BorderStyle(lipgloss.ThickBorder()).BorderForeground(lipgloss.Color("57"))
 	m.updateTableRows()
 	m.updateViewport()
 	m.focus = true
 }
 
 func (m *Model) blur() {
+	m.styles.Table = m.styles.Table.BorderStyle(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("240"))
 	m.focus = false
 }
 
