@@ -2,9 +2,9 @@ package table
 
 import "github.com/charmbracelet/bubbles/key"
 
-// KeyMap defines keybindings. It satisfies to the help.KeyMap interface, which
+// keyMap defines keybindings. It satisfies to the help.KeyMap interface, which
 // is used to render the help menu.
-type KeyMap struct {
+type keyMap struct {
 	LineUp       key.Binding
 	LineDown     key.Binding
 	PageUp       key.Binding
@@ -18,7 +18,7 @@ type KeyMap struct {
 	Enter        key.Binding
 }
 
-var keyMap = KeyMap{
+var keys = keyMap{
 	LineUp: key.NewBinding(
 		key.WithKeys("up", "k"),
 		key.WithHelp("↑/k", "up"),
@@ -69,16 +69,16 @@ var keyMap = KeyMap{
 // Note that this view is not rendered by default and you must call it
 // manually in your application, where applicable.
 func (m Model) HelpView() string {
-	return m.Help.View(keyMap)
+	return m.Help.View(keys)
 }
 
-// ShortHelp implements the KeyMap interface.
-func (km KeyMap) ShortHelp() []key.Binding {
+// ShortHelp implements the keyMap interface.
+func (km keyMap) ShortHelp() []key.Binding {
 	return []key.Binding{km.LineUp, km.LineDown, km.Right, km.Left}
 }
 
-// FullHelp implements the KeyMap interface.
-func (km KeyMap) FullHelp() [][]key.Binding {
+// FullHelp implements the keyMap interface.
+func (km keyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{km.Right, km.Left},
 		{km.LineUp, km.LineDown, km.GotoTop, km.GotoBottom},

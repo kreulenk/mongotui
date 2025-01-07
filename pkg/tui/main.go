@@ -67,12 +67,6 @@ func (m baseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "esc": // TODO use the focus/blur for when we are opening any modals
-			if m.table.Focused() {
-				m.table.Blur()
-			} else {
-				m.table.Focus()
-			}
 		case "q", "ctrl+c":
 			return m, tea.Quit
 		}
@@ -86,7 +80,12 @@ func (m baseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, tea.ClearScreen // Necessary for resizes
 	}
-	m.table, cmd = m.table.Update(msg)
+	m.table, _ = m.table.Update(msg)
+
+	// If a collection is selected, pass off control to the doclist
+	if m.table.CollectionSelected() {
+
+	}
 	return m, cmd
 }
 

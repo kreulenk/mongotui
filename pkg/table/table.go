@@ -40,8 +40,6 @@ type Model struct {
 	collectionStart int
 	collectionEnd   int
 
-	isCollectionSelected bool
-
 	engine *mongodata.Engine
 }
 
@@ -78,32 +76,31 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, keyMap.LineUp):
+		case key.Matches(msg, keys.LineUp):
 			m.MoveUp(1)
-		case key.Matches(msg, keyMap.LineDown):
+		case key.Matches(msg, keys.LineDown):
 			m.MoveDown(1)
-		case key.Matches(msg, keyMap.PageUp):
+		case key.Matches(msg, keys.PageUp):
 			m.MoveUp(m.viewport.Height)
-		case key.Matches(msg, keyMap.PageDown):
+		case key.Matches(msg, keys.PageDown):
 			m.MoveDown(m.viewport.Height)
-		case key.Matches(msg, keyMap.HalfPageUp):
+		case key.Matches(msg, keys.HalfPageUp):
 			m.MoveUp(m.viewport.Height / 2)
-		case key.Matches(msg, keyMap.HalfPageDown):
+		case key.Matches(msg, keys.HalfPageDown):
 			m.MoveDown(m.viewport.Height / 2)
-		case key.Matches(msg, keyMap.LineDown):
+		case key.Matches(msg, keys.LineDown):
 			m.MoveDown(1)
-		case key.Matches(msg, keyMap.GotoTop):
+		case key.Matches(msg, keys.GotoTop):
 			m.GotoTop()
-		case key.Matches(msg, keyMap.GotoBottom):
+		case key.Matches(msg, keys.GotoBottom):
 			m.GotoBottom()
-		case key.Matches(msg, keyMap.Right):
+		case key.Matches(msg, keys.Right):
 			m.GoRight()
-		case key.Matches(msg, keyMap.Left):
+		case key.Matches(msg, keys.Left):
 			m.GoLeft()
-		case key.Matches(msg, keyMap.Enter):
+		case key.Matches(msg, keys.Enter):
 			if m.cursorColumn == collectionsColumn {
-				m.isCollectionSelected = true
-				m.Blur()
+				m.selectCollection()
 			}
 		}
 	}
@@ -111,21 +108,22 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	return m, nil
 }
 
-// Focused returns the focus state of the table.
-func (m Model) Focused() bool {
+// CollectionSelected returns whether or not a collection is currently selected.
+func (m Model) CollectionSelected() bool {
 	return m.focus
 }
 
-// Focus focuses the table, allowing the user to move around the rows and
-// interact.
-func (m *Model) Focus() {
+// DeselectCollection enables key use on the table so that the user can navigate the table again. This signal would
+// be sent from another component
+func (m *Model) DeselectCollection() {
 	m.focus = true
 	m.styles.Table = m.styles.Table.BorderStyle(lipgloss.ThickBorder()).BorderForeground(lipgloss.Color("57"))
 	m.updateViewport()
 }
 
-// Blur blurs the table, preventing selection or movement.
-func (m *Model) Blur() {
+// selectCollection disables key use on the table so that other components can now display information about the collection
+// that is currently highlighted
+func (m *Model) selectCollection() {
 	m.focus = false
 	m.styles.Table = m.styles.Table.BorderStyle(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("240"))
 	m.updateViewport()
