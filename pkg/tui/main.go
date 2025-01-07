@@ -95,9 +95,6 @@ func (m baseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tea.WindowSizeMsg:
 		splitWidth := msg.Width / 2
-		//for i := range m.table.Columns() {
-		//	m.table.Columns()[i].Width = getColumnWidth(splitWidth, len(m.table.Columns()))
-		//}
 		m.table.SetWidth(splitWidth - 6) // TODO look into a more intelligent way of getting this 6 value
 		m.table.SetHeight(msg.Height - 4)
 
@@ -108,10 +105,6 @@ func (m baseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	m.table, cmd = m.table.Update(msg)
 	return m, cmd
-}
-
-func getColumnWidth(windowWidth int, columns int) int {
-	return (windowWidth - 8) / columns
 }
 
 func (m baseModel) View() string {

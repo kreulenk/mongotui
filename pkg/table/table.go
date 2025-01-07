@@ -16,7 +16,6 @@ type cursorColumn int
 const (
 	databasesColumn cursorColumn = iota
 	collectionsColumn
-	dataColumn
 )
 
 // Model defines a state for the table widget.
@@ -284,10 +283,7 @@ func (m Model) HelpView() string {
 // UpdateViewport updates the list content based on the previously defined
 // columns and rows.
 func (m *Model) UpdateViewport() {
-
-	// Render only rows from: m.cursorRow-m.viewport.Height to: m.cursorRow+m.viewport.Height
-	// Constant runtime, independent of number of rows in a table.
-	// Limits the number of renderedDbCells to a maximum of 2*m.viewport.Height
+	// Database column
 	if m.cursorDatabase >= 0 {
 		m.databaseStart = renderutils.Clamp(m.cursorDatabase-m.viewport.Height, 0, m.cursorDatabase)
 	} else {
@@ -300,7 +296,8 @@ func (m *Model) UpdateViewport() {
 	}
 	renderedDbColumn := lipgloss.JoinVertical(lipgloss.Top, renderedDbCells...)
 
-	if m.cursorColumn >= 0 {
+	// Collection column
+	if m.cursorCollection >= 0 {
 		m.collectionStart = renderutils.Clamp(m.cursorCollection-m.viewport.Height, 0, m.cursorCollection)
 	} else {
 		m.collectionStart = 0
@@ -368,9 +365,9 @@ func (m Model) Width() int {
 // It can not go above the first row.
 func (m *Model) MoveUp(n int) {
 	if m.cursorColumn == databasesColumn {
-		m.cursorDatabase = renderutils.Clamp(m.cursorDatabase-1, 0, len(m.databases)-1)
+		m.cursorDatabase = renderutils.Clamp(m.cursorDatabase-n, 0, len(m.databases)-1)
 	} else {
-		m.cursorCollection = renderutils.Clamp(m.cursorCollection-1, 0, len(m.collections)-1)
+		m.cursorCollection = renderutils.Clamp(m.cursorCollection-n, 0, len(m.collections)-1)
 	}
 
 	m.updateTableData()
@@ -399,6 +396,9 @@ func (m *Model) MoveRight() {
 
 // MoveLeft moves the column to the left.
 func (m *Model) MoveLeft() {
+	if m.cursorColumn == collectionsColumn {
+		m.cursorCollection = 0
+	}
 	m.cursorColumn = databasesColumn
 	m.updateTableData()
 	m.UpdateViewport()
@@ -445,7 +445,6 @@ func (m Model) headersView() string {
 	return lipgloss.JoinHorizontal(lipgloss.Top, s...)
 }
 
-// TODO look to combine with renderCollectionCell
 func (m *Model) renderDatabaseCell(r int) string {
 	style := lipgloss.NewStyle().Width(m.columnWidth()).MaxWidth(m.columnWidth()).Inline(true)
 	renderedCell := m.styles.Cell.Render(style.Render(runewidth.Truncate(m.databases[r], m.viewport.Width/len(m.headersText), "…")))
