@@ -22,7 +22,8 @@ const (
 
 // Model defines a state for the table widget.
 type Model struct {
-	Help help.Model
+	Help   help.Model
+	styles Styles
 
 	viewport    viewport.Model
 	headersText []string
@@ -39,6 +40,8 @@ type Model struct {
 	collectionStart int
 	collectionEnd   int
 
+	isCollectionSelected bool
+
 	engine *mongodata.Engine
 }
 
@@ -46,7 +49,8 @@ type Model struct {
 func New(engine *mongodata.Engine) Model {
 	databases := mongodata.GetSortedDatabasesByName(engine.Server.Databases)
 	m := Model{
-		Help: help.New(),
+		Help:   help.New(),
+		styles: defaultStyles(),
 
 		viewport:    viewport.New(0, 20),
 		headersText: []string{"Databases", "Collections"},
@@ -60,7 +64,7 @@ func New(engine *mongodata.Engine) Model {
 	}
 
 	m.updateTableData()
-	m.UpdateViewport()
+	m.updateViewport()
 
 	return m
 }
@@ -96,6 +100,11 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			m.GoRight()
 		case key.Matches(msg, keyMap.Left):
 			m.GoLeft()
+		case key.Matches(msg, keyMap.Enter):
+			if m.cursorColumn == collectionsColumn {
+				m.isCollectionSelected = true
+				m.Blur()
+			}
 		}
 	}
 
@@ -111,23 +120,25 @@ func (m Model) Focused() bool {
 // interact.
 func (m *Model) Focus() {
 	m.focus = true
-	m.UpdateViewport()
+	m.styles.Table = m.styles.Table.BorderStyle(lipgloss.ThickBorder()).BorderForeground(lipgloss.Color("57"))
+	m.updateViewport()
 }
 
 // Blur blurs the table, preventing selection or movement.
 func (m *Model) Blur() {
 	m.focus = false
-	m.UpdateViewport()
+	m.styles.Table = m.styles.Table.BorderStyle(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("240"))
+	m.updateViewport()
 }
 
 // View renders the component.
 func (m Model) View() string {
-	return styles.Table.Render(m.headersView() + "\n" + m.viewport.View())
+	return m.styles.Table.Render(m.headersView() + "\n" + m.viewport.View())
 }
 
-// UpdateViewport updates the list content based on the previously defined
+// updateViewport updates the list content based on the previously defined
 // columns and rows.
-func (m *Model) UpdateViewport() {
+func (m *Model) updateViewport() {
 	// Database column
 	if m.cursorDatabase >= 0 {
 		m.databaseStart = renderutils.Clamp(m.cursorDatabase-m.viewport.Height, 0, m.cursorDatabase)
@@ -159,41 +170,35 @@ func (m *Model) UpdateViewport() {
 	)
 }
 
-// SelectedRow returns the selected row.
+// SelectedDatabase returns the database that is currently highlighted.
 func (m Model) SelectedDatabase() string {
 	if m.cursorDatabase < 0 || m.cursorDatabase >= len(m.databases) {
 		return ""
 	}
-
 	return m.databases[m.cursorDatabase]
 }
 
-// SelectedCell returns the text within the currently highlighted cell
-func (m Model) SelectedCell() string {
-	if m.cursorDatabase < 0 || m.cursorDatabase >= len(m.databases) {
-		return ""
-	} else if m.cursorCollection < 0 || m.cursorCollection >= len(m.collections) {
+// SelectedCollection returns the collection that is currently highlighted.
+func (m Model) SelectedCollection() string {
+	if m.cursorCollection < 0 ||
+		m.cursorCollection >= len(m.collections) ||
+		m.cursorColumn == databasesColumn {
 		return ""
 	}
 
-	if m.cursorColumn == databasesColumn {
-		return m.databases[m.cursorDatabase]
-	} else if m.cursorColumn == collectionsColumn {
-		return m.collections[m.cursorCollection]
-	}
-	return ""
+	return m.collections[m.cursorCollection]
 }
 
 // SetWidth sets the width of the viewport of the table.
 func (m *Model) SetWidth(w int) {
 	m.viewport.Width = w
-	m.UpdateViewport()
+	m.updateViewport()
 }
 
 // SetHeight sets the height of the viewport of the table.
 func (m *Model) SetHeight(h int) {
 	m.viewport.Height = h - lipgloss.Height(m.headersView())
-	m.UpdateViewport()
+	m.updateViewport()
 }
 
 // MoveUp moves the selection up by any number of rows.
@@ -206,7 +211,7 @@ func (m *Model) MoveUp(n int) {
 	}
 
 	m.updateTableData()
-	m.UpdateViewport()
+	m.updateViewport()
 }
 
 // MoveDown moves the selection down by any number of rows.
@@ -219,14 +224,14 @@ func (m *Model) MoveDown(n int) {
 	}
 
 	m.updateTableData()
-	m.UpdateViewport()
+	m.updateViewport()
 }
 
 // MoveRight moves the column to the right.
 func (m *Model) MoveRight() {
 	m.cursorColumn = collectionsColumn
 	m.updateTableData()
-	m.UpdateViewport()
+	m.updateViewport()
 }
 
 // MoveLeft moves the column to the left.
@@ -236,7 +241,7 @@ func (m *Model) MoveLeft() {
 	}
 	m.cursorColumn = databasesColumn
 	m.updateTableData()
-	m.UpdateViewport()
+	m.updateViewport()
 }
 
 // GotoTop moves the selection to the first row.
@@ -274,16 +279,16 @@ func (m Model) headersView() string {
 	for _, col := range m.headersText {
 		style := lipgloss.NewStyle().Width(m.columnWidth()).MaxWidth(m.columnWidth()).Inline(true)
 		renderedCell := style.Render(runewidth.Truncate(col, m.viewport.Width/2, "…"))
-		s = append(s, styles.Header.Render(renderedCell))
+		s = append(s, m.styles.Header.Render(renderedCell))
 	}
 	return lipgloss.JoinHorizontal(lipgloss.Top, s...)
 }
 
 func (m *Model) renderDatabaseCell(r int) string {
 	style := lipgloss.NewStyle().Width(m.columnWidth()).MaxWidth(m.columnWidth()).Inline(true)
-	renderedCell := styles.Cell.Render(style.Render(runewidth.Truncate(m.databases[r], m.viewport.Width/len(m.headersText), "…")))
+	renderedCell := m.styles.Cell.Render(style.Render(runewidth.Truncate(m.databases[r], m.viewport.Width/len(m.headersText), "…")))
 	if r == m.cursorDatabase {
-		renderedCell = styles.Selected.Render(renderedCell)
+		renderedCell = m.styles.Selected.Render(renderedCell)
 	}
 
 	return renderedCell
@@ -291,9 +296,9 @@ func (m *Model) renderDatabaseCell(r int) string {
 
 func (m *Model) renderCollectionCell(r int) string {
 	style := lipgloss.NewStyle().Width(m.columnWidth()).MaxWidth(m.columnWidth()).Inline(true)
-	renderedCell := styles.Cell.Render(style.Render(runewidth.Truncate(m.collections[r], m.viewport.Width/len(m.headersText), "…")))
+	renderedCell := m.styles.Cell.Render(style.Render(runewidth.Truncate(m.collections[r], m.viewport.Width/len(m.headersText), "…")))
 	if r == m.cursorCollection && m.cursorColumn == collectionsColumn {
-		renderedCell = styles.Selected.Render(renderedCell)
+		renderedCell = m.styles.Selected.Render(renderedCell)
 	}
 
 	return renderedCell

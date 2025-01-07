@@ -15,6 +15,7 @@ type KeyMap struct {
 	GotoBottom   key.Binding
 	Right        key.Binding
 	Left         key.Binding
+	Enter        key.Binding
 }
 
 var keyMap = KeyMap{
@@ -57,6 +58,10 @@ var keyMap = KeyMap{
 	Left: key.NewBinding(
 		key.WithKeys("left", "h"),
 		key.WithHelp("←/h", "left"),
+	),
+	Enter: key.NewBinding(
+		key.WithKeys("enter"),
+		key.WithHelp("enter", "select collection"),
 	),
 }
 
