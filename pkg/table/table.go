@@ -1,28 +1,3 @@
-// MIT License
-//
-// Copyright (c) 2020-2023 Charmbracelet, Inc
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
-
-// This table is a modified version of the bubbles table component which can be found at:
-// https://github.com/charmbracelet/bubbles/tree/master/table
-
 package table
 
 import (
@@ -49,29 +24,23 @@ type Model struct {
 	KeyMap KeyMap
 	Help   help.Model
 
-	cols            []Column
-	rows            []Row
-	cursorColumn    cursorColumn
-	cursorRow       int
-	selectedDb      string // TODO Potentially refactor both of these selected fields into one field
-	selectedDbIndex int    // To remember what database we are on when we go left back from collections row
-	focus           bool
-	styles          Styles
+	headersText []string
+	databases   []string
+	collections []string
 
-	viewport viewport.Model
-	start    int
-	end      int
+	cursorColumn     cursorColumn
+	cursorDatabase   int
+	cursorCollection int
+	focus            bool
+	styles           Styles
+
+	viewport        viewport.Model
+	databaseStart   int
+	databaseEnd     int
+	collectionStart int
+	collectionEnd   int
 
 	engine *mongodata.Engine
-}
-
-// Row represents one line in the table.
-type Row []string
-
-// Column defines the table structure.
-type Column struct {
-	Title string
-	Width int
 }
 
 // KeyMap defines keybindings. It satisfies to the help.KeyMap interface, which
@@ -133,11 +102,11 @@ func DefaultKeyMap() KeyMap {
 		),
 		GotoTop: key.NewBinding(
 			key.WithKeys("home", "g"),
-			key.WithHelp("g/home", "go to start"),
+			key.WithHelp("g/home", "go to databaseStart"),
 		),
 		GotoBottom: key.NewBinding(
-			key.WithKeys("end", "G"),
-			key.WithHelp("G/end", "go to end"),
+			key.WithKeys("databaseEnd", "G"),
+			key.WithHelp("G/databaseEnd", "go to databaseEnd"),
 		),
 		Right: key.NewBinding(
 			key.WithKeys("right", "l"),
@@ -182,20 +151,16 @@ type Option func(*Model)
 
 // New creates a new baseModel for the table widget.
 func New(engine *mongodata.Engine, opts ...Option) Model {
-	databases := getSortedDatabasesByName(engine.Server.Databases)
+	databases := mongodata.GetSortedDatabasesByName(engine.Server.Databases)
 
 	m := Model{
-		cursorRow:       0,
-		cursorColumn:    databasesColumn,
-		viewport:        viewport.New(0, 20),
-		selectedDb:      databases[0],
-		selectedDbIndex: 0,
+		cursorDatabase:   0,
+		cursorCollection: 0,
+		cursorColumn:     databasesColumn,
+		viewport:         viewport.New(0, 20),
 
-		cols: []Column{
-			{Title: "Databases"},
-			{Title: "Collections"},
-		},
-		rows: []Row{databases},
+		headersText: []string{"Databases", "Collections"},
+		databases:   databases,
 
 		KeyMap: DefaultKeyMap(),
 		Help:   help.New(),
@@ -208,7 +173,7 @@ func New(engine *mongodata.Engine, opts ...Option) Model {
 		opt(&m)
 	}
 
-	m.updateTableRows()
+	m.updateTableData()
 	m.UpdateViewport()
 
 	return m
@@ -319,64 +284,62 @@ func (m Model) HelpView() string {
 // UpdateViewport updates the list content based on the previously defined
 // columns and rows.
 func (m *Model) UpdateViewport() {
-	renderedRows := make([]string, 0, len(m.rows))
 
 	// Render only rows from: m.cursorRow-m.viewport.Height to: m.cursorRow+m.viewport.Height
 	// Constant runtime, independent of number of rows in a table.
-	// Limits the number of renderedRows to a maximum of 2*m.viewport.Height
-	if m.cursorRow >= 0 {
-		m.start = renderutils.Clamp(m.cursorRow-m.viewport.Height, 0, m.cursorRow)
+	// Limits the number of renderedDbCells to a maximum of 2*m.viewport.Height
+	if m.cursorDatabase >= 0 {
+		m.databaseStart = renderutils.Clamp(m.cursorDatabase-m.viewport.Height, 0, m.cursorDatabase)
 	} else {
-		m.start = 0
+		m.databaseStart = 0
 	}
-	m.end = renderutils.Clamp(m.cursorRow+m.viewport.Height, m.cursorRow, len(m.rows))
-	for i := m.start; i < m.end; i++ {
-		renderedRows = append(renderedRows, m.renderRow(i))
+	m.databaseEnd = renderutils.Clamp(m.cursorDatabase+m.viewport.Height, m.cursorDatabase, len(m.databases))
+	renderedDbCells := make([]string, 0, len(m.databases))
+	for i := m.databaseStart; i < m.databaseEnd; i++ {
+		renderedDbCells = append(renderedDbCells, m.renderDatabaseCell(i))
 	}
+	renderedDbColumn := lipgloss.JoinVertical(lipgloss.Top, renderedDbCells...)
+
+	if m.cursorColumn >= 0 {
+		m.collectionStart = renderutils.Clamp(m.cursorCollection-m.viewport.Height, 0, m.cursorCollection)
+	} else {
+		m.collectionStart = 0
+	}
+	m.collectionEnd = renderutils.Clamp(m.cursorCollection+m.viewport.Height, m.cursorCollection, len(m.collections))
+	renderedCollectionCells := make([]string, 0, len(m.collections))
+	for i := m.collectionStart; i < m.collectionEnd; i++ {
+		renderedCollectionCells = append(renderedCollectionCells, m.renderCollectionCell(i))
+	}
+	renderedCollectionColumn := lipgloss.JoinVertical(lipgloss.Top, renderedCollectionCells...)
 
 	m.viewport.SetContent(
-		lipgloss.JoinVertical(lipgloss.Left, renderedRows...),
+		lipgloss.JoinHorizontal(lipgloss.Left, renderedDbColumn, renderedCollectionColumn),
 	)
 }
 
 // SelectedRow returns the selected row.
-func (m Model) SelectedRow() Row {
-	if m.cursorRow < 0 || m.cursorRow >= len(m.rows) {
-		return nil
+func (m Model) SelectedDatabase() string {
+	if m.cursorDatabase < 0 || m.cursorDatabase >= len(m.databases) {
+		return ""
 	}
 
-	return m.rows[m.cursorRow]
+	return m.databases[m.cursorDatabase]
 }
 
 // SelectedCell returns the text within the currently highlighted cell
 func (m Model) SelectedCell() string {
-	if m.cursorRow < 0 || m.cursorRow >= len(m.rows) {
+	if m.cursorDatabase < 0 || m.cursorDatabase >= len(m.databases) {
+		return ""
+	} else if m.cursorCollection < 0 || m.cursorCollection >= len(m.collections) {
 		return ""
 	}
 
-	return m.rows[m.cursorRow][m.cursorColumn]
-}
-
-// Rows returns the current rows.
-func (m Model) Rows() []Row {
-	return m.rows
-}
-
-// Columns returns the current columns.
-func (m Model) Columns() []Column {
-	return m.cols
-}
-
-// SetRows sets a new rows state.
-func (m *Model) SetRows(r []Row) {
-	m.rows = r
-	m.UpdateViewport()
-}
-
-// SetColumns sets a new columns state.
-func (m *Model) SetColumns(c []Column) {
-	m.cols = c
-	m.UpdateViewport()
+	if m.cursorColumn == databasesColumn {
+		return m.databases[m.cursorDatabase]
+	} else if m.cursorColumn == collectionsColumn {
+		return m.collections[m.cursorCollection]
+	}
+	return ""
 }
 
 // SetWidth sets the width of the viewport of the table.
@@ -401,35 +364,16 @@ func (m Model) Width() int {
 	return m.viewport.Width
 }
 
-// Cursor returns the index of the selected row.
-func (m Model) Cursor() int {
-	return m.cursorRow
-}
-
-// SetCursor sets the cursorRow position in the table.
-func (m *Model) SetCursor(n int) {
-	m.cursorRow = renderutils.Clamp(n, 0, len(m.rows)-1)
-	m.UpdateViewport()
-}
-
 // MoveUp moves the selection up by any number of rows.
 // It can not go above the first row.
 func (m *Model) MoveUp(n int) {
-	m.cursorRow = renderutils.Max(0, m.cursorRow-1)
 	if m.cursorColumn == databasesColumn {
-		m.selectedDbIndex = m.cursorRow
-		m.selectedDb = m.SelectedCell()
+		m.cursorDatabase = renderutils.Clamp(m.cursorDatabase-1, 0, len(m.databases)-1)
+	} else {
+		m.cursorCollection = renderutils.Clamp(m.cursorCollection-1, 0, len(m.collections)-1)
 	}
 
-	switch {
-	case m.start == 0:
-		m.viewport.SetYOffset(renderutils.Clamp(m.viewport.YOffset, 0, m.cursorRow))
-	case m.start < m.viewport.Height:
-		m.viewport.YOffset = renderutils.Clamp(renderutils.Clamp(m.viewport.YOffset+n, 0, m.cursorRow), 0, m.viewport.Height)
-	case m.viewport.YOffset >= 1:
-		m.viewport.YOffset = renderutils.Clamp(m.viewport.YOffset+n, 1, m.viewport.Height)
-	}
-	m.updateTableRows()
+	m.updateTableData()
 	m.UpdateViewport()
 }
 
@@ -437,60 +381,45 @@ func (m *Model) MoveUp(n int) {
 // It can not go below the last row.
 func (m *Model) MoveDown(n int) {
 	if m.cursorColumn == databasesColumn {
-		m.cursorRow = renderutils.Clamp(m.cursorRow+n, 0, len(m.engine.Server.Databases)-1)
-		m.selectedDbIndex = m.cursorRow
-		m.selectedDb = m.SelectedCell()
-	} else { // collections column
-		m.cursorRow = renderutils.Clamp(m.cursorRow+n, 0, len(m.engine.Server.Databases[m.selectedDb].Collections)-1)
+		m.cursorDatabase = renderutils.Clamp(m.cursorDatabase+n, 0, len(m.databases)-1)
+	} else {
+		m.cursorCollection = renderutils.Clamp(m.cursorCollection+n, 0, len(m.collections)-1)
 	}
 
-	m.updateTableRows()
+	m.updateTableData()
 	m.UpdateViewport()
-
-	switch {
-	case m.end == len(m.rows) && m.viewport.YOffset > 0:
-		m.viewport.SetYOffset(renderutils.Clamp(m.viewport.YOffset-n, 1, m.viewport.Height))
-	case m.cursorRow > (m.end-m.start)/2 && m.viewport.YOffset > 0:
-		m.viewport.SetYOffset(renderutils.Clamp(m.viewport.YOffset-n, 1, m.cursorRow))
-	case m.viewport.YOffset > 1:
-	case m.cursorRow > m.viewport.YOffset+m.viewport.Height-1:
-		m.viewport.SetYOffset(renderutils.Clamp(m.viewport.YOffset+1, 0, 1))
-	}
 }
 
 // MoveRight moves the column to the right.
 func (m *Model) MoveRight() {
-	if m.cursorColumn == databasesColumn {
-		m.selectedDb = m.SelectedCell()
-		m.cursorColumn = collectionsColumn
-		m.selectedDbIndex = m.cursorRow
-		m.cursorRow = 0
-	}
-	m.updateTableRows()
+	m.cursorColumn = collectionsColumn
+	m.updateTableData()
 	m.UpdateViewport()
 }
 
 // MoveLeft moves the column to the left.
 func (m *Model) MoveLeft() {
-	if m.cursorColumn == collectionsColumn {
-		m.cursorColumn = databasesColumn
-		m.cursorRow = m.selectedDbIndex
-		m.selectedDb = m.SelectedCell()
-	}
-	m.updateTableRows()
+	m.cursorColumn = databasesColumn
+	m.updateTableData()
 	m.UpdateViewport()
 }
 
 // GotoTop moves the selection to the first row.
-// TODO fix this to work with this new split table element
 func (m *Model) GotoTop() {
-	m.MoveUp(m.cursorRow)
+	if m.cursorColumn == databasesColumn {
+		m.MoveUp(m.cursorDatabase)
+	} else {
+		m.MoveUp(m.cursorCollection)
+	}
 }
 
 // GotoBottom moves the selection to the last row.
-// TODO fix this to work with this new split table element
 func (m *Model) GotoBottom() {
-	m.MoveDown(len(m.rows))
+	if m.cursorColumn == databasesColumn {
+		m.MoveDown(len(m.databases))
+	} else {
+		m.MoveDown(len(m.collections))
+	}
 }
 
 // GoRight moves to the next column.
@@ -502,35 +431,37 @@ func (m *Model) GoLeft() {
 	m.MoveLeft()
 }
 
+func (m *Model) columnWidth() int {
+	return m.viewport.Width / len(m.headersText)
+}
+
 func (m Model) headersView() string {
-	s := make([]string, 0, len(m.cols))
-	for _, col := range m.cols {
-		if col.Width <= 0 {
-			continue
-		}
-		style := lipgloss.NewStyle().Width(col.Width).MaxWidth(col.Width).Inline(true)
-		renderedCell := style.Render(runewidth.Truncate(col.Title, col.Width, "…"))
+	s := make([]string, 0, len(m.headersText))
+	for _, col := range m.headersText {
+		style := lipgloss.NewStyle().Width(m.columnWidth()).MaxWidth(m.columnWidth()).Inline(true)
+		renderedCell := style.Render(runewidth.Truncate(col, m.viewport.Width/2, "…"))
 		s = append(s, m.styles.Header.Render(renderedCell))
 	}
 	return lipgloss.JoinHorizontal(lipgloss.Top, s...)
 }
 
-func (m *Model) renderRow(r int) string {
-	s := make([]string, 0, len(m.cols))
-	for i, value := range m.rows[r] {
-		if m.cols[i].Width <= 0 {
-			continue
-		}
-		style := lipgloss.NewStyle().Width(m.cols[i].Width).MaxWidth(m.cols[i].Width).Inline(true)
-		renderedCell := m.styles.Cell.Render(style.Render(runewidth.Truncate(value, m.cols[i].Width, "…")))
-		if (m.cursorColumn == databasesColumn && cursorColumn(i) == databasesColumn && r == m.cursorRow) ||
-			(m.cursorColumn == collectionsColumn && cursorColumn(i) == databasesColumn && r == m.selectedDbIndex) ||
-			(m.cursorColumn == collectionsColumn && cursorColumn(i) == collectionsColumn && r == m.cursorRow) {
-			renderedCell = m.styles.Selected.Render(renderedCell)
-		}
-		s = append(s, renderedCell)
+// TODO look to combine with renderCollectionCell
+func (m *Model) renderDatabaseCell(r int) string {
+	style := lipgloss.NewStyle().Width(m.columnWidth()).MaxWidth(m.columnWidth()).Inline(true)
+	renderedCell := m.styles.Cell.Render(style.Render(runewidth.Truncate(m.databases[r], m.viewport.Width/len(m.headersText), "…")))
+	if r == m.cursorDatabase {
+		renderedCell = m.styles.Selected.Render(renderedCell)
 	}
 
-	row := lipgloss.JoinHorizontal(lipgloss.Top, s...)
-	return row
+	return renderedCell
+}
+
+func (m *Model) renderCollectionCell(r int) string {
+	style := lipgloss.NewStyle().Width(m.columnWidth()).MaxWidth(m.columnWidth()).Inline(true)
+	renderedCell := m.styles.Cell.Render(style.Render(runewidth.Truncate(m.collections[r], m.viewport.Width/len(m.headersText), "…")))
+	if r == m.cursorCollection && m.cursorColumn == collectionsColumn {
+		renderedCell = m.styles.Selected.Render(renderedCell)
+	}
+
+	return renderedCell
 }

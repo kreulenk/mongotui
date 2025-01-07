@@ -6,6 +6,7 @@ import (
 	"context"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"slices"
 	"time"
 )
 
@@ -68,4 +69,23 @@ func (m *Engine) SetCollectionsPerDb(dbName string) error {
 	}
 
 	return nil
+}
+
+func GetSortedDatabasesByName(databases map[string]Database) []string {
+	databaseNames := make([]string, 0, len(databases))
+	for name := range databases {
+		databaseNames = append(databaseNames, name)
+	}
+	slices.Sort(databaseNames)
+	return databaseNames
+}
+
+// GetSortedCollectionsByName returns a slice of collection names sorted alphabetically
+func GetSortedCollectionsByName(collections map[string]Collection) []string {
+	collectionNames := make([]string, 0, len(collections))
+	for name := range collections {
+		collectionNames = append(collectionNames, name)
+	}
+	slices.Sort(collectionNames)
+	return collectionNames
 }
