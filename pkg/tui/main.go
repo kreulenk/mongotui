@@ -14,7 +14,7 @@ import (
 	"os"
 )
 
-// TODO maybe make a style package so that all componenets can share the same styles
+// TODO maybe make a style package so that all components can share the same styles
 //var baseStyle = lipgloss.NewStyle().
 //	BorderStyle(lipgloss.NormalBorder()).
 //	BorderForeground(lipgloss.Color("240"))
@@ -48,24 +48,7 @@ func initialModel(client *mongo.Client) baseModel {
 		os.Exit(1)
 	}
 
-	t := table.New(
-		engine,
-		table.WithFocused(true),
-	)
-
-	// TODO move these styles to the table package
-	ts := table.DefaultStyles()
-	ts.Header = ts.Header.
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color("240")).
-		BorderBottom(true).
-		Bold(false)
-	ts.Selected = ts.Selected.
-		Foreground(lipgloss.Color("229")).
-		Background(lipgloss.Color("57")).
-		Bold(false)
-	t.SetStyles(ts)
-
+	t := table.New(engine)
 	d := doclist.New(engine)
 
 	return baseModel{
