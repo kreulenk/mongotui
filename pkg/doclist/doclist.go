@@ -176,12 +176,8 @@ func (m *Model) blur() {
 // columns and rows.
 func (m *Model) updateViewport() {
 	renderedRows := make([]string, 0, len(m.docs))
-	var startDocIndex int
-	if m.cursor >= 0 {
-		startDocIndex = renderutils.Clamp(m.cursor-m.viewport.Height, 0, m.cursor)
-	}
 	heightLeft := m.viewport.Height
-	for i := startDocIndex; i < len(m.docs) && heightLeft > 0; i++ {
+	for i := m.cursor; i < len(m.docs) && heightLeft > 0; i++ {
 		newRow, heightUsed := m.renderDocSummary(i, heightLeft)
 		renderedRows = append(renderedRows, newRow)
 		heightLeft -= heightUsed
