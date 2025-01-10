@@ -14,6 +14,7 @@ func defaultStyles() Styles {
 	return Styles{
 		Table:    lipgloss.NewStyle().BorderStyle(lipgloss.ThickBorder()).BorderForeground(lipgloss.Color("240")),
 		Selected: lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("212")),
-		Doc:      lipgloss.NewStyle().Padding(0, 1),
+		Doc: lipgloss.NewStyle().
+			BorderStyle(lipgloss.ThickBorder()).BorderForeground(lipgloss.Color("57")),
 	}
 }

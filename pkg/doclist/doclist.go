@@ -7,7 +7,6 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/mattn/go-runewidth"
 	"mtui/pkg/mongodata"
 	"mtui/pkg/renderutils"
 	"os"
@@ -21,7 +20,7 @@ type selectedCollection struct {
 type Model struct {
 	Help help.Model
 
-	docs   []Row
+	docs   []Doc
 	styles Styles
 
 	cursor             int
@@ -35,18 +34,18 @@ type Model struct {
 	engine *mongodata.Engine
 }
 
-type Row []DocSummary
+type Doc []FieldSummary
 
-type DocSummary struct {
-	FieldName  string
-	FieldType  string // TODO restrict to a set of types
-	FieldValue string
+type FieldSummary struct {
+	Name  string
+	Type  string // TODO restrict to a set of types
+	Value string
 }
 
 // New creates a new baseModel for the table widget.
 func New(engine *mongodata.Engine) Model {
 	m := Model{
-		docs:     []Row{},
+		docs:     []Doc{},
 		viewport: viewport.New(0, 20),
 
 		Help:   help.New(),
@@ -120,24 +119,43 @@ func (m Model) View() string {
 }
 
 func (m *Model) updateTableRows() {
-	docs, err := m.engine.GetData(m.selectedCollection.databaseName, m.selectedCollection.collectionName)
+	mongoDocs, err := m.engine.GetData(m.selectedCollection.databaseName, m.selectedCollection.collectionName)
 	if err != nil { // TODO improve how we handle errors
 		fmt.Printf("could not get data: %v", err)
 		os.Exit(1)
 	}
-	var newDocSummaries []Row
-	for _, doc := range docs {
-		var row Row
+	var newDocs []Doc
+	for _, doc := range mongoDocs {
+		var row Doc
 		for k, v := range doc {
-			row = append(row, DocSummary{
-				FieldName:  k,
-				FieldType:  "TODO: implement",
-				FieldValue: fmt.Sprintf("%v", v),
+			row = append(row, FieldSummary{
+				Name:  k,
+				Type:  getFieldType(v),
+				Value: fmt.Sprintf("%v", v),
 			})
 		}
-		newDocSummaries = append(newDocSummaries, row)
+		newDocs = append(newDocs, row)
 	}
-	m.docs = newDocSummaries
+	m.docs = newDocs
+}
+
+func getFieldType(value interface{}) string {
+	switch value.(type) {
+	case string:
+		return "string"
+	case int:
+		return "int"
+	case float64, float32:
+		return "double"
+	case bool:
+		return "boolean"
+	case map[string]interface{}:
+		return "object"
+	case []interface{}:
+		return "array"
+	default:
+		return "unknown"
+	}
 }
 
 func (m *Model) Focused() bool {
@@ -211,19 +229,19 @@ func (m *Model) GotoBottom() {
 	m.MoveDown(len(m.docs))
 }
 
-// TODO properly render the document summary
 func (m *Model) renderDocSummary(r int) string {
-	var s string
-
 	doc := m.docs[r]
-	//for i := 0; i < 4; i++ { // Render the first 4 items
-	//	s += doc[i].FieldName + " "
-	//}
 
-	s += doc[0].FieldName
+	var fields []string
+	for i, field := range doc {
+		if i == 3 {
+			break
+		}
+		fields = append(fields, fmt.Sprintf("%s: %s\n", field.Name, field.Type))
+	}
 
-	style := lipgloss.NewStyle().Width(m.viewport.Width).MaxWidth(m.viewport.Width).Inline(true)
-	renderedRow := m.styles.Doc.Render(style.Render(runewidth.Truncate(s, m.viewport.Width, "…")))
+	s := lipgloss.JoinVertical(lipgloss.Top, fields...)
+	renderedRow := m.styles.Doc.Width(m.viewport.Width).MaxWidth(m.viewport.Width).Render(s)
 
 	return renderedRow
 }

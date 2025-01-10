@@ -14,11 +14,6 @@ import (
 	"os"
 )
 
-// TODO maybe make a style package so that all components can share the same styles
-//var baseStyle = lipgloss.NewStyle().
-//	BorderStyle(lipgloss.NormalBorder()).
-//	BorderForeground(lipgloss.Color("240"))
-
 type componentSelection int
 
 const (
