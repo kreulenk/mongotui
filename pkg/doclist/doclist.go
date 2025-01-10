@@ -7,9 +7,12 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"mtui/pkg/mongodata"
 	"mtui/pkg/renderutils"
 	"os"
+	"slices"
+	"strings"
 )
 
 type selectedCollection struct {
@@ -28,8 +31,6 @@ type Model struct {
 
 	viewport viewport.Model
 	focus    bool
-	start    int
-	end      int
 
 	engine *mongodata.Engine
 }
@@ -139,22 +140,19 @@ func (m *Model) updateTableRows() {
 	m.docs = newDocs
 }
 
+// TODO add the remaining data types that mongo supports
 func getFieldType(value interface{}) string {
-	switch value.(type) {
-	case string:
-		return "string"
-	case int:
-		return "int"
-	case float64, float32:
-		return "double"
-	case bool:
-		return "boolean"
+	switch v := value.(type) {
+	case string, int32, int64, float64, bool, primitive.ObjectID, primitive.Timestamp, primitive.DateTime:
+		return fmt.Sprintf("%v", v)
 	case map[string]interface{}:
-		return "object"
+		return "Object"
 	case []interface{}:
-		return "array"
+		return "Array"
+	case nil:
+		return "Null"
 	default:
-		return "unknown"
+		return fmt.Sprintf("%T", v)
 	}
 }
 
@@ -178,14 +176,15 @@ func (m *Model) blur() {
 // columns and rows.
 func (m *Model) updateViewport() {
 	renderedRows := make([]string, 0, len(m.docs))
+	var startDocIndex int
 	if m.cursor >= 0 {
-		m.start = renderutils.Clamp(m.cursor-m.viewport.Height, 0, m.cursor)
-	} else {
-		m.start = 0
+		startDocIndex = renderutils.Clamp(m.cursor-m.viewport.Height, 0, m.cursor)
 	}
-	m.end = renderutils.Clamp(m.cursor+m.viewport.Height, m.cursor, len(m.docs))
-	for i := m.start; i < m.end; i++ {
-		renderedRows = append(renderedRows, m.renderDocSummary(i))
+	heightLeft := m.viewport.Height
+	for i := startDocIndex; i < len(m.docs) && heightLeft > 0; i++ {
+		newRow, heightUsed := m.renderDocSummary(i, heightLeft)
+		renderedRows = append(renderedRows, newRow)
+		heightLeft -= heightUsed
 	}
 
 	m.viewport.SetContent(
@@ -229,19 +228,26 @@ func (m *Model) GotoBottom() {
 	m.MoveDown(len(m.docs))
 }
 
-func (m *Model) renderDocSummary(r int) string {
-	doc := m.docs[r]
-
+func (m *Model) renderDocSummary(docIndex, heightLeft int) (string, int) {
+	heightLeft -= 2 // To account for the space between rows
+	doc := m.docs[docIndex]
+	slices.SortFunc(doc, func(i, j FieldSummary) int {
+		return strings.Compare(i.Name, j.Name)
+	})
 	var fields []string
 	for i, field := range doc {
-		if i == 3 {
+		if i == 4 || heightLeft <= 0 { // Only show the first 4 fields and make sure we have not exceeded viewport height
 			break
 		}
-		fields = append(fields, fmt.Sprintf("%s: %s\n", field.Name, field.Type))
+		newField := fmt.Sprintf("%s: %s", m.styles.DocText.Render(field.Name), field.Value)
+		fields = append(fields, newField)
+		heightLeft--
 	}
 
 	s := lipgloss.JoinVertical(lipgloss.Top, fields...)
-	renderedRow := m.styles.Doc.Width(m.viewport.Width).MaxWidth(m.viewport.Width).Render(s)
-
-	return renderedRow
+	if m.cursor == docIndex {
+		return m.styles.SelectedDoc.Width(m.viewport.Width).MaxWidth(m.viewport.Width).Render(s), heightLeft
+	} else {
+		return m.styles.Doc.Width(m.viewport.Width).MaxWidth(m.viewport.Width).Render(s), heightLeft
+	}
 }
