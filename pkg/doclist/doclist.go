@@ -180,10 +180,10 @@ func (m *Model) updateViewport() {
 	renderedRows := make([]string, 0, len(m.docs))
 	var startDocIndex = m.getStartIndex()
 	heightLeft := m.viewport.Height
-	for i := startDocIndex; i < len(m.docs) && heightLeft > 0; i++ {
+	for i := startDocIndex; i < len(m.docs) && heightLeft > 3; i++ {
 		newRow, heightUsed := m.renderDocSummary(i, heightLeft)
-		renderedRows = append(renderedRows, newRow)
 		heightLeft -= heightUsed
+		renderedRows = append(renderedRows, newRow)
 	}
 
 	m.viewport.SetContent(
