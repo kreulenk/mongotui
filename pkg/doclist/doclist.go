@@ -187,7 +187,7 @@ func (m *Model) updateViewport() {
 	}
 
 	m.viewport.SetContent(
-		lipgloss.JoinVertical(lipgloss.Left, renderedRows...),
+		lipgloss.JoinVertical(lipgloss.Bottom, renderedRows...),
 	)
 }
 
@@ -276,8 +276,7 @@ func (m *Model) renderDocSummary(docIndex, heightLeft int) (string, int) {
 
 	s := lipgloss.JoinVertical(lipgloss.Top, fields...)
 	if m.cursor == docIndex {
-		return m.styles.SelectedDoc.Width(m.viewport.Width).MaxWidth(m.viewport.Width).Render(s), heightLeft
-	} else {
-		return m.styles.Doc.Width(m.viewport.Width).MaxWidth(m.viewport.Width).Render(s), heightLeft
+		return m.styles.SelectedDoc.Width(m.viewport.Width - 2).Render(s), heightLeft
 	}
+	return m.styles.Doc.Width(m.viewport.Width - 2).Render(s), heightLeft
 }

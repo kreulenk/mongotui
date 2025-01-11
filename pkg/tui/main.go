@@ -106,7 +106,7 @@ func (m baseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m baseModel) View() string {
 	var leftPanel string
-	if m.table.CollectionSelected() { // Switch
+	if m.table.CollectionSelected() {
 		leftPanel = lipgloss.JoinVertical(lipgloss.Top, m.table.View(), m.doclist.HelpView())
 	} else {
 		leftPanel = lipgloss.JoinVertical(lipgloss.Top, m.table.View(), m.table.HelpView())
