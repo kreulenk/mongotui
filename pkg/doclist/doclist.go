@@ -131,10 +131,15 @@ func (m *Model) updateTableRows() {
 	for _, doc := range mongoDocs {
 		var row Doc
 		for k, v := range doc {
+			val := fmt.Sprintf("%v", v)
+			fType := getFieldType(v)
+			if fType == "Object" || fType == "Array" { // TODO restrict to a set of types
+				val = fType
+			}
 			row = append(row, FieldSummary{
 				Name:  k,
-				Type:  getFieldType(v),
-				Value: fmt.Sprintf("%v", v),
+				Type:  fType,
+				Value: val,
 			})
 		}
 		newDocs = append(newDocs, row)
@@ -142,14 +147,11 @@ func (m *Model) updateTableRows() {
 	m.docs = newDocs
 }
 
-// TODO add the remaining data types that mongo supports
 func getFieldType(value interface{}) string {
 	switch v := value.(type) {
-	case string, int32, int64, float64, bool, primitive.ObjectID, primitive.Timestamp, primitive.DateTime:
-		return fmt.Sprintf("%v", v)
-	case map[string]interface{}:
+	case primitive.M:
 		return "Object"
-	case []interface{}:
+	case primitive.A:
 		return "Array"
 	case nil:
 		return "Null"
