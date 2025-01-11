@@ -8,9 +8,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"go.mongodb.org/mongo-driver/v2/mongo"
-	"mtui/pkg/doclist"
+	"mtui/pkg/components/coltable"
+	"mtui/pkg/components/doclist"
 	"mtui/pkg/mongodata"
-	"mtui/pkg/table"
 	"os"
 )
 
@@ -22,7 +22,7 @@ const (
 )
 
 type baseModel struct {
-	table   table.Model
+	table   coltable.Model
 	doclist doclist.Model
 
 	componentSelection componentSelection
@@ -53,7 +53,7 @@ func initialModel(client *mongo.Client) baseModel {
 		os.Exit(1)
 	}
 
-	t := table.New(engine)
+	t := coltable.New(engine)
 	d := doclist.New(engine)
 
 	return baseModel{

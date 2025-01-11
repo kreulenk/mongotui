@@ -1,4 +1,4 @@
-package table
+package coltable
 
 import (
 	"fmt"
@@ -20,7 +20,7 @@ const (
 	collectionsColumn
 )
 
-// Model defines a state for the table widget.
+// Model defines a state for the coltable widget.
 type Model struct {
 	Help   help.Model
 	styles Styles
@@ -43,7 +43,7 @@ type Model struct {
 	engine *mongodata.Engine
 }
 
-// New creates a new baseModel for the table widget.
+// New creates a new baseModel for the coltable widget.
 func New(engine *mongodata.Engine) Model {
 	databases := mongodata.GetSortedDatabasesByName(engine.Server.Databases)
 	m := Model{
@@ -113,7 +113,7 @@ func (m Model) CollectionSelected() bool {
 	return !m.focus
 }
 
-// DeselectCollection enables key use on the table so that the user can navigate the table again. This signal would
+// DeselectCollection enables key use on the coltable so that the user can navigate the coltable again. This signal would
 // be sent from another component
 func (m *Model) DeselectCollection() {
 	m.focus = true
@@ -121,7 +121,7 @@ func (m *Model) DeselectCollection() {
 	m.updateViewport()
 }
 
-// selectCollection disables key use on the table so that other components can now display information about the collection
+// selectCollection disables key use on the coltable so that other components can now display information about the collection
 // that is currently highlighted
 func (m *Model) selectCollection() {
 	m.focus = false
@@ -187,13 +187,13 @@ func (m Model) SelectedCollection() string {
 	return m.collections[m.cursorCollection]
 }
 
-// SetWidth sets the width of the viewport of the table.
+// SetWidth sets the width of the viewport of the coltable.
 func (m *Model) SetWidth(w int) {
 	m.viewport.Width = w
 	m.updateViewport()
 }
 
-// SetHeight sets the height of the viewport of the table.
+// SetHeight sets the height of the viewport of the coltable.
 func (m *Model) SetHeight(h int) {
 	m.viewport.Height = h - lipgloss.Height(m.headersView())
 	m.updateViewport()

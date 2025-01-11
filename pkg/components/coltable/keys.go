@@ -1,4 +1,4 @@
-package table
+package coltable
 
 import "github.com/charmbracelet/bubbles/key"
 

@@ -44,7 +44,7 @@ type FieldSummary struct {
 	Value string
 }
 
-// New creates a new baseModel for the table widget.
+// New creates a new baseModel for the coltable widget.
 func New(engine *mongodata.Engine) Model {
 	m := Model{
 		docs:     []Doc{},
@@ -216,13 +216,13 @@ func (m *Model) getStartIndex() int {
 	return startIndex
 }
 
-// SetWidth sets the width of the viewport of the table.
+// SetWidth sets the width of the viewport of the coltable.
 func (m *Model) SetWidth(w int) {
 	m.viewport.Width = w
 	m.updateViewport()
 }
 
-// SetHeight sets the height of the viewport of the table.
+// SetHeight sets the height of the viewport of the coltable.
 func (m *Model) SetHeight(h int) {
 	m.viewport.Height = h
 	m.updateViewport()
