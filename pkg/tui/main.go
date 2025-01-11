@@ -76,11 +76,13 @@ func (m baseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 	case tea.WindowSizeMsg:
-		m.table.SetWidth((msg.Width / 3) - 4) // TODO look into a more intelligent way of getting this 6 value
-		m.table.SetHeight(msg.Height - 4)
+		leftRightBorderWidth := 4
+		topBottomBorderAndHelpHeight := 3
+		m.table.SetWidth((msg.Width / 3) - leftRightBorderWidth)
+		m.table.SetHeight(msg.Height - topBottomBorderAndHelpHeight)
 
-		m.doclist.SetWidth((msg.Width * 2 / 3) - 4)
-		m.doclist.SetHeight(msg.Height - 4)
+		m.doclist.SetWidth((msg.Width * 2 / 3) - leftRightBorderWidth)
+		m.doclist.SetHeight(msg.Height - topBottomBorderAndHelpHeight)
 
 		return m, tea.ClearScreen // Necessary for resizes
 	}
