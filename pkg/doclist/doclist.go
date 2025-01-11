@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-runewidth"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"mtui/pkg/mongodata"
 	"mtui/pkg/renderutils"
@@ -176,8 +177,9 @@ func (m *Model) blur() {
 // columns and rows.
 func (m *Model) updateViewport() {
 	renderedRows := make([]string, 0, len(m.docs))
+	var startDocIndex = m.getStartIndex()
 	heightLeft := m.viewport.Height
-	for i := m.cursor; i < len(m.docs) && heightLeft > 0; i++ {
+	for i := startDocIndex; i < len(m.docs) && heightLeft > 0; i++ {
 		newRow, heightUsed := m.renderDocSummary(i, heightLeft)
 		renderedRows = append(renderedRows, newRow)
 		heightLeft -= heightUsed
@@ -186,6 +188,29 @@ func (m *Model) updateViewport() {
 	m.viewport.SetContent(
 		lipgloss.JoinVertical(lipgloss.Left, renderedRows...),
 	)
+}
+
+// getStartIndex returns the index of the first row to be displayed in the viewport.
+// It is calculated based on the cursor position and the size of each row cell based on if there are 4 or less fields
+// per doc
+func (m *Model) getStartIndex() int {
+	if len(m.docs) == 0 {
+		return 0
+	}
+	heightLeft := m.viewport.Height
+	startIndex := m.cursor
+	for i := m.cursor; i >= 0 && heightLeft >= 0; i-- {
+		heightLeft -= 2 // To account for the space between rows
+		if len(m.docs[i]) > 4 {
+			heightLeft -= 4
+		} else {
+			heightLeft -= len(m.docs[i])
+		}
+		if heightLeft >= 0 {
+			startIndex = i
+		}
+	}
+	return startIndex
 }
 
 // SetWidth sets the width of the viewport of the table.
@@ -232,18 +257,18 @@ func (m *Model) renderDocSummary(docIndex, heightLeft int) (string, int) {
 	})
 	var fields []string
 	for i, field := range doc {
-		if i == 4 || heightLeft <= 0 { // Only show the first 4 fields and make sure we have not exceeded viewport height
+		if i >= 4 { // Only show the first 4 fields and make sure we have not exceeded viewport height
 			break
 		}
 		newField := fmt.Sprintf("%s: %s", m.styles.DocText.Render(field.Name), field.Value)
-		fields = append(fields, newField)
+		fields = append(fields, runewidth.Truncate(newField, m.viewport.Width, "…"))
 		heightLeft--
 	}
 
 	s := lipgloss.JoinVertical(lipgloss.Top, fields...)
 	if m.cursor == docIndex {
-		return m.styles.SelectedDoc.Width(m.viewport.Width).MaxWidth(m.viewport.Width).Render(s), heightLeft
+		return m.styles.SelectedDoc.Width(m.viewport.Width - 2).MaxWidth(m.viewport.Width - 2).Render(s), heightLeft
 	} else {
-		return m.styles.Doc.Width(m.viewport.Width).MaxWidth(m.viewport.Width).Render(s), heightLeft
+		return m.styles.Doc.Width(m.viewport.Width - 2).MaxWidth(m.viewport.Width - 2).Render(s), heightLeft
 	}
 }
