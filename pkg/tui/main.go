@@ -76,11 +76,10 @@ func (m baseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 	case tea.WindowSizeMsg:
-		splitWidth := msg.Width / 2
-		m.table.SetWidth(splitWidth - 4) // TODO look into a more intelligent way of getting this 6 value
+		m.table.SetWidth((msg.Width / 3) - 4) // TODO look into a more intelligent way of getting this 6 value
 		m.table.SetHeight(msg.Height - 4)
 
-		m.doclist.SetWidth(splitWidth - 4)
+		m.doclist.SetWidth((msg.Width * 2 / 3) - 4)
 		m.doclist.SetHeight(msg.Height - 4)
 
 		return m, tea.ClearScreen // Necessary for resizes
@@ -105,11 +104,10 @@ func (m baseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m baseModel) View() string {
-	var leftPanel string
+	tables := lipgloss.JoinHorizontal(lipgloss.Left, m.table.View(), m.doclist.View())
 	if m.table.CollectionSelected() {
-		leftPanel = lipgloss.JoinVertical(lipgloss.Top, m.table.View(), m.doclist.HelpView())
+		return lipgloss.JoinVertical(lipgloss.Top, tables, m.doclist.HelpView())
 	} else {
-		leftPanel = lipgloss.JoinVertical(lipgloss.Top, m.table.View(), m.table.HelpView())
+		return lipgloss.JoinVertical(lipgloss.Top, tables, m.table.HelpView())
 	}
-	return lipgloss.JoinHorizontal(lipgloss.Left, leftPanel, m.doclist.View())
 }
