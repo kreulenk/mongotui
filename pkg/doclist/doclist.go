@@ -8,7 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"mtui/pkg/mongodata"
 	"mtui/pkg/renderutils"
 	"os"
@@ -149,9 +149,9 @@ func (m *Model) updateTableRows() {
 
 func getFieldType(value interface{}) string {
 	switch v := value.(type) {
-	case primitive.M:
+	case bson.M, bson.D:
 		return "Object"
-	case primitive.A:
+	case bson.A:
 		return "Array"
 	case nil:
 		return "Null"

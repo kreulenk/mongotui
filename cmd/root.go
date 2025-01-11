@@ -1,16 +1,15 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"mtui/pkg/mongodata"
 	"mtui/pkg/tui"
 	"net"
 	"net/url"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -38,9 +37,7 @@ in a more intuitive way.`,
 			clientOps, err := generateConnectionOptions(parsedConStr, usernameFlag, passwordFlag, authMechanismFlag)
 			cobra.CheckErr(err)
 
-			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-			defer cancel()
-			client, err := mongo.Connect(ctx, clientOps)
+			client, err := mongo.Connect(clientOps)
 			cobra.CheckErr(err)
 			tui.Initialize(client)
 		},
@@ -60,6 +57,8 @@ in a more intuitive way.`,
 // TODO more flags need to be added to fully support auth. Hardcoded to always use an auth database of admin for now
 func generateConnectionOptions(connectionString, usernameFlag, passwordFlag, authMechanism string) (*options.ClientOptions, error) {
 	clientOps := options.Client().ApplyURI(connectionString)
+	clientOps.SetTimeout(mongodata.Timeout)
+
 	if clientOps.Auth == nil && (usernameFlag != "" || passwordFlag != "") {
 		clientOps.Auth = &options.Credential{
 			AuthSource: "admin",

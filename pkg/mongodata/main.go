@@ -4,13 +4,13 @@ package mongodata
 
 import (
 	"context"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"slices"
 	"time"
 )
 
-const timeout = 5 * time.Second
+const Timeout = 5 * time.Second
 
 type Server struct {
 	Databases map[string]Database
@@ -31,7 +31,7 @@ type Engine struct {
 }
 
 func (m *Engine) SetDatabases() error {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
 	dbNames, err := m.Client.ListDatabaseNames(ctx, bson.D{})
 	if err != nil {
@@ -53,7 +53,7 @@ func (m *Engine) SetDatabases() error {
 // SetCollectionsPerDb fetches the Collections for a given database along with the number of records in each collection
 func (m *Engine) SetCollectionsPerDb(dbName string) error {
 	db := m.Client.Database(dbName)
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
 	collectionNames, err := db.ListCollectionNames(ctx, bson.D{})
 	if err != nil {
@@ -82,7 +82,7 @@ func (m *Engine) GetData(dbName, collectionName string) ([]bson.M, error) {
 
 	db := m.Client.Database(dbName)
 	coll := db.Collection(collectionName)
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
 	cur, err := coll.Find(ctx, bson.D{})
 	if err != nil {

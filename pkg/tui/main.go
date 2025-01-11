@@ -7,7 +7,7 @@ import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"mtui/pkg/doclist"
 	"mtui/pkg/mongodata"
 	"mtui/pkg/table"
