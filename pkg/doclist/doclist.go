@@ -105,6 +105,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 // SetSelectedCollection Allows parent components to set what data will be displayed within this component.
 func (m *Model) SetSelectedCollection(collectionName, databaseName string) {
+	m.cursor = 0
 	m.selectedCollection = selectedCollection{
 		collectionName: collectionName,
 		databaseName:   databaseName,
@@ -194,7 +195,7 @@ func (m *Model) updateViewport() {
 // It is calculated based on the cursor position and the size of each row cell based on if there are 4 or less fields
 // per doc
 func (m *Model) getStartIndex() int {
-	if len(m.docs) == 0 {
+	if len(m.docs) == 0 || len(m.docs) < m.cursor {
 		return 0
 	}
 	heightLeft := m.viewport.Height
@@ -260,15 +261,23 @@ func (m *Model) renderDocSummary(docIndex, heightLeft int) (string, int) {
 		if i >= 4 { // Only show the first 4 fields and make sure we have not exceeded viewport height
 			break
 		}
-		newField := fmt.Sprintf("%s: %s", m.styles.DocText.Render(field.Name), field.Value)
-		fields = append(fields, runewidth.Truncate(newField, m.viewport.Width, "…"))
+		// Colors are not properly counted in runewidth so we have to do calculations before applying any styling
+		if runewidth.StringWidth(field.Name) > m.viewport.Width-2 {
+			fieldName := runewidth.Truncate(field.Name, m.viewport.Width-2, "…")
+			fields = append(fields, m.styles.DocText.Render(fieldName))
+		} else {
+			fieldValue := runewidth.Truncate(field.Value, m.viewport.Width-4-runewidth.StringWidth(field.Name), "…")
+			newField := fmt.Sprintf("%s: %s", m.styles.DocText.Render(field.Name), fieldValue)
+			fields = append(fields, newField)
+		}
+
 		heightLeft--
 	}
 
 	s := lipgloss.JoinVertical(lipgloss.Top, fields...)
 	if m.cursor == docIndex {
-		return m.styles.SelectedDoc.Width(m.viewport.Width - 2).MaxWidth(m.viewport.Width - 2).Render(s), heightLeft
+		return m.styles.SelectedDoc.Width(m.viewport.Width).MaxWidth(m.viewport.Width).Render(s), heightLeft
 	} else {
-		return m.styles.Doc.Width(m.viewport.Width - 2).MaxWidth(m.viewport.Width - 2).Render(s), heightLeft
+		return m.styles.Doc.Width(m.viewport.Width).MaxWidth(m.viewport.Width).Render(s), heightLeft
 	}
 }

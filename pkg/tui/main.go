@@ -77,10 +77,10 @@ func (m baseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tea.WindowSizeMsg:
 		splitWidth := msg.Width / 2
-		m.table.SetWidth(splitWidth - 6) // TODO look into a more intelligent way of getting this 6 value
+		m.table.SetWidth(splitWidth - 4) // TODO look into a more intelligent way of getting this 6 value
 		m.table.SetHeight(msg.Height - 4)
 
-		m.doclist.SetWidth(splitWidth - 6)
+		m.doclist.SetWidth(splitWidth - 4)
 		m.doclist.SetHeight(msg.Height - 4)
 
 		return m, tea.ClearScreen // Necessary for resizes
