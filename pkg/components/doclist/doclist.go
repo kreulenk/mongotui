@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"mtui/pkg/components/searchbar"
 	"mtui/pkg/mongodata"
 	"mtui/pkg/renderutils"
 	"os"
@@ -22,7 +23,8 @@ type selectedCollection struct {
 }
 
 type Model struct {
-	Help help.Model
+	Help      help.Model
+	searchBar searchbar.Model
 
 	docs   []Doc
 	styles Styles
@@ -47,10 +49,12 @@ type FieldSummary struct {
 // New creates a new baseModel for the coltable widget.
 func New(engine *mongodata.Engine) Model {
 	m := Model{
+		Help:      help.New(),
+		searchBar: searchbar.New(engine),
+
 		docs:     []Doc{},
 		viewport: viewport.New(0, 20),
 
-		Help:   help.New(),
 		styles: defaultStyles(),
 
 		engine: engine,
@@ -118,6 +122,7 @@ func (m Model) Init() tea.Cmd {
 
 // View renders the component.
 func (m Model) View() string {
+	//return lipgloss.JoinVertical(lipgloss.Top, m.searchBar.View(), m.styles.Table.Render(m.viewport.View()))
 	return m.styles.Table.Render(m.viewport.View())
 }
 
@@ -188,8 +193,13 @@ func (m *Model) updateViewport() {
 		renderedRows = append(renderedRows, newRow)
 	}
 
+	joinedRows := lipgloss.JoinVertical(lipgloss.Top, renderedRows...)
+	if len(m.docs) == 0 && m.selectedCollection.collectionName != "" {
+		joinedRows = "\nNo documents found" // TODO make this centered
+	}
+
 	m.viewport.SetContent(
-		lipgloss.JoinVertical(lipgloss.Bottom, renderedRows...),
+		lipgloss.JoinVertical(lipgloss.Top, m.searchBar.View(), joinedRows),
 	)
 }
 

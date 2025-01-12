@@ -12,6 +12,7 @@ require (
 )
 
 require (
+	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/charmbracelet/x/ansi v0.6.1-0.20250107110353-48b574af22a5 // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
