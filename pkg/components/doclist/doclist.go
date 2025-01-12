@@ -70,8 +70,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	if m.searchEnabled {
 		m.searchBar, _ = m.searchBar.Update(msg)
 		if !m.searchBar.Focused() {
-			m.updateTableRows()
 			m.searchEnabled = false
+			m.updateTableRows()
 		}
 		m.updateViewport()
 		return m, nil
@@ -170,6 +170,7 @@ func (m *Model) Focused() bool {
 
 func (m *Model) Focus() {
 	m.styles.Table = m.styles.Table.BorderStyle(lipgloss.ThickBorder()).BorderForeground(lipgloss.Color("57"))
+	m.searchBar.ResetValue()
 	m.updateTableRows()
 	m.updateViewport()
 	m.focus = true
@@ -209,10 +210,10 @@ func (m *Model) getStartIndex() int {
 	if len(m.docs) == 0 || len(m.docs) < m.cursor {
 		return 0
 	}
-	heightLeft := m.viewport.Height
+	heightLeft := m.viewport.Height - 1 // 1 to account for the search bar
 	startIndex := m.cursor
-	for i := m.cursor; i >= 0 && heightLeft >= 0; i-- {
-		heightLeft -= 2 // To account for the space between rows
+	for i := m.cursor; i >= 0 && heightLeft > 0; i-- {
+		heightLeft -= 2 // To account for the space between rows from borders
 		if len(m.docs[i]) > 4 {
 			heightLeft -= 4
 		} else {

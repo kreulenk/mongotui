@@ -10,6 +10,7 @@ import (
 
 type Model struct {
 	textInput textinput.Model
+	textValue string
 }
 
 func New() Model {
@@ -21,6 +22,7 @@ func New() Model {
 	ti.Blur()
 
 	return Model{
+		textValue: "{}",
 		textInput: ti,
 	}
 }
@@ -42,9 +44,16 @@ func (m Model) Focused() bool {
 	return m.textInput.Focused()
 }
 
+func (m *Model) ResetValue() {
+	m.textInput.Reset()
+	m.textValue = "{}"
+	m.textInput.SetValue(m.textValue)
+	m.textInput.SetCursor(1)
+}
+
 func (m Model) GetValue() bson.D {
 	var query bson.D
-	err := bson.UnmarshalExtJSON([]byte(m.textInput.Value()), false, &query)
+	err := bson.UnmarshalExtJSON([]byte(m.textValue), false, &query)
 	if err != nil {
 		fmt.Printf("Error unmarshalling query: %v\n", err)
 		os.Exit(1)
@@ -58,12 +67,14 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Type {
-		case tea.KeyEnter: // TODO add search functionality
+		case tea.KeyEnter:
+			m.textValue = m.textInput.Value()
 			m.textInput.Blur()
 			return m, nil
 		case tea.KeyEsc, tea.KeyDown:
 			m.textInput.Blur()
 			return m, nil
+		default:
 		}
 	}
 

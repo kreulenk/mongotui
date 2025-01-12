@@ -9,7 +9,7 @@ type keyMap struct {
 	LineUp       key.Binding
 	LineDown     key.Binding
 	PageUp       key.Binding
-	PageDown     key.Binding
+	PageDown     key.Binding // TODO get page/half-page/line/go-to to work with new larger cells
 	HalfPageUp   key.Binding
 	HalfPageDown key.Binding
 	GotoTop      key.Binding

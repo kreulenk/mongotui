@@ -123,7 +123,7 @@ func (m *Engine) GetSelectedDocs() []bson.M {
 			return collection.Data
 		}
 	}
-	return nil
+	return []bson.M{}
 }
 
 func GetSortedDatabasesByName(databases map[string]Database) []string {
