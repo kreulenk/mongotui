@@ -148,6 +148,7 @@ func (m *Model) updateTableRows() {
 		}
 		newDocs = append(newDocs, row)
 	}
+	m.cursor = 0
 	m.docs = newDocs
 }
 
@@ -171,7 +172,6 @@ func (m *Model) Focused() bool {
 func (m *Model) Focus() {
 	m.styles.Table = m.styles.Table.BorderStyle(lipgloss.ThickBorder()).BorderForeground(lipgloss.Color("57"))
 	m.searchBar.ResetValue()
-	m.cursor = 0
 	m.updateTableRows()
 	m.updateViewport()
 	m.focus = true
