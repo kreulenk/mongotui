@@ -171,6 +171,7 @@ func (m *Model) Focused() bool {
 func (m *Model) Focus() {
 	m.styles.Table = m.styles.Table.BorderStyle(lipgloss.ThickBorder()).BorderForeground(lipgloss.Color("57"))
 	m.searchBar.ResetValue()
+	m.cursor = 0
 	m.updateTableRows()
 	m.updateViewport()
 	m.focus = true
@@ -187,7 +188,7 @@ func (m *Model) updateViewport() {
 	renderedRows := make([]string, 0, len(m.docs))
 	var startDocIndex = m.getStartIndex()
 	heightLeft := m.viewport.Height
-	for i := startDocIndex; i < len(m.docs) && heightLeft > 3; i++ {
+	for i := startDocIndex; i < len(m.docs) && heightLeft >= 3; i++ { // 3 as one cell is minimum 3 lines
 		newRow, heightUsed := m.renderDocSummary(i, heightLeft)
 		heightLeft -= heightUsed
 		renderedRows = append(renderedRows, newRow)
@@ -207,10 +208,10 @@ func (m *Model) updateViewport() {
 // It is calculated based on the cursor position and the size of each row cell based on if there are 4 or less fields
 // per doc
 func (m *Model) getStartIndex() int {
-	if len(m.docs) == 0 || len(m.docs) < m.cursor {
+	if len(m.docs) == 0 {
 		return 0
 	}
-	heightLeft := m.viewport.Height - 1 // 1 to account for the search bar
+	heightLeft := m.viewport.Height - 3 // 1 to account for the search bar and top/bottom borders
 	startIndex := m.cursor
 	for i := m.cursor; i >= 0 && heightLeft > 0; i-- {
 		heightLeft -= 2 // To account for the space between rows from borders
@@ -276,7 +277,7 @@ func (m *Model) renderDocSummary(docIndex, heightLeft int) (string, int) {
 	})
 	var fields []string
 	for i, field := range doc {
-		if i >= 4 { // Only show the first 4 fields and make sure we have not exceeded viewport height
+		if i >= 4 || heightLeft < 0 { // Only show the first 4 fields and make sure we have not exceeded viewport height
 			break
 		}
 		// Colors are not properly counted in runewidth so we have to do calculations before applying any styling
