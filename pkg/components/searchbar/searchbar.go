@@ -1,26 +1,27 @@
 package searchbar
 
 import (
+	"fmt"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"mtui/pkg/mongodata"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"os"
 )
 
 type Model struct {
 	textInput textinput.Model
-	engine    *mongodata.Engine
 }
 
-func New(engine *mongodata.Engine) Model {
+func New() Model {
 	ti := textinput.New()
 	ti.Placeholder = "Query"
+	ti.SetValue("{}")
+	ti.SetCursor(1)
 	ti.CharLimit = 156
-	ti.Width = 20
 	ti.Blur()
 
 	return Model{
 		textInput: ti,
-		engine:    engine,
 	}
 }
 
@@ -37,8 +38,18 @@ func (m *Model) Focus() {
 	m.textInput.Focus()
 }
 
-func (m *Model) Focused() bool {
+func (m Model) Focused() bool {
 	return m.textInput.Focused()
+}
+
+func (m Model) GetValue() bson.D {
+	var query bson.D
+	err := bson.UnmarshalExtJSON([]byte(m.textInput.Value()), false, &query)
+	if err != nil {
+		fmt.Printf("Error unmarshalling query: %v\n", err)
+		os.Exit(1)
+	}
+	return query
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
@@ -50,7 +61,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		case tea.KeyEnter: // TODO add search functionality
 			m.textInput.Blur()
 			return m, nil
-		case tea.KeyEsc:
+		case tea.KeyEsc, tea.KeyDown:
 			m.textInput.Blur()
 			return m, nil
 		}

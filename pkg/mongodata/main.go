@@ -4,6 +4,7 @@ package mongodata
 
 import (
 	"context"
+	"fmt"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"slices"
@@ -21,13 +22,18 @@ type Database struct {
 }
 
 type Collection struct {
-	Count int64
-	Data  []bson.M
+	Data []bson.M
+}
+
+type selectedCollection struct {
+	collectionName string
+	databaseName   string
 }
 
 type Engine struct {
-	Client *mongo.Client
-	Server *Server
+	Client             *mongo.Client
+	Server             *Server
+	selectedCollection selectedCollection
 }
 
 func (m *Engine) SetDatabases() error {
@@ -62,39 +68,62 @@ func (m *Engine) SetCollectionsPerDb(dbName string) error {
 
 	m.Server.Databases[dbName] = Database{Collections: make(map[string]Collection)} // zero out the Data
 	for _, collectionName := range collectionNames {
-		coll := db.Collection(collectionName)
-		c, err := coll.CountDocuments(context.Background(), bson.D{})
-		if err != nil {
-			return err
-		}
-		m.Server.Databases[dbName].Collections[collectionName] = Collection{Count: c}
+		m.Server.Databases[dbName].Collections[collectionName] = Collection{}
 	}
 
 	return nil
 }
 
-// GetData fetches all the data from a given collection in a given database
-// TODO: add pagination
-func (m *Engine) GetData(dbName, collectionName string) ([]bson.M, error) {
-	if dbName == "" || collectionName == "" {
-		return nil, nil
+// SetSelectedCollection Allows parent components to set what data will be displayed within this component.
+func (m *Engine) SetSelectedCollection(collectionName, databaseName string) {
+	m.selectedCollection = selectedCollection{
+		collectionName: collectionName,
+		databaseName:   databaseName,
+	}
+}
+
+func (m *Engine) IsCollectionSelected() bool {
+	return m.selectedCollection.collectionName != "" && m.selectedCollection.databaseName != ""
+}
+
+// QueryCollection fetches all the data from a given collection in a given database
+func (m *Engine) QueryCollection(query bson.D) error {
+	if m.selectedCollection.databaseName == "" || m.selectedCollection.collectionName == "" {
+		return fmt.Errorf("no collection selected") // This should never happen
 	}
 
-	db := m.Client.Database(dbName)
-	coll := db.Collection(collectionName)
+	db := m.Client.Database(m.selectedCollection.databaseName)
+	coll := db.Collection(m.selectedCollection.collectionName)
 	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
-	cur, err := coll.Find(ctx, bson.D{})
+	cur, err := coll.Find(ctx, query)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	var data []bson.M
 	if err = cur.All(ctx, &data); err != nil {
-		return nil, err
+		return err
 	}
 
-	return data, nil
+	curDb, ok := m.Server.Databases[m.selectedCollection.databaseName]
+	if ok {
+		curDb.Collections[m.selectedCollection.collectionName] = Collection{Data: data}
+	} else {
+		return fmt.Errorf("no database is set") // should never happen
+	}
+	return nil
+}
+
+func (m *Engine) GetSelectedDocs() []bson.M {
+	db, ok := m.Server.Databases[m.selectedCollection.databaseName]
+	if ok {
+		collection, ok := db.Collections[m.selectedCollection.collectionName]
+		if ok {
+			return collection.Data
+		}
+	}
+	return nil
 }
 
 func GetSortedDatabasesByName(databases map[string]Database) []string {

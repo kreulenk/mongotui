@@ -17,11 +17,6 @@ import (
 	"strings"
 )
 
-type selectedCollection struct {
-	collectionName string
-	databaseName   string
-}
-
 type Model struct {
 	Help help.Model
 
@@ -31,9 +26,7 @@ type Model struct {
 	docs   []Doc
 	styles Styles
 
-	cursor             int
-	selectedCollection selectedCollection
-
+	cursor   int
 	viewport viewport.Model
 	focus    bool
 
@@ -52,7 +45,7 @@ type FieldSummary struct {
 func New(engine *mongodata.Engine) Model {
 	m := Model{
 		Help:      help.New(),
-		searchBar: searchbar.New(engine),
+		searchBar: searchbar.New(),
 
 		docs:     []Doc{},
 		viewport: viewport.New(0, 20),
@@ -77,6 +70,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	if m.searchEnabled {
 		m.searchBar, _ = m.searchBar.Update(msg)
 		if !m.searchBar.Focused() {
+			m.updateTableRows()
 			m.searchEnabled = false
 		}
 		m.updateViewport()
@@ -118,33 +112,27 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	return m, nil
 }
 
-// SetSelectedCollection Allows parent components to set what data will be displayed within this component.
-func (m *Model) SetSelectedCollection(collectionName, databaseName string) {
-	m.cursor = 0
-	m.selectedCollection = selectedCollection{
-		collectionName: collectionName,
-		databaseName:   databaseName,
-	}
-}
-
 func (m Model) Init() tea.Cmd {
 	return nil
 }
 
 // View renders the component.
 func (m Model) View() string {
-	//return lipgloss.JoinVertical(lipgloss.Top, m.searchBar.View(), m.styles.Table.Render(m.viewport.View()))
 	return m.styles.Table.Render(m.viewport.View())
 }
 
 func (m *Model) updateTableRows() {
-	mongoDocs, err := m.engine.GetData(m.selectedCollection.databaseName, m.selectedCollection.collectionName)
-	if err != nil { // TODO improve how we handle errors
+	if !m.engine.IsCollectionSelected() {
+		return
+	}
+	err := m.engine.QueryCollection(m.searchBar.GetValue()) // TODO add pagination
+	if err != nil {                                         // TODO improve how we handle errors
 		fmt.Printf("could not get data: %v", err)
 		os.Exit(1)
 	}
+
 	var newDocs []Doc
-	for _, doc := range mongoDocs {
+	for _, doc := range m.engine.GetSelectedDocs() {
 		var row Doc
 		for k, v := range doc {
 			val := fmt.Sprintf("%v", v)
@@ -205,7 +193,7 @@ func (m *Model) updateViewport() {
 	}
 
 	joinedRows := lipgloss.JoinVertical(lipgloss.Top, renderedRows...)
-	if len(m.docs) == 0 && m.selectedCollection.collectionName != "" {
+	if len(m.docs) == 0 && m.engine.IsCollectionSelected() {
 		joinedRows = "\nNo documents found" // TODO make this centered
 	}
 
@@ -240,6 +228,7 @@ func (m *Model) getStartIndex() int {
 // SetWidth sets the width of the viewport of the coltable.
 func (m *Model) SetWidth(w int) {
 	m.viewport.Width = w
+	m.searchBar.SetWidth(w)
 	m.updateViewport()
 }
 
