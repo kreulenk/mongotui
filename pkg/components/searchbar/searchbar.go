@@ -16,6 +16,7 @@ func New(engine *mongodata.Engine) Model {
 	ti.Placeholder = "Query"
 	ti.CharLimit = 156
 	ti.Width = 20
+	ti.Blur()
 
 	return Model{
 		textInput: ti,
@@ -36,17 +37,23 @@ func (m *Model) Focus() {
 	m.textInput.Focus()
 }
 
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *Model) Focused() bool {
+	return m.textInput.Focused()
+}
+
+func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Type {
-		case tea.KeyEnter:
+		case tea.KeyEnter: // TODO add search functionality
+			m.textInput.Blur()
+			return m, nil
+		case tea.KeyEsc:
 			m.textInput.Blur()
 			return m, nil
 		}
-
 	}
 
 	m.textInput, cmd = m.textInput.Update(msg)

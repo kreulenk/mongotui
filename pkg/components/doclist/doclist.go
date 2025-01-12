@@ -23,8 +23,10 @@ type selectedCollection struct {
 }
 
 type Model struct {
-	Help      help.Model
-	searchBar searchbar.Model
+	Help help.Model
+
+	searchBar     searchbar.Model
+	searchEnabled bool
 
 	docs   []Doc
 	styles Styles
@@ -69,6 +71,15 @@ func New(engine *mongodata.Engine) Model {
 // Update is the Bubble Tea update loop.
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	if !m.focus {
+		return m, nil
+	}
+
+	if m.searchEnabled {
+		m.searchBar, _ = m.searchBar.Update(msg)
+		if !m.searchBar.Focused() {
+			m.searchEnabled = false
+		}
+		m.updateViewport()
 		return m, nil
 	}
 
@@ -241,6 +252,11 @@ func (m *Model) SetHeight(h int) {
 // MoveUp moves the selection up by any number of rows.
 // It can not go above the first row.
 func (m *Model) MoveUp(n int) {
+	if m.cursor == 0 {
+		m.searchEnabled = true
+		m.searchBar.Focus()
+	}
+
 	m.cursor = renderutils.Clamp(m.cursor-n, 0, len(m.docs)-1)
 	m.updateViewport()
 }
