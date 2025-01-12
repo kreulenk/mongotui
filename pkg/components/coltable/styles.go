@@ -19,11 +19,12 @@ func defaultStyles() Styles {
 			Background(lipgloss.Color("57")).
 			Bold(false),
 		Header: lipgloss.NewStyle().
+			Inline(true).
 			Bold(true).
 			Padding(0, 1).
 			BorderStyle(lipgloss.NormalBorder()).
 			BorderForeground(lipgloss.Color("240")).
 			BorderBottom(true),
-		Cell: lipgloss.NewStyle().Padding(0, 1),
+		Cell: lipgloss.NewStyle().Inline(true),
 	}
 }

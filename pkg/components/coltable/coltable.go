@@ -280,16 +280,16 @@ func (m *Model) columnWidth() int {
 func (m Model) headersView() string {
 	s := make([]string, 0, len(m.headersText))
 	for _, col := range m.headersText {
-		style := lipgloss.NewStyle().Width(m.columnWidth()).MaxWidth(m.columnWidth()).Inline(true)
-		renderedCell := style.Render(runewidth.Truncate(col, m.viewport.Width/2, "…"))
-		s = append(s, m.styles.Header.Render(renderedCell))
+		m.styles.Header = m.styles.Header.Width(m.columnWidth()).MaxWidth(m.columnWidth())
+		renderedCell := m.styles.Header.Render(runewidth.Truncate(col, m.columnWidth(), "…"))
+		s = append(s, renderedCell)
 	}
 	return lipgloss.JoinHorizontal(lipgloss.Top, s...)
 }
 
 func (m *Model) renderDatabaseCell(r int) string {
-	style := lipgloss.NewStyle().Width(m.columnWidth()).MaxWidth(m.columnWidth()).Inline(true)
-	renderedCell := m.styles.Cell.Render(style.Render(runewidth.Truncate(m.databases[r], m.viewport.Width/len(m.headersText), "…")))
+	m.styles.Cell = m.styles.Cell.Width(m.columnWidth()).MaxWidth(m.columnWidth())
+	renderedCell := m.styles.Cell.Render(runewidth.Truncate(m.databases[r], m.columnWidth(), "…"))
 	if r == m.cursorDatabase {
 		renderedCell = m.styles.Selected.Render(renderedCell)
 	}
@@ -298,8 +298,8 @@ func (m *Model) renderDatabaseCell(r int) string {
 }
 
 func (m *Model) renderCollectionCell(r int) string {
-	style := lipgloss.NewStyle().Width(m.columnWidth()).MaxWidth(m.columnWidth()).Inline(true)
-	renderedCell := m.styles.Cell.Render(style.Render(runewidth.Truncate(m.collections[r], m.viewport.Width/len(m.headersText), "…")))
+	m.styles.Cell = m.styles.Cell.Width(m.columnWidth()).MaxWidth(m.columnWidth())
+	renderedCell := m.styles.Cell.Render(runewidth.Truncate(m.collections[r], m.columnWidth(), "…"))
 	if r == m.cursorCollection && m.cursorColumn == collectionsColumn {
 		renderedCell = m.styles.Selected.Render(renderedCell)
 	}
