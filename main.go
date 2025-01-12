@@ -1,6 +1,6 @@
 package main
 
-import "mtui/cmd"
+import "github.com/kreulenk/mtui/cmd"
 
 func main() {
 	cmd.Execute()

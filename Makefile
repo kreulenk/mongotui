@@ -5,3 +5,6 @@ build:
 
 install: build
 	 @cp ./bin/mtui /usr/local/bin/
+
+licenses:
+	@go-licenses report ./... --template=third_party/template.tmpl > ./ACKNOWLEDGEMENTS

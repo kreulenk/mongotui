@@ -7,10 +7,10 @@ import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/kreulenk/mtui/pkg/components/coltable"
+	"github.com/kreulenk/mtui/pkg/components/doclist"
+	"github.com/kreulenk/mtui/pkg/mongodata"
 	"go.mongodb.org/mongo-driver/v2/mongo"
-	"mtui/pkg/components/coltable"
-	"mtui/pkg/components/doclist"
-	"mtui/pkg/mongodata"
 	"os"
 )
 

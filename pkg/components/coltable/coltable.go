@@ -7,9 +7,9 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/kreulenk/mtui/pkg/mongodata"
+	"github.com/kreulenk/mtui/pkg/renderutils"
 	"github.com/mattn/go-runewidth"
-	"mtui/pkg/mongodata"
-	"mtui/pkg/renderutils"
 	"os"
 )
 

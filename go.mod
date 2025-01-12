@@ -1,4 +1,4 @@
-module mtui
+module github.com/kreulenk/mtui
 
 go 1.23
 

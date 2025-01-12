@@ -1,0 +1,13 @@
+Below are the licenses for the third-party dependencies used in this project.
+
+{{ range . }}
+## {{ .Name }}
+
+* Name: {{ .Name }}
+* Version: {{ .Version }}
+* License: [{{ .LicenseName }}]({{ .LicenseURL }})
+
+```
+{{ .LicenseText }}
+```
+{{ end }}
