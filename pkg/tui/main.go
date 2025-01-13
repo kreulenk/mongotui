@@ -6,8 +6,8 @@ package tui
 import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/kreulenk/mtui/pkg/appview"
-	"github.com/kreulenk/mtui/pkg/components/errormodal"
+	"github.com/kreulenk/mongotui/pkg/appview"
+	"github.com/kreulenk/mongotui/pkg/components/errormodal"
 	overlay "github.com/rmhubbert/bubbletea-overlay"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"os"

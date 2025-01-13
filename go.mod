@@ -1,4 +1,4 @@
-module github.com/kreulenk/mtui
+module github.com/kreulenk/mongotui
 
 go 1.23.4
 

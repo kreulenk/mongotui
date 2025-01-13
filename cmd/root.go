@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/kreulenk/mtui/pkg/mongodata"
-	"github.com/kreulenk/mtui/pkg/tui"
+	"github.com/kreulenk/mongotui/pkg/mongodata"
+	"github.com/kreulenk/mongotui/pkg/tui"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"net"
