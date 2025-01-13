@@ -16,17 +16,21 @@ func (m *Model) Init() tea.Cmd {
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case " ":
+		switch msg.Type {
+		case tea.KeySpace, tea.KeyEnter:
 			if m.ErrorPresent() {
 				m.err = nil
 			}
+		default:
 		}
 	}
 	return m, nil
 }
 
 func (m *Model) View() string {
+	if !m.ErrorPresent() {
+		return ""
+	}
 	foreStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder(), true).
 		BorderForeground(lipgloss.Color("6")).
@@ -45,8 +49,4 @@ func (m *Model) SetError(err error) {
 
 func (m *Model) ErrorPresent() bool {
 	return m.err != nil
-}
-
-func (m *Model) ClearError() {
-	m.err = nil
 }

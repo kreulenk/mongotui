@@ -71,20 +71,24 @@ func (m *baseModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	fg, fgCmd := m.errModal.Update(message)
-	m.errModal = fg
-
-	bg, bgCmd := m.appView.Update(message)
-	m.appView = bg
-
+	cmds := []tea.Cmd{}
 	if m.errModal.(*errormodal.Model).ErrorPresent() { // TODO investigate if we NEED this typecast due to the bubble overlay library
 		m.state = modalView
+		fg, fgCmd := m.errModal.Update(message)
+		m.errModal = fg
+		cmds = append(cmds, fgCmd)
 	} else {
 		m.state = mainView
-	}
+		bg, bgCmd := m.appView.Update(message)
+		m.appView = bg
+		cmds = append(cmds, bgCmd)
 
-	cmds := []tea.Cmd{}
-	cmds = append(cmds, fgCmd, bgCmd)
+		// Check if the appView has an error
+		if m.errModal.(*errormodal.Model).ErrorPresent() {
+			m.state = modalView
+		}
+
+	}
 
 	return m, tea.Batch(cmds...)
 }
