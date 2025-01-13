@@ -1,10 +1,8 @@
 build:
-	@go build \
-		-v \
-		-o bin/mtui
+	@go build -v -o bin/mongotui
 
 install: build
-	 @cp ./bin/mtui /usr/local/bin/
+	 @cp ./bin/mongotui /usr/local/bin/
 
 licenses:
 	@go-licenses report ./... --template=third_party/template.tmpl > ./ACKNOWLEDGEMENTS

@@ -71,7 +71,7 @@ func (m *baseModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	cmds := []tea.Cmd{}
+	var cmds []tea.Cmd
 	if m.errModal.(*errormodal.Model).ErrorPresent() { // TODO investigate if we NEED this typecast due to the bubble overlay library
 		m.state = modalView
 		fg, fgCmd := m.errModal.Update(message)
