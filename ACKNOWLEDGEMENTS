@@ -644,11 +644,11 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ```
 
-## github.com/kreulenk/mtui
+## github.com/kreulenk/mongotui
 
-* Name: github.com/kreulenk/mtui
+* Name: github.com/kreulenk/mongotui
 * Version: Unknown
-* License: [MIT](https://github.com/kreulenk/mtui/blob/HEAD/LICENSE)
+* License: [MIT](https://github.com/kreulenk/mongotui/blob/HEAD/LICENSE)
 
 ```
 MIT License
@@ -844,6 +844,37 @@ SOFTWARE.
 MIT License
 
 Copyright (c) 2019 Oliver Kuederle
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+```
+
+## github.com/rmhubbert/bubbletea-overlay
+
+* Name: github.com/rmhubbert/bubbletea-overlay
+* Version: v0.3.0
+* License: [MIT](https://github.com/rmhubbert/bubbletea-overlay/blob/v0.3.0/LICENSE)
+
+```
+MIT License
+
+Copyright (c) 2024 Hubby
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -1923,8 +1954,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ## golang.org/x/sync
 
 * Name: golang.org/x/sync
-* Version: v0.9.0
-* License: [BSD-3-Clause](https://cs.opensource.google/go/x/sync/+/v0.9.0:LICENSE)
+* Version: v0.10.0
+* License: [BSD-3-Clause](https://cs.opensource.google/go/x/sync/+/v0.10.0:LICENSE)
 
 ```
 Copyright 2009 The Go Authors.
@@ -1960,8 +1991,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ## golang.org/x/sys/unix
 
 * Name: golang.org/x/sys/unix
-* Version: v0.27.0
-* License: [BSD-3-Clause](https://cs.opensource.google/go/x/sys/+/v0.27.0:LICENSE)
+* Version: v0.29.0
+* License: [BSD-3-Clause](https://cs.opensource.google/go/x/sys/+/v0.29.0:LICENSE)
 
 ```
 Copyright 2009 The Go Authors.
@@ -1997,8 +2028,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ## golang.org/x/text
 
 * Name: golang.org/x/text
-* Version: v0.20.0
-* License: [BSD-3-Clause](https://cs.opensource.google/go/x/text/+/v0.20.0:LICENSE)
+* Version: v0.21.0
+* License: [BSD-3-Clause](https://cs.opensource.google/go/x/text/+/v0.21.0:LICENSE)
 
 ```
 Copyright 2009 The Go Authors.
