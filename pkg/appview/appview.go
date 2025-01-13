@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/kreulenk/mongotui/pkg/components/coltable"
 	"github.com/kreulenk/mongotui/pkg/components/doclist"
+	"github.com/kreulenk/mongotui/pkg/components/errormodal"
 	"github.com/kreulenk/mongotui/pkg/mongodata"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"os"
@@ -25,13 +26,15 @@ type Model struct {
 	coltable *coltable.Model
 	doclist  *doclist.Model
 
+	errModal *errormodal.Model
+
 	componentSelection componentSelection
 
 	engine *mongodata.Engine
 	err    error // TODO handle how to display errors
 }
 
-func New(client *mongo.Client) *Model {
+func New(client *mongo.Client, errModal *errormodal.Model) *Model {
 	engine := &mongodata.Engine{
 		Client: client,
 		Server: &mongodata.Server{
@@ -45,12 +48,13 @@ func New(client *mongo.Client) *Model {
 		os.Exit(1)
 	}
 
-	t := coltable.New(engine)
-	d := doclist.New(engine)
+	t := coltable.New(engine, errModal)
+	d := doclist.New(engine, errModal)
 
 	return &Model{
 		coltable:           t,
 		doclist:            d,
+		errModal:           errModal,
 		componentSelection: dbColSelection,
 		engine:             engine,
 	}

@@ -6,24 +6,24 @@ import (
 )
 
 type Model struct {
-	windowWidth  int
-	windowHeight int
+	err error
 }
 
 func (m *Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m *Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
-
-	switch msg := message.(type) {
-	case tea.WindowSizeMsg:
-		m.windowWidth = msg.Width
-		m.windowHeight = msg.Height
+func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case " ":
+			if m.ErrorPresent() {
+				m.err = nil
+			}
+		}
 	}
-
-	return m, cmd
+	return m, nil
 }
 
 func (m *Model) View() string {
@@ -35,7 +35,18 @@ func (m *Model) View() string {
 
 	boldStyle := lipgloss.NewStyle().Bold(true)
 	title := boldStyle.Render("Error")
-	content := "This is an example error message.\n\nPress <space> to close the window."
 
-	return foreStyle.Render(title + "\n\n" + content)
+	return foreStyle.Render(title + "\n\n" + m.err.Error())
+}
+
+func (m *Model) SetError(err error) {
+	m.err = err
+}
+
+func (m *Model) ErrorPresent() bool {
+	return m.err != nil
+}
+
+func (m *Model) ClearError() {
+	m.err = nil
 }

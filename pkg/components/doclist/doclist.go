@@ -7,18 +7,19 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/kreulenk/mongotui/pkg/components/errormodal"
 	"github.com/kreulenk/mongotui/pkg/components/searchbar"
 	"github.com/kreulenk/mongotui/pkg/mongodata"
 	"github.com/kreulenk/mongotui/pkg/renderutils"
 	"github.com/mattn/go-runewidth"
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"os"
 	"slices"
 	"strings"
 )
 
 type Model struct {
-	Help help.Model
+	Help     help.Model
+	errModal *errormodal.Model
 
 	searchBar     *searchbar.Model
 	searchEnabled bool
@@ -42,10 +43,11 @@ type FieldSummary struct {
 }
 
 // New creates a new baseModel for the coltable widget.
-func New(engine *mongodata.Engine) *Model {
+func New(engine *mongodata.Engine, errModal *errormodal.Model) *Model {
 	m := Model{
 		Help:      help.New(),
-		searchBar: searchbar.New(),
+		errModal:  errModal,
+		searchBar: searchbar.New(errModal),
 
 		docs:     []Doc{},
 		viewport: viewport.New(0, 20),
@@ -125,10 +127,15 @@ func (m *Model) updateTableRows() {
 	if !m.engine.IsCollectionSelected() {
 		return
 	}
-	err := m.engine.QueryCollection(m.searchBar.GetValue()) // TODO add pagination
-	if err != nil {                                         // TODO improve how we handle errors
-		fmt.Printf("could not get data: %v", err)
-		os.Exit(1)
+	val, err := m.searchBar.GetValue()
+	if err != nil {
+		m.errModal.SetError(err)
+		return
+	}
+	err = m.engine.QueryCollection(val)
+	if err != nil { // TODO improve how we handle errors
+		m.errModal.SetError(err)
+		return
 	}
 
 	var newDocs []Doc

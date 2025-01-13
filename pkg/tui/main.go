@@ -22,12 +22,10 @@ const (
 
 // baseModel implements tea.Model, and manages the browser UI.
 type baseModel struct {
-	state        sessionState
-	windowWidth  int
-	windowHeight int
-	foreground   tea.Model
-	background   tea.Model
-	overlay      tea.Model
+	state    sessionState
+	errModal tea.Model
+	appView  tea.Model
+	overlay  tea.Model
 }
 
 func Initialize(client *mongo.Client) {
@@ -39,10 +37,10 @@ func Initialize(client *mongo.Client) {
 }
 
 func initialModel(client *mongo.Client) tea.Model {
-	appView := appview.New(client)
-	modal := &errormodal.Model{}
+	errModal := &errormodal.Model{}
+	appView := appview.New(client, errModal)
 	view := overlay.New(
-		modal,
+		errModal,
 		appView,
 		overlay.Center,
 		overlay.Center,
@@ -51,12 +49,10 @@ func initialModel(client *mongo.Client) tea.Model {
 	)
 
 	return &baseModel{
-		state:        mainView,
-		windowWidth:  0,
-		windowHeight: 0,
-		foreground:   modal,
-		background:   appView,
-		overlay:      view,
+		state:    mainView,
+		errModal: errModal,
+		appView:  appView,
+		overlay:  view,
 	}
 }
 
@@ -68,30 +64,24 @@ func (m *baseModel) Init() tea.Cmd {
 // Update handles event and manages internal state. It partly implements the tea.Model interface.
 func (m *baseModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := message.(type) {
-	case tea.WindowSizeMsg:
-		m.windowWidth = msg.Width
-		m.windowHeight = msg.Height
-
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q", "esc":
 			return m, tea.Quit
-
-		case " ":
-			if m.state == mainView {
-				m.state = modalView
-			} else {
-				m.state = mainView
-			}
-			return m, nil
 		}
 	}
 
-	fg, fgCmd := m.foreground.Update(message)
-	m.foreground = fg
+	fg, fgCmd := m.errModal.Update(message)
+	m.errModal = fg
 
-	bg, bgCmd := m.background.Update(message)
-	m.background = bg
+	bg, bgCmd := m.appView.Update(message)
+	m.appView = bg
+
+	if m.errModal.(*errormodal.Model).ErrorPresent() { // TODO investigate if we NEED this typecast due to the bubble overlay library
+		m.state = modalView
+	} else {
+		m.state = mainView
+	}
 
 	cmds := []tea.Cmd{}
 	cmds = append(cmds, fgCmd, bgCmd)
@@ -105,5 +95,5 @@ func (m *baseModel) View() string {
 	if m.state == modalView {
 		return m.overlay.View()
 	}
-	return m.background.View()
+	return m.appView.View()
 }

@@ -4,16 +4,18 @@ import (
 	"fmt"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/kreulenk/mongotui/pkg/components/errormodal"
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"os"
 )
 
 type Model struct {
 	textInput textinput.Model
 	textValue string
+
+	errModal *errormodal.Model
 }
 
-func New() *Model {
+func New(errModal *errormodal.Model) *Model {
 	ti := textinput.New()
 	ti.Placeholder = "Query"
 	ti.SetValue("{}")
@@ -24,6 +26,7 @@ func New() *Model {
 	return &Model{
 		textValue: "{}",
 		textInput: ti,
+		errModal:  errModal,
 	}
 }
 
@@ -51,14 +54,13 @@ func (m *Model) ResetValue() {
 	m.textInput.SetCursor(1)
 }
 
-func (m *Model) GetValue() bson.D {
+func (m *Model) GetValue() (bson.D, error) {
 	var query bson.D
 	err := bson.UnmarshalExtJSON([]byte(m.textValue), false, &query)
 	if err != nil {
-		fmt.Printf("Error unmarshalling query: %v\n", err)
-		os.Exit(1)
+		return bson.D{}, fmt.Errorf("invalid query: %v", err)
 	}
-	return query
+	return query, nil
 }
 
 func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {

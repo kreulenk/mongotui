@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/kreulenk/mongotui/pkg/components/errormodal"
 	"github.com/kreulenk/mongotui/pkg/mongodata"
 	"github.com/kreulenk/mongotui/pkg/renderutils"
 	"github.com/mattn/go-runewidth"
@@ -22,8 +23,9 @@ const (
 
 // Model defines a state for the coltable widget.
 type Model struct {
-	Help   help.Model
-	styles Styles
+	Help     help.Model
+	errModal *errormodal.Model
+	styles   Styles
 
 	viewport    viewport.Model
 	headersText []string
@@ -48,11 +50,12 @@ func (m *Model) Init() tea.Cmd {
 }
 
 // New creates a new baseModel for the coltable widget.
-func New(engine *mongodata.Engine) *Model {
+func New(engine *mongodata.Engine, errModal *errormodal.Model) *Model {
 	databases := mongodata.GetSortedDatabasesByName(engine.Server.Databases)
 	m := Model{
-		Help:   help.New(),
-		styles: defaultStyles(),
+		Help:     help.New(),
+		errModal: errModal,
+		styles:   defaultStyles(),
 
 		viewport:    viewport.New(0, 20),
 		headersText: []string{"Databases", "Collections"},
