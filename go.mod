@@ -1,6 +1,6 @@
 module github.com/kreulenk/mtui
 
-go 1.23
+go 1.23.4
 
 require (
 	github.com/charmbracelet/bubbles v0.20.0
@@ -27,6 +27,7 @@ require (
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/termenv v0.15.2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
+	github.com/rmhubbert/bubbletea-overlay v0.3.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.2 // indirect

@@ -20,7 +20,7 @@ import (
 type Model struct {
 	Help help.Model
 
-	searchBar     searchbar.Model
+	searchBar     *searchbar.Model
 	searchEnabled bool
 
 	docs   []Doc
@@ -42,7 +42,7 @@ type FieldSummary struct {
 }
 
 // New creates a new baseModel for the coltable widget.
-func New(engine *mongodata.Engine) Model {
+func New(engine *mongodata.Engine) *Model {
 	m := Model{
 		Help:      help.New(),
 		searchBar: searchbar.New(),
@@ -58,11 +58,11 @@ func New(engine *mongodata.Engine) Model {
 	m.updateTableRows()
 	m.updateViewport()
 
-	return m
+	return &m
 }
 
 // Update is the Bubble Tea update loop.
-func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 	if !m.focus {
 		return m, nil
 	}
@@ -112,12 +112,12 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) Init() tea.Cmd {
+func (m *Model) Init() tea.Cmd {
 	return nil
 }
 
 // View renders the component.
-func (m Model) View() string {
+func (m *Model) View() string {
 	return m.styles.Table.Render(m.viewport.View())
 }
 

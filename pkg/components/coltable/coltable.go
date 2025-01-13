@@ -43,8 +43,12 @@ type Model struct {
 	engine *mongodata.Engine
 }
 
+func (m *Model) Init() tea.Cmd {
+	return nil
+}
+
 // New creates a new baseModel for the coltable widget.
-func New(engine *mongodata.Engine) Model {
+func New(engine *mongodata.Engine) *Model {
 	databases := mongodata.GetSortedDatabasesByName(engine.Server.Databases)
 	m := Model{
 		Help:   help.New(),
@@ -64,11 +68,11 @@ func New(engine *mongodata.Engine) Model {
 	m.updateTableData()
 	m.updateViewport()
 
-	return m
+	return &m
 }
 
 // Update is the Bubble Tea update loop.
-func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 	if !m.focus {
 		return m, nil
 	}
@@ -130,7 +134,7 @@ func (m *Model) selectCollection() {
 }
 
 // View renders the component.
-func (m Model) View() string {
+func (m *Model) View() string {
 	return m.styles.Table.Render(m.headersView() + "\n" + m.viewport.View())
 }
 

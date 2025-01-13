@@ -13,7 +13,7 @@ type Model struct {
 	textValue string
 }
 
-func New() Model {
+func New() *Model {
 	ti := textinput.New()
 	ti.Placeholder = "Query"
 	ti.SetValue("{}")
@@ -21,13 +21,13 @@ func New() Model {
 	ti.CharLimit = 156
 	ti.Blur()
 
-	return Model{
+	return &Model{
 		textValue: "{}",
 		textInput: ti,
 	}
 }
 
-func (m Model) Init() tea.Cmd {
+func (m *Model) Init() tea.Cmd {
 	return textinput.Blink
 }
 
@@ -40,7 +40,7 @@ func (m *Model) Focus() {
 	m.textInput.Focus()
 }
 
-func (m Model) Focused() bool {
+func (m *Model) Focused() bool {
 	return m.textInput.Focused()
 }
 
@@ -51,7 +51,7 @@ func (m *Model) ResetValue() {
 	m.textInput.SetCursor(1)
 }
 
-func (m Model) GetValue() bson.D {
+func (m *Model) GetValue() bson.D {
 	var query bson.D
 	err := bson.UnmarshalExtJSON([]byte(m.textValue), false, &query)
 	if err != nil {
@@ -61,7 +61,7 @@ func (m Model) GetValue() bson.D {
 	return query
 }
 
-func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
@@ -82,6 +82,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) View() string {
+func (m *Model) View() string {
 	return m.textInput.View()
 }

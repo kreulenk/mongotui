@@ -6,29 +6,28 @@ package tui
 import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/kreulenk/mtui/pkg/components/coltable"
-	"github.com/kreulenk/mtui/pkg/components/doclist"
-	"github.com/kreulenk/mtui/pkg/mongodata"
+	"github.com/kreulenk/mtui/pkg/appview"
+	"github.com/kreulenk/mtui/pkg/components/errormodal"
+	overlay "github.com/rmhubbert/bubbletea-overlay"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"os"
 )
 
-type componentSelection int
+type sessionState int
 
 const (
-	dbColSelection componentSelection = iota
-	docSummarySelection
+	mainView sessionState = iota
+	modalView
 )
 
+// baseModel implements tea.Model, and manages the browser UI.
 type baseModel struct {
-	table   coltable.Model
-	doclist doclist.Model
-
-	componentSelection componentSelection
-
-	engine *mongodata.Engine
-	err    error // TODO handle how to display errors
+	state        sessionState
+	windowWidth  int
+	windowHeight int
+	foreground   tea.Model
+	background   tea.Model
+	overlay      tea.Model
 }
 
 func Initialize(client *mongo.Client) {
@@ -39,77 +38,72 @@ func Initialize(client *mongo.Client) {
 	}
 }
 
-func initialModel(client *mongo.Client) baseModel {
-	engine := &mongodata.Engine{
-		Client: client,
-		Server: &mongodata.Server{
-			Databases: make(map[string]mongodata.Database),
-		},
-	}
+func initialModel(client *mongo.Client) tea.Model {
+	appView := appview.New(client)
+	modal := &errormodal.Model{}
+	view := overlay.New(
+		modal,
+		appView,
+		overlay.Center,
+		overlay.Center,
+		0,
+		0,
+	)
 
-	err := engine.SetDatabases()
-	if err != nil {
-		fmt.Printf("could not initialize Data: %v", err)
-		os.Exit(1)
-	}
-
-	t := coltable.New(engine)
-	d := doclist.New(engine)
-
-	return baseModel{
-		table:              t,
-		doclist:            d,
-		componentSelection: dbColSelection,
-		engine:             engine,
+	return &baseModel{
+		state:        mainView,
+		windowWidth:  0,
+		windowHeight: 0,
+		foreground:   modal,
+		background:   appView,
+		overlay:      view,
 	}
 }
 
-func (m baseModel) Init() tea.Cmd {
+// Init initialises the baseModel on program load. It partly implements the tea.Model interface.
+func (m *baseModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m baseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
+// Update handles event and manages internal state. It partly implements the tea.Model interface.
+func (m *baseModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := message.(type) {
+	case tea.WindowSizeMsg:
+		m.windowWidth = msg.Width
+		m.windowHeight = msg.Height
+
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "q", "ctrl+c":
+		case "q", "esc":
 			return m, tea.Quit
+
+		case " ":
+			if m.state == mainView {
+				m.state = modalView
+			} else {
+				m.state = mainView
+			}
+			return m, nil
 		}
-	case tea.WindowSizeMsg:
-		leftRightBorderWidth := 4
-		topBottomBorderAndHelpHeight := 3
-		m.table.SetWidth((msg.Width / 3) - leftRightBorderWidth)
-		m.table.SetHeight(msg.Height - topBottomBorderAndHelpHeight)
-
-		m.doclist.SetWidth((msg.Width * 2 / 3) - leftRightBorderWidth)
-		m.doclist.SetHeight(msg.Height - topBottomBorderAndHelpHeight)
-
-		return m, tea.ClearScreen // Necessary for resizes
 	}
 
-	m.table, _ = m.table.Update(msg)
-	m.doclist, _ = m.doclist.Update(msg)
+	fg, fgCmd := m.foreground.Update(message)
+	m.foreground = fg
 
-	// If a collection is selected, pass off control to the doclist
-	if m.componentSelection == dbColSelection && m.table.CollectionSelected() {
-		m.componentSelection = docSummarySelection
-		m.engine.SetSelectedCollection(m.table.SelectedCollection(), m.table.SelectedDatabase())
-		m.doclist.Focus()
-	}
+	bg, bgCmd := m.background.Update(message)
+	m.background = bg
 
-	if m.componentSelection == docSummarySelection && m.doclist.Focused() == false {
-		m.componentSelection = dbColSelection
-		m.table.DeselectCollection()
-	}
+	cmds := []tea.Cmd{}
+	cmds = append(cmds, fgCmd, bgCmd)
 
-	return m, nil
+	return m, tea.Batch(cmds...)
 }
 
-func (m baseModel) View() string {
-	tables := lipgloss.JoinHorizontal(lipgloss.Left, m.table.View(), m.doclist.View())
-	if m.table.CollectionSelected() {
-		return lipgloss.JoinVertical(lipgloss.Top, tables, m.doclist.HelpView())
-	} else {
-		return lipgloss.JoinVertical(lipgloss.Top, tables, m.table.HelpView())
+// View applies and styling and handles rendering the view. It partly implements the tea.Model
+// interface.
+func (m *baseModel) View() string {
+	if m.state == modalView {
+		return m.overlay.View()
 	}
+	return m.background.View()
 }
