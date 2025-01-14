@@ -68,7 +68,11 @@ func New(engine *mongodata.Engine, errModal *errormodal.Model) *Model {
 		engine: engine,
 	}
 
-	m.updateTableData()
+	err := m.updateTableData()
+	if err != nil {
+		fmt.Printf("failed to initialize the database and collection information: %v\n", err)
+		os.Exit(1)
+	}
 	m.updateViewport()
 
 	return &m
@@ -116,7 +120,7 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 }
 
 // CollectionSelected returns whether or not a collection is currently selected.
-func (m Model) CollectionSelected() bool {
+func (m *Model) CollectionSelected() bool {
 	return !m.focus
 }
 
@@ -176,7 +180,7 @@ func (m *Model) updateViewport() {
 }
 
 // SelectedDatabase returns the database that is currently highlighted.
-func (m Model) SelectedDatabase() string {
+func (m *Model) SelectedDatabase() string {
 	if m.cursorDatabase < 0 || m.cursorDatabase >= len(m.databases) {
 		return ""
 	}
@@ -184,7 +188,7 @@ func (m Model) SelectedDatabase() string {
 }
 
 // SelectedCollection returns the collection that is currently highlighted.
-func (m Model) SelectedCollection() string {
+func (m *Model) SelectedCollection() string {
 	if m.cursorCollection < 0 ||
 		m.cursorCollection >= len(m.collections) ||
 		m.cursorColumn == databasesColumn {
@@ -209,26 +213,38 @@ func (m *Model) SetHeight(h int) {
 // MoveUp moves the selection up by any number of rows.
 // It can not go above the first row.
 func (m *Model) MoveUp(n int) {
+	oldCursor := m.cursorDatabase
 	if m.cursorColumn == databasesColumn {
 		m.cursorDatabase = renderutils.Clamp(m.cursorDatabase-n, 0, len(m.databases)-1)
 	} else {
 		m.cursorCollection = renderutils.Clamp(m.cursorCollection-n, 0, len(m.collections)-1)
 	}
 
-	m.updateTableData()
+	err := m.updateTableData()
+	if err != nil {
+		m.errModal.SetError(err)
+		m.cursorDatabase = oldCursor
+		return
+	}
 	m.updateViewport()
 }
 
 // MoveDown moves the selection down by any number of rows.
 // It can not go below the last row.
 func (m *Model) MoveDown(n int) {
+	oldCursor := m.cursorDatabase
 	if m.cursorColumn == databasesColumn {
 		m.cursorDatabase = renderutils.Clamp(m.cursorDatabase+n, 0, len(m.databases)-1)
 	} else {
 		m.cursorCollection = renderutils.Clamp(m.cursorCollection+n, 0, len(m.collections)-1)
 	}
 
-	m.updateTableData()
+	err := m.updateTableData()
+	if err != nil {
+		m.errModal.SetError(err)
+		m.cursorDatabase = oldCursor
+		return
+	}
 	m.updateViewport()
 }
 
@@ -239,18 +255,31 @@ func (m *Model) MoveRight() {
 		return
 	} else if m.cursorColumn == databasesColumn {
 		m.cursorColumn = collectionsColumn
-		m.updateTableData()
+		err := m.updateTableData()
+		if err != nil {
+			m.errModal.SetError(err)
+			m.cursorColumn = databasesColumn
+			return
+		}
 		m.updateViewport()
 	}
 }
 
 // MoveLeft moves the column to the left.
 func (m *Model) MoveLeft() {
+	oldCursorCollection := m.cursorCollection
+	oldCursorColumn := m.cursorColumn
 	if m.cursorColumn == collectionsColumn {
 		m.cursorCollection = 0
 	}
 	m.cursorColumn = databasesColumn
-	m.updateTableData()
+	err := m.updateTableData()
+	if err != nil {
+		m.errModal.SetError(err)
+		m.cursorCollection = oldCursorCollection
+		m.cursorColumn = oldCursorColumn
+		return
+	}
 	m.updateViewport()
 }
 
@@ -284,7 +313,7 @@ func (m *Model) GoLeft() {
 func (m *Model) columnWidth() int {
 	return m.viewport.Width / len(m.headersText)
 }
-func (m Model) headersView() string {
+func (m *Model) headersView() string {
 	s := make([]string, 0, len(m.headersText))
 	for _, col := range m.headersText {
 		m.styles.Header = m.styles.Header.Width(m.columnWidth()).MaxWidth(m.columnWidth())
@@ -316,12 +345,12 @@ func (m *Model) renderCollectionCell(r int) string {
 
 // updateTableData updates the data tracked in the model based on the current cursorDatabase, cursorCollection and cursorColumn position
 // Lots of opportunity for caching with how this function is handled/called, but I like the live data for now
-func (m *Model) updateTableData() {
+func (m *Model) updateTableData() error {
 	err := m.engine.SetCollectionsPerDb(m.databases[m.cursorDatabase])
-	if err != nil { // TODO handle errors better
-		fmt.Printf("could not fetch collections: %v", err)
-		os.Exit(1)
+	if err != nil {
+		return err
 	}
 
 	m.collections = mongodata.GetSortedCollectionsByName(m.engine.Server.Databases[m.databases[m.cursorDatabase]].Collections)
+	return nil
 }

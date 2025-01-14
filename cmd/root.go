@@ -121,6 +121,7 @@ func Execute() {
 	rootCmd := genRootCmd()
 	err := rootCmd.Execute()
 	if err != nil {
+		fmt.Printf("failed to initialize the cli: %v\n", err)
 		os.Exit(1)
 	}
 }

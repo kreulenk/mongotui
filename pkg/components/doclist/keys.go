@@ -22,7 +22,7 @@ type keyMap struct {
 // HelpView is a helper method for rendering the help menu from the keymap.
 // Note that this view is not rendered by default and you must call it
 // manually in your application, where applicable.
-func (m Model) HelpView() string {
+func (m *Model) HelpView() string {
 	return m.Help.View(keys)
 }
 

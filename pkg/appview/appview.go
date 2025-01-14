@@ -31,7 +31,6 @@ type Model struct {
 	componentSelection componentSelection
 
 	engine *mongodata.Engine
-	err    error // TODO handle how to display errors
 }
 
 func New(client *mongo.Client, errModal *errormodal.Model) *Model {
@@ -44,7 +43,7 @@ func New(client *mongo.Client, errModal *errormodal.Model) *Model {
 
 	err := engine.SetDatabases()
 	if err != nil {
-		fmt.Printf("could not initialize Data: %v", err)
+		fmt.Printf("could not initialize data: %v", err)
 		os.Exit(1)
 	}
 

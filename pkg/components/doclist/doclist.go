@@ -13,6 +13,7 @@ import (
 	"github.com/kreulenk/mongotui/pkg/renderutils"
 	"github.com/mattn/go-runewidth"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"os"
 	"slices"
 	"strings"
 )
@@ -57,7 +58,11 @@ func New(engine *mongodata.Engine, errModal *errormodal.Model) *Model {
 		engine: engine,
 	}
 
-	m.updateTableRows()
+	err := m.updateTableRows()
+	if err != nil {
+		fmt.Printf("could not initialize document summary list: %v", err)
+		os.Exit(1)
+	}
 	m.updateViewport()
 
 	return &m
@@ -73,7 +78,11 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 		m.searchBar, _ = m.searchBar.Update(msg)
 		if !m.searchBar.Focused() {
 			m.searchEnabled = false
-			m.updateTableRows()
+			err := m.updateTableRows()
+			if err != nil {
+				m.errModal.SetError(err)
+				return m, nil
+			}
 		}
 		m.updateViewport()
 		return m, nil
@@ -123,19 +132,19 @@ func (m *Model) View() string {
 	return m.styles.Table.Render(m.viewport.View())
 }
 
-func (m *Model) updateTableRows() {
+// updateTableRows updates the list of document summaries shown in the right hand bar based on the database/collection
+// selected in the left hand bar as well as the query that was last entered in the search bar.
+func (m *Model) updateTableRows() error {
 	if !m.engine.IsCollectionSelected() {
-		return
+		return nil
 	}
 	val, err := m.searchBar.GetValue()
 	if err != nil {
-		m.errModal.SetError(err)
-		return
+		return err
 	}
 	err = m.engine.QueryCollection(val)
-	if err != nil { // TODO improve how we handle errors
-		m.errModal.SetError(err)
-		return
+	if err != nil {
+		return err
 	}
 
 	var newDocs []Doc
@@ -157,6 +166,7 @@ func (m *Model) updateTableRows() {
 	}
 	m.cursor = 0
 	m.docs = newDocs
+	return nil
 }
 
 func getFieldType(value interface{}) string {
@@ -179,7 +189,10 @@ func (m *Model) Focused() bool {
 func (m *Model) Focus() {
 	m.styles.Table = m.styles.Table.BorderStyle(lipgloss.ThickBorder()).BorderForeground(lipgloss.Color("57"))
 	m.searchBar.ResetValue()
-	m.updateTableRows()
+	err := m.updateTableRows()
+	if err != nil {
+		m.errModal.SetError(err)
+	}
 	m.updateViewport()
 	m.focus = true
 }

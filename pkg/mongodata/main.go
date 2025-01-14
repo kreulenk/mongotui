@@ -63,7 +63,7 @@ func (m *Engine) SetCollectionsPerDb(dbName string) error {
 	defer cancel()
 	collectionNames, err := db.ListCollectionNames(ctx, bson.D{})
 	if err != nil {
-		return err
+		return fmt.Errorf("could not list collections for database %s: %v", dbName, err)
 	}
 
 	m.Server.Databases[dbName] = Database{Collections: make(map[string]Collection)} // zero out the Data
