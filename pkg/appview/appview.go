@@ -10,6 +10,7 @@ import (
 	"github.com/kreulenk/mongotui/pkg/components/coltable"
 	"github.com/kreulenk/mongotui/pkg/components/doclist"
 	"github.com/kreulenk/mongotui/pkg/components/errormodal"
+	"github.com/kreulenk/mongotui/pkg/components/jsonviewer"
 	"github.com/kreulenk/mongotui/pkg/mongodata"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"os"
@@ -23,8 +24,9 @@ const (
 )
 
 type Model struct {
-	coltable *coltable.Model
-	doclist  *doclist.Model
+	colTable        *coltable.Model
+	docList         *doclist.Model
+	singleDocViewer *jsonviewer.Model
 
 	errModal *errormodal.Model
 
@@ -49,10 +51,12 @@ func New(client *mongo.Client, errModal *errormodal.Model) *Model {
 
 	t := coltable.New(engine, errModal)
 	d := doclist.New(engine, errModal)
+	sdv := jsonviewer.New(engine, errModal)
 
 	return &Model{
-		coltable:           t,
-		doclist:            d,
+		colTable:           t,
+		docList:            d,
+		singleDocViewer:    sdv,
 		errModal:           errModal,
 		componentSelection: dbColSelection,
 		engine:             engine,
@@ -69,28 +73,36 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		leftRightBorderWidth := 4
 		topBottomBorderAndHelpHeight := 3
-		m.coltable.SetWidth((msg.Width / 3) - leftRightBorderWidth)
-		m.coltable.SetHeight(msg.Height - topBottomBorderAndHelpHeight)
+		m.colTable.SetWidth((msg.Width / 3) - leftRightBorderWidth)
+		m.colTable.SetHeight(msg.Height - topBottomBorderAndHelpHeight)
+		m.docList.SetWidth((msg.Width * 2 / 3) - leftRightBorderWidth)
+		m.docList.SetHeight(msg.Height - topBottomBorderAndHelpHeight)
 
-		m.doclist.SetWidth((msg.Width * 2 / 3) - leftRightBorderWidth)
-		m.doclist.SetHeight(msg.Height - topBottomBorderAndHelpHeight)
+		m.singleDocViewer.SetWidth(msg.Width)
+		m.singleDocViewer.SetHeight(msg.Height)
 
 		return m, tea.ClearScreen // Necessary for resizes
 	}
 
-	m.coltable, _ = m.coltable.Update(msg)
-	m.doclist, _ = m.doclist.Update(msg)
+	m.colTable, _ = m.colTable.Update(msg)
+	m.docList, _ = m.docList.Update(msg)
+	m.singleDocViewer, _ = m.singleDocViewer.Update(msg)
 
-	// If a collection is selected, pass off control to the doclist
-	if m.componentSelection == dbColSelection && m.coltable.CollectionSelected() {
-		m.componentSelection = docSummarySelection
-		m.engine.SetSelectedCollection(m.coltable.SelectedCollection(), m.coltable.SelectedDatabase())
-		m.doclist.Focus()
+	if m.engine.IsDocumentSelected() {
+		m.singleDocViewer.Focus()
+		return m, nil
 	}
 
-	if m.componentSelection == docSummarySelection && m.doclist.Focused() == false {
+	// If a collection is selected, pass off control to the docList
+	if m.componentSelection == dbColSelection && m.colTable.CollectionSelected() {
+		m.componentSelection = docSummarySelection
+		m.engine.SetSelectedCollection(m.colTable.SelectedCollection(), m.colTable.SelectedDatabase())
+		m.docList.Focus()
+	}
+
+	if m.componentSelection == docSummarySelection && m.docList.Focused() == false {
 		m.componentSelection = dbColSelection
-		m.coltable.DeselectCollection()
+		m.colTable.DeselectCollection()
 	}
 
 	return m, nil
@@ -100,11 +112,14 @@ func (m *Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m *Model) View() string {
-	tables := lipgloss.JoinHorizontal(lipgloss.Left, m.coltable.View(), m.doclist.View())
-	if m.coltable.CollectionSelected() {
-		return lipgloss.JoinVertical(lipgloss.Top, tables, m.doclist.HelpView())
+func (m *Model) View() string { // TODO standardize how component focusing and blurring is handled
+	if m.engine.IsDocumentSelected() {
+		return m.singleDocViewer.View()
+	}
+	tables := lipgloss.JoinHorizontal(lipgloss.Left, m.colTable.View(), m.docList.View())
+	if m.colTable.CollectionSelected() {
+		return lipgloss.JoinVertical(lipgloss.Top, tables, m.docList.HelpView())
 	} else {
-		return lipgloss.JoinVertical(lipgloss.Top, tables, m.coltable.HelpView())
+		return lipgloss.JoinVertical(lipgloss.Top, tables, m.colTable.HelpView())
 	}
 }

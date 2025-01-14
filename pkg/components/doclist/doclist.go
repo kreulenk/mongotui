@@ -113,10 +113,10 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 			m.GotoBottom()
 		case key.Matches(msg, keys.Left):
 			m.blur()
-			//case key.Matches(msg, keys.Edit):
-			//	m.EditDoc()
-			//case key.Matches(msg, keys.View):
-			//	m.ViewDoc()
+		//case key.Matches(msg, keys.Edit):
+		//	m.EditDoc()
+		case key.Matches(msg, keys.View):
+			m.ViewDoc()
 		}
 	}
 
@@ -148,7 +148,7 @@ func (m *Model) updateTableRows() error {
 	}
 
 	var newDocs []Doc
-	for _, doc := range m.engine.GetSelectedDocs() {
+	for _, doc := range m.engine.GetQueriedDocs() {
 		var row Doc
 		for k, v := range doc {
 			val := fmt.Sprintf("%v", v)
@@ -200,6 +200,22 @@ func (m *Model) Focus() {
 func (m *Model) blur() {
 	m.styles.Table = m.styles.Table.BorderStyle(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("240"))
 	m.focus = false
+}
+
+// ViewDoc opens the selected document in a new window via the jsonviewer component.
+func (m *Model) ViewDoc() {
+	currDoc := m.docs[m.cursor]
+	for _, field := range currDoc {
+		if field.Name == "_id" {
+			m.engine.SetSelectedDocument(field.Value)
+			return
+		}
+	}
+	m.errModal.SetError(fmt.Errorf("no _id field found in selected document so it cannot be viewed"))
+}
+
+func (m *Model) IsDocSelected() bool {
+	return m.cursor >= 0 && m.cursor < len(m.docs)
 }
 
 // updateViewport updates the list content based on the previously defined

@@ -8,6 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"slices"
+	"strings"
 	"time"
 )
 
@@ -25,15 +26,16 @@ type Collection struct {
 	Data []bson.M
 }
 
-type selectedCollection struct {
+type selectedData struct {
 	collectionName string
 	databaseName   string
+	documentId     string
 }
 
 type Engine struct {
-	Client             *mongo.Client
-	Server             *Server
-	selectedCollection selectedCollection
+	Client       *mongo.Client
+	Server       *Server
+	selectedData selectedData
 }
 
 func (m *Engine) SetDatabases() error {
@@ -76,24 +78,66 @@ func (m *Engine) SetCollectionsPerDb(dbName string) error {
 
 // SetSelectedCollection Allows parent components to set what data will be displayed within this component.
 func (m *Engine) SetSelectedCollection(collectionName, databaseName string) {
-	m.selectedCollection = selectedCollection{
+	m.selectedData = selectedData{
 		collectionName: collectionName,
 		databaseName:   databaseName,
 	}
 }
 
+func (m *Engine) SetSelectedDocument(documentId string) {
+	m.selectedData.documentId = documentId
+}
+
+func (m *Engine) IsDocumentSelected() bool {
+	return m.selectedData.documentId != ""
+}
+
+func (m *Engine) GetSelectedDocument() (string, error) {
+	if m.selectedData.databaseName == "" || m.selectedData.collectionName == "" || m.selectedData.documentId == "" {
+		return "", fmt.Errorf("no document selected") // This should never happen if calling components are working correctly
+	}
+
+	db := m.Client.Database(m.selectedData.databaseName)
+	coll := db.Collection(m.selectedData.collectionName)
+	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
+	defer cancel()
+
+	trimmedDoc := strings.TrimPrefix(m.selectedData.documentId, `ObjectID("`) // TODO look into how this is set and if it can be done better
+	trimmedDoc = strings.TrimSuffix(trimmedDoc, `")`)
+
+	objectId, err := bson.ObjectIDFromHex(trimmedDoc)
+	if err != nil {
+		return "", fmt.Errorf("invalid ObjectID %s: %v", trimmedDoc, err)
+	}
+	cur := coll.FindOne(ctx, bson.D{{"_id", objectId}})
+	if cur.Err() != nil {
+		return "", fmt.Errorf("failed to retrieve document with Id '%s': %w", m.selectedData.documentId, cur.Err())
+	}
+	data, err := cur.Raw()
+	if err != nil {
+		return "", err
+	}
+
+	parsedDoc, err := bson.MarshalExtJSON(data, false, false)
+	if err != nil {
+		return "", fmt.Errorf("could not parse document: %v", err)
+	}
+
+	return string(parsedDoc), nil
+}
+
 func (m *Engine) IsCollectionSelected() bool {
-	return m.selectedCollection.collectionName != "" && m.selectedCollection.databaseName != ""
+	return m.selectedData.collectionName != "" && m.selectedData.databaseName != ""
 }
 
 // QueryCollection fetches all the data from a given collection in a given database
 func (m *Engine) QueryCollection(query bson.D) error {
-	if m.selectedCollection.databaseName == "" || m.selectedCollection.collectionName == "" {
+	if m.selectedData.databaseName == "" || m.selectedData.collectionName == "" {
 		return fmt.Errorf("no collection selected") // This should never happen
 	}
 
-	db := m.Client.Database(m.selectedCollection.databaseName)
-	coll := db.Collection(m.selectedCollection.collectionName)
+	db := m.Client.Database(m.selectedData.databaseName)
+	coll := db.Collection(m.selectedData.collectionName)
 	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
 	cur, err := coll.Find(ctx, query)
@@ -106,19 +150,20 @@ func (m *Engine) QueryCollection(query bson.D) error {
 		return err
 	}
 
-	curDb, ok := m.Server.Databases[m.selectedCollection.databaseName]
+	curDb, ok := m.Server.Databases[m.selectedData.databaseName]
 	if ok {
-		curDb.Collections[m.selectedCollection.collectionName] = Collection{Data: data}
+		curDb.Collections[m.selectedData.collectionName] = Collection{Data: data}
 	} else {
 		return fmt.Errorf("no database is set") // should never happen
 	}
 	return nil
 }
 
-func (m *Engine) GetSelectedDocs() []bson.M {
-	db, ok := m.Server.Databases[m.selectedCollection.databaseName]
+// GetQueriedDocs returns the data that was last queried from the database for the selected database/collection
+func (m *Engine) GetQueriedDocs() []bson.M {
+	db, ok := m.Server.Databases[m.selectedData.databaseName]
 	if ok {
-		collection, ok := db.Collections[m.selectedCollection.collectionName]
+		collection, ok := db.Collections[m.selectedData.collectionName]
 		if ok {
 			return collection.Data
 		}
