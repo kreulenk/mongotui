@@ -24,7 +24,7 @@ Then, you can install mongotui by running the following command:
 make install
 ```
 
-## Development
+## Development Roadmap
 The high level plan for this project is as follows:
 |  #  | Step                                                            | Status |
 | :-: | --------------------------------------------------------------- | :----: |
@@ -34,4 +34,5 @@ The high level plan for this project is as follows:
 |  4  | View an entire document                                         |   ❌   |
 |  5  | Edit a document                                                 |   ❌   |
 |  6  | Delete a database/collection/document                           |   ❌   |
-|  7  | TBD!                                                            |   💥   |
+|  7  | Connection/authentication option feature parity with mongosh    |   ❌   |
+|  8  | TBD!                                                            |   💥   |
