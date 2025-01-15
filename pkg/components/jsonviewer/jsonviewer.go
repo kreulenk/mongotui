@@ -41,7 +41,7 @@ func (m *Model) Focus() {
 	}
 
 	buf := new(bytes.Buffer)
-	if err := quick.Highlight(buf, selectedDoc, ".json", "terminal256", "dracula"); err != nil {
+	if err := quick.Highlight(buf, selectedDoc, "json", "terminal256", "dracula"); err != nil {
 		m.errModal.SetError(fmt.Errorf("could not highlight json: %v", err))
 		return
 	}
@@ -49,7 +49,7 @@ func (m *Model) Focus() {
 	renderedContent := lipgloss.NewStyle().
 		Width(m.Viewport.Width).
 		Height(m.Viewport.Height).
-		Render(selectedDoc)
+		Render(buf.String())
 
 	m.Viewport.SetContent(renderedContent)
 	m.focus = true

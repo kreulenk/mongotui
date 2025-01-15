@@ -118,7 +118,7 @@ func (m *Engine) GetSelectedDocument() (string, error) {
 		return "", err
 	}
 
-	parsedDoc, err := bson.MarshalExtJSON(data, false, false)
+	parsedDoc, err := bson.MarshalExtJSONIndent(data, false, false, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("could not parse document: %v", err)
 	}
