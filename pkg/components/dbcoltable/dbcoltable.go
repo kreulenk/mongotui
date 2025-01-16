@@ -1,4 +1,4 @@
-package coltable
+package dbcoltable
 
 import (
 	"fmt"
@@ -21,7 +21,7 @@ const (
 	collectionsColumn
 )
 
-// Model defines a state for the coltable widget.
+// Model defines a state for the dbcoltable widget.
 type Model struct {
 	Help     help.Model
 	errModal *errormodal.Model
@@ -49,7 +49,7 @@ func (m *Model) Init() tea.Cmd {
 	return nil
 }
 
-// New creates a new baseModel for the coltable widget.
+// New creates a new baseModel for the dbcoltable widget.
 func New(engine *mongodata.Engine, errModal *errormodal.Model) *Model {
 	databases := mongodata.GetSortedDatabasesByName(engine.Server.Databases)
 	m := Model{
@@ -111,7 +111,7 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 			m.GoLeft()
 		case key.Matches(msg, keys.Enter):
 			if m.cursorColumn == collectionsColumn {
-				m.selectCollection()
+				m.blur()
 			}
 		}
 	}
@@ -119,22 +119,22 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 	return m, nil
 }
 
-// CollectionSelected returns whether or not a collection is currently selected.
-func (m *Model) CollectionSelected() bool {
-	return !m.focus
+// Focused returns whether or not this component is currently being used
+func (m *Model) Focused() bool {
+	return m.focus
 }
 
-// DeselectCollection enables key use on the coltable so that the user can navigate the coltable again. This signal would
+// Focus enables key use on the dbcoltable so that the user can navigate the dbcoltable again. This signal would
 // be sent from another component
-func (m *Model) DeselectCollection() {
+func (m *Model) Focus() {
 	m.focus = true
 	m.styles.Table = m.styles.Table.BorderStyle(lipgloss.ThickBorder()).BorderForeground(lipgloss.Color("57"))
 	m.updateViewport()
 }
 
-// selectCollection disables key use on the coltable so that other components can now display information about the collection
-// that is currently highlighted
-func (m *Model) selectCollection() {
+// blur disables key use on the dbcoltable so that the parent appview component can switch the focus to
+// the doclist component
+func (m *Model) blur() {
 	m.focus = false
 	m.styles.Table = m.styles.Table.BorderStyle(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("240"))
 	m.updateViewport()
@@ -198,13 +198,13 @@ func (m *Model) SelectedCollection() string {
 	return m.collections[m.cursorCollection]
 }
 
-// SetWidth sets the width of the viewport of the coltable.
+// SetWidth sets the width of the viewport of the dbcoltable.
 func (m *Model) SetWidth(w int) {
 	m.viewport.Width = w
 	m.updateViewport()
 }
 
-// SetHeight sets the height of the viewport of the coltable.
+// SetHeight sets the height of the viewport of the dbcoltable.
 func (m *Model) SetHeight(h int) {
 	m.viewport.Height = h - lipgloss.Height(m.headersView())
 	m.updateViewport()
@@ -251,7 +251,7 @@ func (m *Model) MoveDown(n int) {
 // MoveRight moves the column to the right.
 func (m *Model) MoveRight() {
 	if m.cursorColumn == collectionsColumn {
-		m.selectCollection()
+		m.blur()
 		return
 	} else if m.cursorColumn == databasesColumn {
 		m.cursorColumn = collectionsColumn

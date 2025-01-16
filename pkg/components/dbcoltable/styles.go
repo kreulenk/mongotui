@@ -1,4 +1,4 @@
-package coltable
+package dbcoltable
 
 import "github.com/charmbracelet/lipgloss"
 

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/kreulenk/mongotui/pkg/components/coltable"
+	"github.com/kreulenk/mongotui/pkg/components/dbcoltable"
 	"github.com/kreulenk/mongotui/pkg/components/doclist"
 	"github.com/kreulenk/mongotui/pkg/components/errormodal"
 	"github.com/kreulenk/mongotui/pkg/components/jsonviewer"
@@ -24,7 +24,7 @@ const (
 )
 
 type Model struct {
-	colTable        *coltable.Model
+	colTable        *dbcoltable.Model
 	docList         *doclist.Model
 	singleDocViewer *jsonviewer.Model
 
@@ -49,7 +49,7 @@ func New(client *mongo.Client, errModal *errormodal.Model) *Model {
 		os.Exit(1)
 	}
 
-	t := coltable.New(engine, errModal)
+	t := dbcoltable.New(engine, errModal)
 	d := doclist.New(engine, errModal)
 	sdv := jsonviewer.New(engine, errModal)
 
@@ -79,9 +79,6 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.ClearScreen // Necessary for resizes
 	}
 
-	m.colTable, _ = m.colTable.Update(msg)
-	m.docList, _ = m.docList.Update(msg)
-
 	if m.engine.IsDocumentSelected() {
 		if m.singleDocViewer.Focused() == false {
 			m.singleDocViewer.Focus()
@@ -90,8 +87,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	m.colTable, _ = m.colTable.Update(msg)
+	m.docList, _ = m.docList.Update(msg)
+
 	// If a collection is selected, pass off control to the docList
-	if m.componentSelection == dbColSelection && m.colTable.CollectionSelected() {
+	if m.componentSelection == dbColSelection && m.colTable.Focused() {
 		m.componentSelection = docSummarySelection
 		m.engine.SetSelectedCollection(m.colTable.SelectedCollection(), m.colTable.SelectedDatabase())
 		m.docList.Focus()
@@ -99,7 +99,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	if m.componentSelection == docSummarySelection && m.docList.Focused() == false {
 		m.componentSelection = dbColSelection
-		m.colTable.DeselectCollection()
+		m.colTable.Focus()
 	}
 
 	return m, nil
@@ -114,9 +114,10 @@ func (m *Model) View() string { // TODO standardize how component focusing and b
 		return m.singleDocViewer.View()
 	}
 	tables := lipgloss.JoinHorizontal(lipgloss.Left, m.colTable.View(), m.docList.View())
-	if m.colTable.CollectionSelected() {
-		return lipgloss.JoinVertical(lipgloss.Top, tables, m.docList.HelpView())
-	} else {
+	if m.colTable.Focused() {
 		return lipgloss.JoinVertical(lipgloss.Top, tables, m.colTable.HelpView())
+	} else {
+		return lipgloss.JoinVertical(lipgloss.Top, tables, m.docList.HelpView())
+
 	}
 }

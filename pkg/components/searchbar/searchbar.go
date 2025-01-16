@@ -34,7 +34,7 @@ func (m *Model) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-// SetWidth sets the width of the viewport of the coltable.
+// SetWidth sets the width of the viewport of the dbcoltable.
 func (m *Model) SetWidth(w int) {
 	m.textInput.Width = w
 }
