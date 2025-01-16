@@ -66,7 +66,7 @@ func New(client *mongo.Client, errModal *errormodal.Model) *Model {
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		leftRightBorderWidth := 4
+		leftRightBorderWidth := 2
 		topBottomBorderAndHelpHeight := 3
 		m.colTable.SetWidth((msg.Width / 3) - leftRightBorderWidth)
 		m.colTable.SetHeight(msg.Height - topBottomBorderAndHelpHeight)
