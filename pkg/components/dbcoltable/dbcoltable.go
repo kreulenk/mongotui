@@ -346,11 +346,10 @@ func (m *Model) renderCollectionCell(r int) string {
 // updateTableData updates the data tracked in the model based on the current cursorDatabase, cursorCollection and cursorColumn position
 // Lots of opportunity for caching with how this function is handled/called, but I like the live data for now
 func (m *Model) updateTableData() error {
-	err := m.engine.SetCollectionsPerDb(m.databases[m.cursorDatabase])
+	collections, err := m.engine.SetDbAndGetCollections(m.databases[m.cursorDatabase])
 	if err != nil {
 		return err
 	}
-
-	m.collections = mongodata.GetSortedCollectionsByName(m.engine.Server.Databases[m.databases[m.cursorDatabase]].Collections)
+	m.collections = collections
 	return nil
 }

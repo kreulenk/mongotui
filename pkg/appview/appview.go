@@ -91,7 +91,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.docList, _ = m.docList.Update(msg)
 
 	// If a collection is selected, pass off control to the docList
-	if m.componentSelection == dbColSelection && m.dbColTable.Focused() {
+	if m.componentSelection == dbColSelection && !m.dbColTable.Focused() {
 		m.componentSelection = docSummarySelection
 		m.engine.SetSelectedCollection(m.dbColTable.SelectedCollection(), m.dbColTable.SelectedDatabase())
 		m.docList.Focus()

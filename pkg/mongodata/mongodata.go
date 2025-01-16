@@ -48,7 +48,7 @@ func (m *Engine) SetDatabases() error {
 
 	m.Server.Databases = make(map[string]Database)
 	for _, dbName := range dbNames {
-		err := m.SetCollectionsPerDb(dbName)
+		_, err := m.SetDbAndGetCollections(dbName)
 		if err != nil {
 			return err
 		}
@@ -58,14 +58,20 @@ func (m *Engine) SetDatabases() error {
 
 }
 
-// SetCollectionsPerDb fetches the Collections for a given database along with the number of records in each collection
-func (m *Engine) SetCollectionsPerDb(dbName string) error {
+// SetDbAndGetCollections fetches the Collections for a given database along with the number of records in each collection
+func (m *Engine) SetDbAndGetCollections(dbName string) ([]string, error) {
+	_, ok := m.Server.Databases[dbName] // If we already have the cached data, don't fetch it again
+	if ok {
+		m.selectedData.databaseName = dbName
+		return getSortedCollectionsByName(m.Server.Databases[dbName].Collections), nil
+	}
+
 	db := m.Client.Database(dbName)
 	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
 	collectionNames, err := db.ListCollectionNames(ctx, bson.D{})
 	if err != nil {
-		return fmt.Errorf("could not list collections for database %s: %v", dbName, err)
+		return nil, fmt.Errorf("could not list collections for database %s: %v", dbName, err)
 	}
 
 	m.Server.Databases[dbName] = Database{Collections: make(map[string]Collection)} // zero out the Data
@@ -73,7 +79,18 @@ func (m *Engine) SetCollectionsPerDb(dbName string) error {
 		m.Server.Databases[dbName].Collections[collectionName] = Collection{}
 	}
 
-	return nil
+	m.selectedData.databaseName = dbName
+	return getSortedCollectionsByName(m.Server.Databases[dbName].Collections), nil
+}
+
+// getSortedCollectionsByName returns a slice of collection names sorted alphabetically
+func getSortedCollectionsByName(collections map[string]Collection) []string {
+	collectionNames := make([]string, 0, len(collections))
+	for name := range collections {
+		collectionNames = append(collectionNames, name)
+	}
+	slices.Sort(collectionNames)
+	return collectionNames
 }
 
 // SetSelectedCollection Allows parent components to set what data will be displayed within this component.
@@ -182,14 +199,4 @@ func GetSortedDatabasesByName(databases map[string]Database) []string {
 	}
 	slices.Sort(databaseNames)
 	return databaseNames
-}
-
-// GetSortedCollectionsByName returns a slice of collection names sorted alphabetically
-func GetSortedCollectionsByName(collections map[string]Collection) []string {
-	collectionNames := make([]string, 0, len(collections))
-	for name := range collections {
-		collectionNames = append(collectionNames, name)
-	}
-	slices.Sort(collectionNames)
-	return collectionNames
 }
