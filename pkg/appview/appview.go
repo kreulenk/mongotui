@@ -65,11 +65,6 @@ func New(client *mongo.Client, errModal *errormodal.Model) *Model {
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "q", "ctrl+c":
-			return m, tea.Quit
-		}
 	case tea.WindowSizeMsg:
 		leftRightBorderWidth := 4
 		topBottomBorderAndHelpHeight := 3
@@ -86,10 +81,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	m.colTable, _ = m.colTable.Update(msg)
 	m.docList, _ = m.docList.Update(msg)
-	m.singleDocViewer, _ = m.singleDocViewer.Update(msg)
 
 	if m.engine.IsDocumentSelected() {
-		m.singleDocViewer.Focus()
+		if m.singleDocViewer.Focused() == false {
+			m.singleDocViewer.Focus()
+		}
+		m.singleDocViewer, _ = m.singleDocViewer.Update(msg)
 		return m, nil
 	}
 

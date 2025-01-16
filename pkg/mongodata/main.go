@@ -92,6 +92,10 @@ func (m *Engine) IsDocumentSelected() bool {
 	return m.selectedData.documentId != ""
 }
 
+func (m *Engine) ClearSelectedDocument() {
+	m.selectedData.documentId = ""
+}
+
 func (m *Engine) GetSelectedDocument() (string, error) {
 	if m.selectedData.databaseName == "" || m.selectedData.collectionName == "" || m.selectedData.documentId == "" {
 		return "", fmt.Errorf("no document selected") // This should never happen if calling components are working correctly

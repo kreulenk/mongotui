@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/alecthomas/chroma/quick"
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -13,9 +15,11 @@ import (
 
 type Model struct {
 	Viewport viewport.Model
-	engine   *mongodata.Engine
+	Help     help.Model
 	errModal *errormodal.Model
-	focus    bool
+
+	engine *mongodata.Engine
+	focus  bool
 }
 
 func New(engine *mongodata.Engine, errModal *errormodal.Model) *Model {
@@ -23,6 +27,7 @@ func New(engine *mongodata.Engine, errModal *errormodal.Model) *Model {
 
 	return &Model{
 		Viewport: viewPort,
+		Help:     help.New(),
 		engine:   engine,
 		focus:    false,
 		errModal: errModal,
@@ -61,27 +66,35 @@ func (m *Model) Focused() bool {
 
 func (m *Model) blur() {
 	m.focus = false
+	m.engine.ClearSelectedDocument()
 }
 
 func (m *Model) SetWidth(w int) {
-	m.Viewport.Width = w
+	m.Viewport.Width = w - 1
 }
 
 func (m *Model) SetHeight(h int) {
-	m.Viewport.Height = h
+	m.Viewport.Height = h - 1 // 1 line for help menu
 }
 
 func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
-	var cmds []tea.Cmd
-	if m.focus {
-		var cmd tea.Cmd
-		m.Viewport, cmd = m.Viewport.Update(msg)
-		cmds = append(cmds, cmd)
+	if !m.focus {
+		return m, nil
+	}
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch {
+		case key.Matches(msg, keys.Back):
+			m.blur()
+			return m, nil
+		}
 	}
 
-	return m, tea.Batch(cmds...)
+	var cmd tea.Cmd
+	m.Viewport, cmd = m.Viewport.Update(msg)
+	return m, cmd
 }
 
 func (m *Model) View() string {
-	return m.Viewport.View()
+	return lipgloss.JoinVertical(lipgloss.Top, m.Viewport.View(), m.Help.View(keys))
 }
