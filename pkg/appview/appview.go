@@ -24,7 +24,7 @@ const (
 )
 
 type Model struct {
-	colTable        *dbcoltable.Model
+	dbColTable      *dbcoltable.Model
 	docList         *doclist.Model
 	singleDocViewer *jsonviewer.Model
 
@@ -54,7 +54,7 @@ func New(client *mongo.Client, errModal *errormodal.Model) *Model {
 	sdv := jsonviewer.New(engine, errModal)
 
 	return &Model{
-		colTable:           t,
+		dbColTable:         t,
 		docList:            d,
 		singleDocViewer:    sdv,
 		errModal:           errModal,
@@ -68,8 +68,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		leftRightBorderWidth := 2
 		topBottomBorderAndHelpHeight := 3
-		m.colTable.SetWidth((msg.Width / 3) - leftRightBorderWidth)
-		m.colTable.SetHeight(msg.Height - topBottomBorderAndHelpHeight)
+		m.dbColTable.SetWidth((msg.Width / 3) - leftRightBorderWidth)
+		m.dbColTable.SetHeight(msg.Height - topBottomBorderAndHelpHeight)
 		m.docList.SetWidth((msg.Width * 2 / 3) - leftRightBorderWidth)
 		m.docList.SetHeight(msg.Height - topBottomBorderAndHelpHeight)
 
@@ -87,19 +87,19 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	m.colTable, _ = m.colTable.Update(msg)
+	m.dbColTable, _ = m.dbColTable.Update(msg)
 	m.docList, _ = m.docList.Update(msg)
 
 	// If a collection is selected, pass off control to the docList
-	if m.componentSelection == dbColSelection && m.colTable.Focused() {
+	if m.componentSelection == dbColSelection && m.dbColTable.Focused() {
 		m.componentSelection = docSummarySelection
-		m.engine.SetSelectedCollection(m.colTable.SelectedCollection(), m.colTable.SelectedDatabase())
+		m.engine.SetSelectedCollection(m.dbColTable.SelectedCollection(), m.dbColTable.SelectedDatabase())
 		m.docList.Focus()
 	}
 
 	if m.componentSelection == docSummarySelection && m.docList.Focused() == false {
 		m.componentSelection = dbColSelection
-		m.colTable.Focus()
+		m.dbColTable.Focus()
 	}
 
 	return m, nil
@@ -113,9 +113,9 @@ func (m *Model) View() string { // TODO standardize how component focusing and b
 	if m.engine.IsDocumentSelected() {
 		return m.singleDocViewer.View()
 	}
-	tables := lipgloss.JoinHorizontal(lipgloss.Left, m.colTable.View(), m.docList.View())
-	if m.colTable.Focused() {
-		return lipgloss.JoinVertical(lipgloss.Top, tables, m.colTable.HelpView())
+	tables := lipgloss.JoinHorizontal(lipgloss.Left, m.dbColTable.View(), m.docList.View())
+	if m.dbColTable.Focused() {
+		return lipgloss.JoinVertical(lipgloss.Top, tables, m.dbColTable.HelpView())
 	} else {
 		return lipgloss.JoinVertical(lipgloss.Top, tables, m.docList.HelpView())
 
