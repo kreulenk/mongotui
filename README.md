@@ -31,7 +31,7 @@ The high level plan for this project is as follows:
 |  1  | Simple PLAIN authentication to a MongoDB server                 |   ✅   |
 |  2  | View a server's databases, collections, and documents summaries |   ✅   |
 |  3  | Query within a collection                                       |   ✅   |
-|  4  | View an entire document                                         |   ❌   |
+|  4  | View an entire document                                         |   ✅   |
 |  5  | Edit a document                                                 |   ❌   |
 |  6  | Delete a database/collection/document                           |   ❌   |
 |  7  | Connection/authentication option feature parity with mongosh    |   ❌   |
