@@ -8,7 +8,6 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"slices"
-	"strings"
 	"time"
 )
 
@@ -27,15 +26,33 @@ type Collection struct {
 }
 
 type selectedData struct {
-	collectionName string
 	databaseName   string
-	documentId     string
+	collectionName string
+
+	// The doclist component will set the documentIndex of whatever is highlighted.
+	// This is because we are not guaranteed a consistent Id.
+	// No document selected is represented by a value of -1
+	documentIndex int
 }
 
 type Engine struct {
 	Client       *mongo.Client
 	Server       *Server
 	selectedData selectedData
+}
+
+func New(client *mongo.Client) *Engine {
+	return &Engine{
+		Client: client,
+		Server: &Server{
+			Databases: make(map[string]Database),
+		},
+		selectedData: selectedData{
+			databaseName:   "",
+			collectionName: "",
+			documentIndex:  -1,
+		},
+	}
 }
 
 func (m *Engine) SetDatabases() error {
@@ -94,61 +111,45 @@ func getSortedCollectionsByName(collections map[string]Collection) []string {
 }
 
 // SetSelectedCollection Allows parent components to set what data will be displayed within this component.
-func (m *Engine) SetSelectedCollection(collectionName, databaseName string) {
-	m.selectedData = selectedData{
-		collectionName: collectionName,
-		databaseName:   databaseName,
-	}
+func (m *Engine) SetSelectedCollection(databaseName, collectionName string) {
+	m.selectedData.databaseName = databaseName
+	m.selectedData.collectionName = collectionName
 }
 
-func (m *Engine) SetSelectedDocument(documentId string) {
-	m.selectedData.documentId = documentId
+func (m *Engine) SetSelectedDocument(documentIndex int) {
+	m.selectedData.documentIndex = documentIndex
 }
 
 func (m *Engine) IsDocumentSelected() bool {
-	return m.selectedData.documentId != ""
+	return m.selectedData.documentIndex >= 0
 }
 
 func (m *Engine) ClearSelectedDocument() {
-	m.selectedData.documentId = ""
+	m.selectedData.documentIndex = -1
 }
 
-func (m *Engine) GetSelectedDocument() (string, error) {
-	if m.selectedData.databaseName == "" || m.selectedData.collectionName == "" || m.selectedData.documentId == "" {
-		return "", fmt.Errorf("no document selected") // This should never happen if calling components are working correctly
+func (m *Engine) GetSelectedDocument() ([]byte, error) {
+	if m.selectedData.databaseName == "" || m.selectedData.collectionName == "" || m.selectedData.documentIndex < 0 {
+		return nil, fmt.Errorf("no document selected") // This should never happen if calling components are working correctly
 	}
 
-	db := m.Client.Database(m.selectedData.databaseName)
-	coll := db.Collection(m.selectedData.collectionName)
-	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
-	defer cancel()
-
-	trimmedDoc := strings.TrimPrefix(m.selectedData.documentId, `ObjectID("`) // TODO look into how this is set and if it can be done better
-	trimmedDoc = strings.TrimSuffix(trimmedDoc, `")`)
-
-	objectId, err := bson.ObjectIDFromHex(trimmedDoc)
-	if err != nil {
-		return "", fmt.Errorf("invalid ObjectID %s: %v", trimmedDoc, err)
-	}
-	cur := coll.FindOne(ctx, bson.D{{"_id", objectId}})
-	if cur.Err() != nil {
-		return "", fmt.Errorf("failed to retrieve document with Id '%s': %w", m.selectedData.documentId, cur.Err())
-	}
-	data, err := cur.Raw()
-	if err != nil {
-		return "", err
-	}
-
+	data := m.Server.Databases[m.selectedData.databaseName].Collections[m.selectedData.collectionName].Data[m.selectedData.documentIndex]
 	parsedDoc, err := bson.MarshalExtJSONIndent(data, false, false, "", "  ")
 	if err != nil {
-		return "", fmt.Errorf("could not parse document: %v", err)
+		return nil, fmt.Errorf("could not parse document: %v", err)
 	}
 
-	return string(parsedDoc), nil
+	return parsedDoc, nil
 }
 
 func (m *Engine) IsCollectionSelected() bool {
 	return m.selectedData.collectionName != "" && m.selectedData.databaseName != ""
+}
+
+func (m *Engine) ClearCollectionSelection() {
+	m.selectedData = selectedData{
+		documentIndex: -1,
+	}
 }
 
 // QueryCollection fetches all the data from a given collection in a given database

@@ -137,7 +137,7 @@ func (m *Model) Focus() {
 func (m *Model) blur() {
 	m.focus = false
 	m.styles.Table = m.styles.Table.BorderStyle(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("240"))
-	m.updateViewport()
+	m.engine.SetSelectedCollection(m.selectedDatabase(), m.selectedCollection())
 }
 
 // View renders the component.
@@ -179,16 +179,16 @@ func (m *Model) updateViewport() {
 	)
 }
 
-// SelectedDatabase returns the database that is currently highlighted.
-func (m *Model) SelectedDatabase() string {
+// selectedDatabase returns the database that is currently highlighted.
+func (m *Model) selectedDatabase() string {
 	if m.cursorDatabase < 0 || m.cursorDatabase >= len(m.databases) {
 		return ""
 	}
 	return m.databases[m.cursorDatabase]
 }
 
-// SelectedCollection returns the collection that is currently highlighted.
-func (m *Model) SelectedCollection() string {
+// selectedCollection returns the collection that is currently highlighted.
+func (m *Model) selectedCollection() string {
 	if m.cursorCollection < 0 ||
 		m.cursorCollection >= len(m.collections) ||
 		m.cursorColumn == databasesColumn {

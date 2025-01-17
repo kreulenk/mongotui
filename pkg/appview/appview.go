@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/kreulenk/mongotui/pkg/components/dbcoltable"
 	"github.com/kreulenk/mongotui/pkg/components/doclist"
+	"github.com/kreulenk/mongotui/pkg/components/editor"
 	"github.com/kreulenk/mongotui/pkg/components/errormodal"
 	"github.com/kreulenk/mongotui/pkg/components/jsonviewer"
 	"github.com/kreulenk/mongotui/pkg/mongodata"
@@ -16,50 +17,31 @@ import (
 	"os"
 )
 
-type componentSelection int
-
-const (
-	dbColSelection componentSelection = iota
-	docSummarySelection
-)
-
 type Model struct {
 	dbColTable      *dbcoltable.Model
 	docList         *doclist.Model
 	singleDocViewer *jsonviewer.Model
-
-	errModal *errormodal.Model
-
-	componentSelection componentSelection
+	singleDocEditor editor.Editor
+	errModal        *errormodal.Model
 
 	engine *mongodata.Engine
 }
 
 func New(client *mongo.Client, errModal *errormodal.Model) *Model {
-	engine := &mongodata.Engine{
-		Client: client,
-		Server: &mongodata.Server{
-			Databases: make(map[string]mongodata.Database),
-		},
-	}
-
+	engine := mongodata.New(client)
 	err := engine.SetDatabases()
 	if err != nil {
 		fmt.Printf("could not initialize data: %v", err)
 		os.Exit(1)
 	}
 
-	t := dbcoltable.New(engine, errModal)
-	d := doclist.New(engine, errModal)
-	sdv := jsonviewer.New(engine, errModal)
-
 	return &Model{
-		dbColTable:         t,
-		docList:            d,
-		singleDocViewer:    sdv,
-		errModal:           errModal,
-		componentSelection: dbColSelection,
-		engine:             engine,
+		dbColTable:      dbcoltable.New(engine, errModal),
+		docList:         doclist.New(engine, errModal),
+		singleDocViewer: jsonviewer.New(engine, errModal),
+		singleDocEditor: editor.New(engine),
+		errModal:        errModal,
+		engine:          engine,
 	}
 }
 
@@ -79,26 +61,31 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.ClearScreen // Necessary for resizes
 	}
 
-	if m.engine.IsDocumentSelected() {
+	m.dbColTable, _ = m.dbColTable.Update(msg)
+	m.docList, _ = m.docList.Update(msg)
+	if m.engine.IsDocumentSelected() && m.docList.GetDocAction() == doclist.EditDoc {
+		if err := m.singleDocEditor.OpenFileInEditor(); err != nil {
+			m.errModal.SetError(err)
+		}
+	}
+
+	if m.engine.IsDocumentSelected() && m.docList.GetDocAction() == doclist.ViewDoc { // Handle viewing of a single document
 		if m.singleDocViewer.Focused() == false {
 			m.singleDocViewer.Focus()
 		}
 		m.singleDocViewer, _ = m.singleDocViewer.Update(msg)
+		if m.singleDocViewer.Focused() == false {
+			m.docList.Focus(false)
+		}
 		return m, nil
 	}
 
-	m.dbColTable, _ = m.dbColTable.Update(msg)
-	m.docList, _ = m.docList.Update(msg)
-
 	// If a collection is selected, pass off control to the docList
-	if m.componentSelection == dbColSelection && !m.dbColTable.Focused() {
-		m.componentSelection = docSummarySelection
-		m.engine.SetSelectedCollection(m.dbColTable.SelectedCollection(), m.dbColTable.SelectedDatabase())
-		m.docList.Focus()
+	if !m.docList.Focused() && m.engine.IsCollectionSelected() {
+		m.docList.Focus(true)
 	}
 
-	if m.componentSelection == docSummarySelection && m.docList.Focused() == false {
-		m.componentSelection = dbColSelection
+	if !m.dbColTable.Focused() && !m.engine.IsCollectionSelected() {
 		m.dbColTable.Focus()
 	}
 
@@ -109,8 +96,8 @@ func (m *Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m *Model) View() string { // TODO standardize how component focusing and blurring is handled
-	if m.engine.IsDocumentSelected() {
+func (m *Model) View() string {
+	if m.singleDocViewer.Focused() {
 		return m.singleDocViewer.View()
 	}
 	tables := lipgloss.JoinHorizontal(lipgloss.Left, m.dbColTable.View(), m.docList.View())

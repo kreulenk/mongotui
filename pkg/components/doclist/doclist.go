@@ -18,6 +18,14 @@ import (
 	"strings"
 )
 
+type DocAction int
+
+const (
+	NoAction DocAction = iota
+	ViewDoc
+	EditDoc
+)
+
 type Model struct {
 	Help     help.Model
 	errModal *errormodal.Model
@@ -28,9 +36,10 @@ type Model struct {
 	docs   []Doc
 	styles Styles
 
-	cursor   int
-	viewport viewport.Model
-	focus    bool
+	cursor    int
+	viewport  viewport.Model
+	focus     bool
+	docAction DocAction
 
 	engine *mongodata.Engine
 }
@@ -55,7 +64,8 @@ func New(engine *mongodata.Engine, errModal *errormodal.Model) *Model {
 
 		styles: defaultStyles(),
 
-		engine: engine,
+		docAction: NoAction,
+		engine:    engine,
 	}
 
 	err := m.updateTableRows()
@@ -112,9 +122,10 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 		case key.Matches(msg, keys.GotoBottom):
 			m.GotoBottom()
 		case key.Matches(msg, keys.Left):
+			m.engine.ClearCollectionSelection()
 			m.blur()
-		//case key.Matches(msg, keys.Edit):
-		//	m.EditDoc()
+		case key.Matches(msg, keys.Edit):
+			m.EditDoc()
 		case key.Matches(msg, keys.View):
 			m.ViewDoc()
 		}
@@ -186,14 +197,17 @@ func (m *Model) Focused() bool {
 	return m.focus
 }
 
-func (m *Model) Focus() {
+func (m *Model) Focus(resetValues bool) {
+	m.docAction = NoAction
 	m.styles.Table = m.styles.Table.BorderStyle(lipgloss.ThickBorder()).BorderForeground(lipgloss.Color("57"))
-	m.searchBar.ResetValue()
-	err := m.updateTableRows()
-	if err != nil {
-		m.errModal.SetError(err)
+	if resetValues {
+		m.searchBar.ResetValue()
+		err := m.updateTableRows()
+		if err != nil {
+			m.errModal.SetError(err)
+		}
+		m.updateViewport()
 	}
-	m.updateViewport()
 	m.focus = true
 }
 
@@ -202,16 +216,31 @@ func (m *Model) blur() {
 	m.focus = false
 }
 
+func (m *Model) GetDocAction() DocAction {
+	return m.docAction
+}
+
+func (m *Model) EditDoc() {
+	if m.cursor >= len(m.docs) {
+		m.errModal.SetError(fmt.Errorf("no document selected"))
+		return
+	}
+	
+	m.docAction = EditDoc
+	m.engine.SetSelectedDocument(m.cursor)
+	m.blur()
+}
+
 // ViewDoc opens the selected document in a new window via the jsonviewer component.
 func (m *Model) ViewDoc() {
-	currDoc := m.docs[m.cursor]
-	for _, field := range currDoc {
-		if field.Name == "_id" {
-			m.engine.SetSelectedDocument(field.Value)
-			return
-		}
+	if m.cursor >= len(m.docs) {
+		m.errModal.SetError(fmt.Errorf("no document selected"))
+		return
 	}
-	m.errModal.SetError(fmt.Errorf("no _id field found in selected document so it cannot be viewed"))
+
+	m.docAction = ViewDoc
+	m.engine.SetSelectedDocument(m.cursor)
+	m.blur()
 }
 
 func (m *Model) IsDocSelected() bool {

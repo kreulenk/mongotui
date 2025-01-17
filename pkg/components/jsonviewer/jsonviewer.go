@@ -46,7 +46,7 @@ func (m *Model) Focus() {
 	}
 
 	buf := new(bytes.Buffer)
-	if err := quick.Highlight(buf, selectedDoc, "json", "terminal256", "dracula"); err != nil {
+	if err := quick.Highlight(buf, string(selectedDoc), "json", "terminal256", "dracula"); err != nil {
 		m.errModal.SetError(fmt.Errorf("could not highlight json: %v", err))
 		return
 	}
