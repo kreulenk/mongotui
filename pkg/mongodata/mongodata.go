@@ -162,6 +162,7 @@ func (m *Engine) QueryCollection(query bson.D) error {
 	coll := db.Collection(m.selectedData.collectionName)
 	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
+
 	cur, err := coll.Find(ctx, query)
 	if err != nil {
 		return err
@@ -177,6 +178,31 @@ func (m *Engine) QueryCollection(query bson.D) error {
 		curDb.Collections[m.selectedData.collectionName] = Collection{Data: data}
 	} else {
 		return fmt.Errorf("no database is set") // should never happen
+	}
+	return nil
+}
+
+func (m *Engine) UpdateDocument(oldDoc, newDoc []byte) error {
+	if m.selectedData.databaseName == "" || m.selectedData.collectionName == "" {
+		return fmt.Errorf("no collection selected") // This should never happen
+	}
+	var oldDocBson bson.M
+	if err := bson.UnmarshalExtJSON(oldDoc, false, &oldDocBson); err != nil {
+		return fmt.Errorf("failed to parse the original document needed for the replacement: %w", err)
+	}
+	var newDocBson bson.M
+	if err := bson.UnmarshalExtJSON(newDoc, false, &newDocBson); err != nil {
+		return fmt.Errorf("failed to parse the new document needed for the replacement: %w", err)
+	}
+
+	db := m.Client.Database(m.selectedData.databaseName)
+	coll := db.Collection(m.selectedData.collectionName)
+	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
+	defer cancel()
+
+	res := coll.FindOneAndReplace(ctx, oldDocBson, newDocBson)
+	if res.Err() != nil {
+		return fmt.Errorf("failed to update document: %w", res.Err())
 	}
 	return nil
 }

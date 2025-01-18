@@ -22,12 +22,12 @@ func New(engine *mongodata.Engine) Editor {
 }
 
 func (e Editor) OpenFileInEditor() error {
-	doc, err := e.engine.GetSelectedDocument()
+	oldDoc, err := e.engine.GetSelectedDocument()
 	if err != nil {
 		return err
 	}
 	file := filepath.Join(os.TempDir(), "mongoEdit.json")
-	if err = os.WriteFile(file, doc, 0600); err != nil {
+	if err = os.WriteFile(file, oldDoc, 0600); err != nil {
 		return fmt.Errorf("failed to write file to allow for doc editing: %w", err)
 	}
 	defer os.Remove(file)
@@ -43,5 +43,15 @@ func (e Editor) OpenFileInEditor() error {
 	if err = openEditorCmd.Run(); err != nil {
 		return fmt.Errorf("error opening %s editor: %v", editor, err)
 	}
+
+	newDoc, err := os.ReadFile(file)
+	if err != nil {
+		return fmt.Errorf("failed to read the file that was just edited: %w", err)
+	}
+
+	if err = e.engine.UpdateDocument(oldDoc, newDoc); err != nil {
+		return err
+	}
+
 	return nil
 }
