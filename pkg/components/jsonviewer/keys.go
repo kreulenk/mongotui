@@ -8,7 +8,6 @@ type keyMap struct {
 	Back     key.Binding
 	LineUp   key.Binding
 	LineDown key.Binding
-	Edit     key.Binding
 }
 
 // HelpView is a helper method for rendering the help menu from the keymap.
@@ -19,7 +18,7 @@ func (m *Model) HelpView() string {
 }
 
 func (km keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{km.LineUp, km.LineDown, km.Edit, km.Back}
+	return []key.Binding{km.LineUp, km.LineDown, km.Back}
 }
 
 // FullHelp implements the keyMap interface.
@@ -42,9 +41,5 @@ var keys = keyMap{
 	LineDown: key.NewBinding(
 		key.WithKeys("down", "j"),
 		key.WithHelp("↓/j", "down"),
-	),
-	Edit: key.NewBinding(
-		key.WithKeys("e"),
-		key.WithHelp("e", "edit document"),
 	),
 }

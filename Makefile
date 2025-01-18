@@ -6,3 +6,7 @@ install: build
 
 licenses:
 	@go-licenses report ./... --template=third_party/template.tmpl > ./ACKNOWLEDGEMENTS
+
+# See docs/demo/DEMO.md
+demo-gif:
+	@vhs ./docs/demo/demo.tape

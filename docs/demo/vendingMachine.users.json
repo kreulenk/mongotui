@@ -1,0 +1,49 @@
+[{
+  "_id": {
+    "$oid": "651a3fe55471824376fdb031"
+  },
+  "name": "Kevin",
+  "bankBalance": 100
+},
+{
+  "_id": {
+    "$oid": "651a53aa5471824376fdb032"
+  },
+  "name": "Sally",
+  "bankBalance": 48
+},
+{
+  "_id": {
+    "$oid": "651cb984448189f246d4c035"
+  },
+  "name": "Maggie",
+  "bankBalance": 100
+},
+{
+  "_id": {
+    "$oid": "651cc14a448189f246d4c036"
+  },
+  "name": "Bob",
+  "bankBalance": 48
+},
+{
+  "_id": {
+    "$oid": "651cca9b448189f246d4c037"
+  },
+  "name": "George",
+  "bankBalance": 3
+},
+{
+  "_id": {
+    "$oid": "654657481e76207cd0dc6506"
+  },
+  "name": "Burdell",
+  "bankBalance": 14
+},
+{
+  "_id": {
+    "$oid": "654985a6a22dfe306cf6b329"
+  },
+  "name": "Dan",
+  "bankBalance": 23
+}]
