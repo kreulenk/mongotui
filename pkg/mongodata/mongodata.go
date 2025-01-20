@@ -100,6 +100,13 @@ func (m *Engine) SetDbAndGetCollections(dbName string) ([]string, error) {
 	return getSortedCollectionsByName(m.Server.Databases[dbName].Collections), nil
 }
 
+func (m *Engine) ClearCachedData() {
+	m.Server = &Server{
+		Databases: make(map[string]Database),
+	}
+	m.ClearCollectionSelection()
+}
+
 // getSortedCollectionsByName returns a slice of collection names sorted alphabetically
 func getSortedCollectionsByName(collections map[string]Collection) []string {
 	collectionNames := make([]string, 0, len(collections))
@@ -180,6 +187,21 @@ func (m *Engine) QueryCollection(query bson.D) error {
 		return fmt.Errorf("no database is set") // should never happen
 	}
 	return nil
+}
+
+func (m *Engine) DropDatabase(databaseName string) error {
+	db := m.Client.Database(databaseName)
+	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
+	defer cancel()
+	return db.Drop(ctx)
+}
+
+func (m *Engine) DropCollection(databaseName, collectionName string) error {
+	db := m.Client.Database(databaseName)
+	col := db.Collection(collectionName)
+	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
+	defer cancel()
+	return col.Drop(ctx)
 }
 
 func (m *Engine) UpdateDocument(oldDoc, newDoc []byte) error {

@@ -68,7 +68,7 @@ func New(engine *mongodata.Engine, errModal *errormodal.Model) *Model {
 		engine: engine,
 	}
 
-	err := m.updateTableData()
+	err := m.updateCollectionsData()
 	if err != nil {
 		fmt.Printf("failed to initialize the database and collection information: %v\n", err)
 		os.Exit(1)
@@ -91,16 +91,6 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 			m.MoveUp(1)
 		case key.Matches(msg, keys.LineDown):
 			m.MoveDown(1)
-		case key.Matches(msg, keys.PageUp):
-			m.MoveUp(m.viewport.Height)
-		case key.Matches(msg, keys.PageDown):
-			m.MoveDown(m.viewport.Height)
-		case key.Matches(msg, keys.HalfPageUp):
-			m.MoveUp(m.viewport.Height / 2)
-		case key.Matches(msg, keys.HalfPageDown):
-			m.MoveDown(m.viewport.Height / 2)
-		case key.Matches(msg, keys.LineDown):
-			m.MoveDown(1)
 		case key.Matches(msg, keys.GotoTop):
 			m.GotoTop()
 		case key.Matches(msg, keys.GotoBottom):
@@ -113,6 +103,8 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 			if m.cursorColumn == collectionsColumn {
 				m.blur()
 			}
+		case key.Matches(msg, keys.Delete):
+			m.DeleteDbOrCol()
 		}
 	}
 
@@ -138,6 +130,26 @@ func (m *Model) blur() {
 	m.focus = false
 	m.styles.Table = m.styles.Table.BorderStyle(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("240"))
 	m.engine.SetSelectedCollection(m.selectedDatabase(), m.selectedCollection())
+}
+
+func (m *Model) DeleteDbOrCol() {
+	if m.cursorColumn == databasesColumn {
+		if err := m.engine.DropDatabase(m.selectedDatabase()); err != nil {
+			m.errModal.SetError(fmt.Errorf("failed to drop database '%s': %w", m.selectedDatabase(), err))
+			m.cursorDatabase = renderutils.Max(0, m.cursorDatabase-1)
+			m.cursorCollection = renderutils.Max(0, m.cursorCollection-1)
+		}
+	} else {
+		if err := m.engine.DropCollection(m.selectedDatabase(), m.selectedCollection()); err != nil {
+			m.errModal.SetError(fmt.Errorf("failed to drop collection '%s' within database '%s': %w", m.selectedCollection(), m.selectedDatabase(), err))
+		}
+		m.cursorCollection = renderutils.Max(0, m.cursorCollection-1)
+	}
+	m.engine.ClearCachedData()
+	if err := m.updateCollectionsData(); err != nil {
+		m.errModal.SetError(fmt.Errorf("unable to reinitialize data after deletion: %w", err))
+	}
+	m.updateViewport()
 }
 
 // View renders the component.
@@ -220,7 +232,7 @@ func (m *Model) MoveUp(n int) {
 		m.cursorCollection = renderutils.Clamp(m.cursorCollection-n, 0, len(m.collections)-1)
 	}
 
-	err := m.updateTableData()
+	err := m.updateCollectionsData()
 	if err != nil {
 		m.errModal.SetError(err)
 		m.cursorDatabase = oldCursor
@@ -239,7 +251,7 @@ func (m *Model) MoveDown(n int) {
 		m.cursorCollection = renderutils.Clamp(m.cursorCollection+n, 0, len(m.collections)-1)
 	}
 
-	err := m.updateTableData()
+	err := m.updateCollectionsData()
 	if err != nil {
 		m.errModal.SetError(err)
 		m.cursorDatabase = oldCursor
@@ -255,7 +267,7 @@ func (m *Model) MoveRight() {
 		return
 	} else if m.cursorColumn == databasesColumn {
 		m.cursorColumn = collectionsColumn
-		err := m.updateTableData()
+		err := m.updateCollectionsData()
 		if err != nil {
 			m.errModal.SetError(err)
 			m.cursorColumn = databasesColumn
@@ -273,7 +285,7 @@ func (m *Model) MoveLeft() {
 		m.cursorCollection = 0
 	}
 	m.cursorColumn = databasesColumn
-	err := m.updateTableData()
+	err := m.updateCollectionsData()
 	if err != nil {
 		m.errModal.SetError(err)
 		m.cursorCollection = oldCursorCollection
@@ -343,10 +355,10 @@ func (m *Model) renderCollectionCell(r int) string {
 	return renderedCell
 }
 
-// updateTableData updates the data tracked in the model based on the current cursorDatabase, cursorCollection and cursorColumn position
+// updateCollectionsData updates the data tracked in the model based on the current cursorDatabase, cursorCollection and cursorColumn position
 // Lots of opportunity for caching with how this function is handled/called, but I like the live data for now
-func (m *Model) updateTableData() error {
-	collections, err := m.engine.SetDbAndGetCollections(m.databases[m.cursorDatabase])
+func (m *Model) updateCollectionsData() error {
+	collections, err := m.engine.SetDbAndGetCollections(m.selectedDatabase())
 	if err != nil {
 		return err
 	}

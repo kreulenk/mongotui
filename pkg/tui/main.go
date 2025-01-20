@@ -4,6 +4,7 @@
 package tui
 
 import (
+	"context"
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/kreulenk/mongotui/pkg/appview"
@@ -33,6 +34,9 @@ func Initialize(client *mongo.Client) {
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error: %v", err)
 		os.Exit(1)
+	}
+	if err := client.Disconnect(context.TODO()); err != nil {
+		fmt.Printf("failed to properly disconnect from db. Closing anyways: %v\n", err)
 	}
 }
 
