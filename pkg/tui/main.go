@@ -8,7 +8,7 @@ import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/kreulenk/mongotui/pkg/appview"
-	"github.com/kreulenk/mongotui/pkg/components/errormodal"
+	"github.com/kreulenk/mongotui/pkg/components/modal"
 	overlay "github.com/rmhubbert/bubbletea-overlay"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"os"
@@ -41,7 +41,7 @@ func Initialize(client *mongo.Client) {
 }
 
 func initialModel(client *mongo.Client) tea.Model {
-	errModal := &errormodal.Model{}
+	errModal := modal.New()
 	appView := appview.New(client, errModal)
 	view := overlay.New(
 		errModal,
@@ -76,7 +76,7 @@ func (m *baseModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	var cmds []tea.Cmd
-	if m.errModal.(*errormodal.Model).ErrorPresent() { // TODO investigate if we NEED this typecast due to the bubble overlay library
+	if m.errModal.(*modal.Model).ShouldDisplay() { // TODO investigate if we NEED this typecast due to the bubble overlay library
 		m.state = modalView
 		fg, fgCmd := m.errModal.Update(message)
 		m.errModal = fg
@@ -88,7 +88,7 @@ func (m *baseModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, bgCmd)
 
 		// Check if the appView has an error
-		if m.errModal.(*errormodal.Model).ErrorPresent() {
+		if m.errModal.(*modal.Model).ShouldDisplay() {
 			m.state = modalView
 		}
 

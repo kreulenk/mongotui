@@ -7,7 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/kreulenk/mongotui/pkg/components/errormodal"
+	"github.com/kreulenk/mongotui/pkg/components/modal"
 	"github.com/kreulenk/mongotui/pkg/components/searchbar"
 	"github.com/kreulenk/mongotui/pkg/mongodata"
 	"github.com/kreulenk/mongotui/pkg/renderutils"
@@ -28,7 +28,7 @@ const (
 
 type Model struct {
 	Help     help.Model
-	errModal *errormodal.Model
+	msgModal *modal.Model
 
 	searchBar     *searchbar.Model
 	searchEnabled bool
@@ -53,11 +53,11 @@ type FieldSummary struct {
 }
 
 // New creates a new baseModel for the dbcoltable widget.
-func New(engine *mongodata.Engine, errModal *errormodal.Model) *Model {
+func New(engine *mongodata.Engine, msgModal *modal.Model) *Model {
 	m := Model{
 		Help:      help.New(),
-		errModal:  errModal,
-		searchBar: searchbar.New(errModal),
+		msgModal:  msgModal,
+		searchBar: searchbar.New(msgModal),
 
 		docs:     []Doc{},
 		viewport: viewport.New(0, 20),
@@ -90,7 +90,7 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 			m.searchEnabled = false
 			err := m.updateTableRows()
 			if err != nil {
-				m.errModal.SetError(err)
+				m.msgModal.SetError(err)
 				return m, nil
 			}
 		}
@@ -204,7 +204,7 @@ func (m *Model) Focus(resetValues bool) {
 		m.searchBar.ResetValue()
 		err := m.updateTableRows()
 		if err != nil {
-			m.errModal.SetError(err)
+			m.msgModal.SetError(err)
 		}
 		m.updateViewport()
 	}
@@ -222,10 +222,10 @@ func (m *Model) GetDocAction() DocAction {
 
 func (m *Model) EditDoc() {
 	if m.cursor >= len(m.docs) {
-		m.errModal.SetError(fmt.Errorf("no document selected"))
+		m.msgModal.SetError(fmt.Errorf("no document selected"))
 		return
 	}
-	
+
 	m.docAction = EditDoc
 	m.engine.SetSelectedDocument(m.cursor)
 	m.blur()
@@ -234,7 +234,7 @@ func (m *Model) EditDoc() {
 // ViewDoc opens the selected document in a new window via the jsonviewer component.
 func (m *Model) ViewDoc() {
 	if m.cursor >= len(m.docs) {
-		m.errModal.SetError(fmt.Errorf("no document selected"))
+		m.msgModal.SetError(fmt.Errorf("no document selected"))
 		return
 	}
 

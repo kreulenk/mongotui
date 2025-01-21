@@ -10,8 +10,8 @@ import (
 	"github.com/kreulenk/mongotui/pkg/components/dbcoltable"
 	"github.com/kreulenk/mongotui/pkg/components/doclist"
 	"github.com/kreulenk/mongotui/pkg/components/editor"
-	"github.com/kreulenk/mongotui/pkg/components/errormodal"
 	"github.com/kreulenk/mongotui/pkg/components/jsonviewer"
+	"github.com/kreulenk/mongotui/pkg/components/modal"
 	"github.com/kreulenk/mongotui/pkg/mongodata"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"os"
@@ -22,12 +22,12 @@ type Model struct {
 	docList         *doclist.Model
 	singleDocViewer *jsonviewer.Model
 	singleDocEditor editor.Editor
-	errModal        *errormodal.Model
+	msgModal        *modal.Model
 
 	engine *mongodata.Engine
 }
 
-func New(client *mongo.Client, errModal *errormodal.Model) *Model {
+func New(client *mongo.Client, errModal *modal.Model) *Model {
 	engine := mongodata.New(client)
 	err := engine.SetDatabases()
 	if err != nil {
@@ -40,7 +40,7 @@ func New(client *mongo.Client, errModal *errormodal.Model) *Model {
 		docList:         doclist.New(engine, errModal),
 		singleDocViewer: jsonviewer.New(engine, errModal),
 		singleDocEditor: editor.New(engine),
-		errModal:        errModal,
+		msgModal:        errModal,
 		engine:          engine,
 	}
 }
@@ -65,7 +65,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.docList, _ = m.docList.Update(msg)
 	if m.engine.IsDocumentSelected() && m.docList.GetDocAction() == doclist.EditDoc {
 		if err := m.singleDocEditor.OpenFileInEditor(); err != nil {
-			m.errModal.SetError(err)
+			m.msgModal.SetError(err)
 		}
 	}
 

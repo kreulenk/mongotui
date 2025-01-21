@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/kreulenk/mongotui/pkg/components/errormodal"
+	"github.com/kreulenk/mongotui/pkg/components/modal"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -12,10 +12,10 @@ type Model struct {
 	textInput textinput.Model
 	textValue string
 
-	errModal *errormodal.Model
+	msgModal *modal.Model // TODO look if we actually want to pass msgMoal into this component
 }
 
-func New(errModal *errormodal.Model) *Model {
+func New(msgModal *modal.Model) *Model {
 	ti := textinput.New()
 	ti.Placeholder = "Query"
 	ti.SetValue("{}")
@@ -26,7 +26,7 @@ func New(errModal *errormodal.Model) *Model {
 	return &Model{
 		textValue: "{}",
 		textInput: ti,
-		errModal:  errModal,
+		msgModal:  msgModal,
 	}
 }
 
