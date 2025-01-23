@@ -7,39 +7,27 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/kreulenk/mongotui/pkg/components/modal"
+	"github.com/kreulenk/mongotui/internal/state"
 	"github.com/kreulenk/mongotui/pkg/components/searchbar"
 	"github.com/kreulenk/mongotui/pkg/mongodata"
 	"github.com/kreulenk/mongotui/pkg/renderutils"
 	"github.com/mattn/go-runewidth"
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"os"
 	"slices"
 	"strings"
 )
 
-type DocAction int
-
-const (
-	NoAction DocAction = iota
-	ViewDoc
-	EditDoc
-)
-
 type Model struct {
-	Help     help.Model
-	msgModal *modal.Model
+	state *state.TuiState
+	Help  help.Model
 
-	searchBar     *searchbar.Model
-	searchEnabled bool
+	searchBar *searchbar.Model
 
 	docs   []Doc
 	styles Styles
 
-	cursor    int
-	viewport  viewport.Model
-	focus     bool
-	docAction DocAction
+	cursor   int
+	viewport viewport.Model
 
 	engine *mongodata.Engine
 }
@@ -53,47 +41,37 @@ type FieldSummary struct {
 }
 
 // New creates a new baseModel for the dbcoltable widget.
-func New(engine *mongodata.Engine, msgModal *modal.Model) *Model {
+func New(engine *mongodata.Engine, state *state.TuiState) *Model {
 	m := Model{
+		state:     state,
 		Help:      help.New(),
-		msgModal:  msgModal,
-		searchBar: searchbar.New(msgModal),
+		searchBar: searchbar.New(state),
 
 		docs:     []Doc{},
 		viewport: viewport.New(0, 20),
 
 		styles: defaultStyles(),
 
-		docAction: NoAction,
-		engine:    engine,
+		engine: engine,
 	}
-
-	err := m.updateTableRows()
-	if err != nil {
-		fmt.Printf("could not initialize document summary list: %v", err)
-		os.Exit(1)
-	}
-	m.updateViewport()
-
 	return &m
 }
 
-// Update is the Bubble Tea update loop.
 func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
-	if !m.focus {
-		return m, nil
-	}
-
-	if m.searchEnabled {
-		m.searchBar, _ = m.searchBar.Update(msg)
-		if !m.searchBar.Focused() {
-			m.searchEnabled = false
-			err := m.updateTableRows()
-			if err != nil {
-				m.msgModal.SetError(err)
-				return m, nil
+	// Handle searchBar updates
+	if m.searchBar.Focused() {
+		if k, ok := msg.(tea.KeyMsg); ok { // If the user hit enter into the search bar, update the docList
+			if strings.Trim(k.String(), " ") == "enter" { // For some reason enter always comes in with spaces
+				err := m.updateTableRows() // updateTableRows uses the text in the searchBar
+				if err != nil {
+					m.state.SetError(err)
+					m.updateViewport()
+					return m, nil
+				}
+				m.searchBar.Blur()
 			}
 		}
+		m.searchBar, _ = m.searchBar.Update(msg)
 		m.updateViewport()
 		return m, nil
 	}
@@ -101,8 +79,6 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, keys.Esc):
-			m.blur()
 		case key.Matches(msg, keys.LineUp):
 			m.MoveUp(1)
 		case key.Matches(msg, keys.LineDown):
@@ -122,7 +98,7 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 		case key.Matches(msg, keys.GotoBottom):
 			m.GotoBottom()
 		case key.Matches(msg, keys.Left):
-			m.engine.ClearCollectionSelection()
+			m.state.MainViewState.ActiveComponent = state.DbColTable
 			m.blur()
 		case key.Matches(msg, keys.Edit):
 			m.EditDoc()
@@ -146,9 +122,6 @@ func (m *Model) View() string {
 // updateTableRows updates the list of document summaries shown in the right hand bar based on the database/collection
 // selected in the left hand bar as well as the query that was last entered in the search bar.
 func (m *Model) updateTableRows() error {
-	if !m.engine.IsCollectionSelected() {
-		return nil
-	}
 	val, err := m.searchBar.GetValue()
 	if err != nil {
 		return err
@@ -193,54 +166,45 @@ func getFieldType(value interface{}) string {
 	}
 }
 
-func (m *Model) Focused() bool {
-	return m.focus
+func (m *Model) RefreshDocs() {
+	err := m.updateTableRows()
+	if err != nil {
+		m.state.SetError(err)
+	}
+	m.updateViewport()
 }
 
-func (m *Model) Focus(resetValues bool) {
-	m.docAction = NoAction
+func (m *Model) ResetSearchBar() {
+	m.searchBar.ResetValue()
+}
+
+func (m *Model) Focus() {
 	m.styles.Table = m.styles.Table.BorderStyle(lipgloss.ThickBorder()).BorderForeground(lipgloss.Color("57"))
-	if resetValues {
-		m.searchBar.ResetValue()
-		err := m.updateTableRows()
-		if err != nil {
-			m.msgModal.SetError(err)
-		}
-		m.updateViewport()
-	}
-	m.focus = true
 }
 
 func (m *Model) blur() {
 	m.styles.Table = m.styles.Table.BorderStyle(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("240"))
-	m.focus = false
-}
-
-func (m *Model) GetDocAction() DocAction {
-	return m.docAction
 }
 
 func (m *Model) EditDoc() {
 	if m.cursor >= len(m.docs) {
-		m.msgModal.SetError(fmt.Errorf("no document selected"))
+		m.state.SetError(fmt.Errorf("no document selected"))
 		return
 	}
 
-	m.docAction = EditDoc
-	m.engine.SetSelectedDocument(m.cursor)
-	m.blur()
+	m.state.MainViewState.ActiveComponent = state.SingleDocEditor
+	m.state.MainViewState.DocListState.SetSelectedDocIndex(m.cursor)
 }
 
 // ViewDoc opens the selected document in a new window via the jsonviewer component.
 func (m *Model) ViewDoc() {
 	if m.cursor >= len(m.docs) {
-		m.msgModal.SetError(fmt.Errorf("no document selected"))
+		m.state.SetError(fmt.Errorf("no document selected"))
 		return
 	}
 
-	m.docAction = ViewDoc
-	m.engine.SetSelectedDocument(m.cursor)
-	m.blur()
+	m.state.MainViewState.ActiveComponent = state.SingleDocViewer
+	m.state.MainViewState.DocListState.SetSelectedDocIndex(m.cursor)
 }
 
 func (m *Model) IsDocSelected() bool {
@@ -260,7 +224,7 @@ func (m *Model) updateViewport() {
 	}
 
 	joinedRows := lipgloss.JoinVertical(lipgloss.Top, renderedRows...)
-	if len(m.docs) == 0 && m.engine.IsCollectionSelected() {
+	if len(m.docs) == 0 && m.state.MainViewState.DbColTableState.IsCollectionSelected() {
 		joinedRows = "\nNo documents found" // TODO make this centered
 	}
 
@@ -309,7 +273,6 @@ func (m *Model) SetHeight(h int) {
 // It can not go above the first row.
 func (m *Model) MoveUp(n int) {
 	if m.cursor == 0 {
-		m.searchEnabled = true
 		m.searchBar.Focus()
 	}
 

@@ -2,18 +2,20 @@ package modal
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/kreulenk/mongotui/internal/state"
 )
 
 type Model struct {
 	promptMsg string
-	err       error
+	state     *state.TuiState
 
 	styles Styles
 }
 
 // New returns a modal component with the default styles applied
-func New() *Model {
+func New(state *state.TuiState) *Model {
 	return &Model{
+		state:  state,
 		styles: defaultStyles(),
 	}
 }
@@ -27,10 +29,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeySpace, tea.KeyEnter:
-			if m.ShouldDisplay() {
-				m.err = nil
-				m.promptMsg = ""
-			}
+			m.promptMsg = ""
+			m.state.ClearError()
 		default:
 		}
 	}
@@ -38,25 +38,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) View() string {
-	if !m.ShouldDisplay() {
-		return ""
-	}
-	if m.err != nil {
+	if m.state.GetError() != nil {
 		title := m.styles.Header.Render("Error")
-		return m.styles.Modal.Render(title + "\n\n" + m.err.Error())
+		return m.styles.Modal.Render(title + "\n\n" + m.state.GetError().Error())
 	} else {
 		return ""
 	}
 }
 
-func (m *Model) SetError(err error) {
-	m.err = err
-}
-
 func (m *Model) SetPromptMessage(msg string) {
 	m.promptMsg = msg
-}
-
-func (m *Model) ShouldDisplay() bool {
-	return m.err != nil || m.promptMsg != ""
 }

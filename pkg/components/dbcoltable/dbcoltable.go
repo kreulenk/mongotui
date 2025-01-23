@@ -7,7 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/kreulenk/mongotui/pkg/components/modal"
+	"github.com/kreulenk/mongotui/internal/state"
 	"github.com/kreulenk/mongotui/pkg/mongodata"
 	"github.com/kreulenk/mongotui/pkg/renderutils"
 	"github.com/mattn/go-runewidth"
@@ -23,9 +23,9 @@ const (
 
 // Model defines a state for the dbcoltable widget.
 type Model struct {
-	Help     help.Model
-	msgModal *modal.Model
-	styles   Styles
+	state  *state.TuiState
+	Help   help.Model
+	styles Styles
 
 	viewport    viewport.Model
 	headersText []string
@@ -35,7 +35,6 @@ type Model struct {
 	cursorColumn     cursorColumn
 	cursorDatabase   int
 	cursorCollection int
-	focus            bool
 
 	databaseStart   int
 	databaseEnd     int
@@ -50,12 +49,12 @@ func (m *Model) Init() tea.Cmd {
 }
 
 // New creates a new baseModel for the dbcoltable widget.
-func New(engine *mongodata.Engine, msgModal *modal.Model) *Model {
+func New(engine *mongodata.Engine, state *state.TuiState) *Model {
 	databases := mongodata.GetSortedDatabasesByName(engine.Server.Databases)
 	m := Model{
-		Help:     help.New(),
-		msgModal: msgModal,
-		styles:   defaultStyles(),
+		state:  state,
+		Help:   help.New(),
+		styles: defaultStyles(),
 
 		viewport:    viewport.New(0, 20),
 		headersText: []string{"Databases", "Collections"},
@@ -63,7 +62,6 @@ func New(engine *mongodata.Engine, msgModal *modal.Model) *Model {
 		collections: []string{},
 
 		cursorColumn: databasesColumn,
-		focus:        true,
 
 		engine: engine,
 	}
@@ -80,10 +78,6 @@ func New(engine *mongodata.Engine, msgModal *modal.Model) *Model {
 
 // Update is the Bubble Tea update loop.
 func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
-	if !m.focus {
-		return m, nil
-	}
-
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
@@ -111,43 +105,38 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 	return m, nil
 }
 
-// Focused returns whether or not this component is currently being used
-func (m *Model) Focused() bool {
-	return m.focus
-}
-
 // Focus enables key use on the dbcoltable so that the user can navigate the dbcoltable again. This signal would
 // be sent from another component
 func (m *Model) Focus() {
-	m.focus = true
 	m.styles.Table = m.styles.Table.BorderStyle(lipgloss.ThickBorder()).BorderForeground(lipgloss.Color("57"))
 	m.updateViewport()
 }
 
-// blur disables key use on the dbcoltable so that the parent appview component can switch the focus to
+// blur disables key use on the dbcoltable so that the parent mainview component can switch the focus to
 // the doclist component
 func (m *Model) blur() {
-	m.focus = false
+	m.state.MainViewState.ActiveComponent = state.DocList
+	m.state.MainViewState.DbColTableState.SetSelectedCollection(m.selectedDatabase(), m.selectedCollection())
 	m.styles.Table = m.styles.Table.BorderStyle(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("240"))
-	m.engine.SetSelectedCollection(m.selectedDatabase(), m.selectedCollection())
 }
 
 func (m *Model) DeleteDbOrCol() {
 	if m.cursorColumn == databasesColumn {
 		if err := m.engine.DropDatabase(m.selectedDatabase()); err != nil {
-			m.msgModal.SetError(fmt.Errorf("failed to drop database '%s': %w", m.selectedDatabase(), err))
+			m.state.SetError(fmt.Errorf("failed to drop database '%s': %w", m.selectedDatabase(), err))
 			m.cursorDatabase = renderutils.Max(0, m.cursorDatabase-1)
 			m.cursorCollection = renderutils.Max(0, m.cursorCollection-1)
 		}
 	} else {
 		if err := m.engine.DropCollection(m.selectedDatabase(), m.selectedCollection()); err != nil {
-			m.msgModal.SetError(fmt.Errorf("failed to drop collection '%s' within database '%s': %w", m.selectedCollection(), m.selectedDatabase(), err))
+			m.state.SetError(fmt.Errorf("failed to drop collection '%s' within database '%s': %w", m.selectedCollection(), m.selectedDatabase(), err))
 		}
 		m.cursorCollection = renderutils.Max(0, m.cursorCollection-1)
 	}
 	m.engine.ClearCachedData()
+	m.state.MainViewState.DbColTableState.ClearCollectionSelection()
 	if err := m.updateCollectionsData(); err != nil {
-		m.msgModal.SetError(fmt.Errorf("unable to reinitialize data after deletion: %w", err))
+		m.state.SetError(fmt.Errorf("unable to reinitialize data after deletion: %w", err))
 	}
 	m.updateViewport()
 }
@@ -234,7 +223,7 @@ func (m *Model) MoveUp(n int) {
 
 	err := m.updateCollectionsData()
 	if err != nil {
-		m.msgModal.SetError(err)
+		m.state.SetError(err)
 		m.cursorDatabase = oldCursor
 		return
 	}
@@ -253,7 +242,7 @@ func (m *Model) MoveDown(n int) {
 
 	err := m.updateCollectionsData()
 	if err != nil {
-		m.msgModal.SetError(err)
+		m.state.SetError(err)
 		m.cursorDatabase = oldCursor
 		return
 	}
@@ -269,7 +258,7 @@ func (m *Model) MoveRight() {
 		m.cursorColumn = collectionsColumn
 		err := m.updateCollectionsData()
 		if err != nil {
-			m.msgModal.SetError(err)
+			m.state.SetError(err)
 			m.cursorColumn = databasesColumn
 			return
 		}
@@ -287,7 +276,7 @@ func (m *Model) MoveLeft() {
 	m.cursorColumn = databasesColumn
 	err := m.updateCollectionsData()
 	if err != nil {
-		m.msgModal.SetError(err)
+		m.state.SetError(err)
 		m.cursorCollection = oldCursorCollection
 		m.cursorColumn = oldCursorColumn
 		return
@@ -358,7 +347,7 @@ func (m *Model) renderCollectionCell(r int) string {
 // updateCollectionsData updates the data tracked in the model based on the current cursorDatabase, cursorCollection and cursorColumn position
 // Lots of opportunity for caching with how this function is handled/called, but I like the live data for now
 func (m *Model) updateCollectionsData() error {
-	collections, err := m.engine.SetDbAndGetCollections(m.selectedDatabase())
+	collections, err := m.engine.GetCollectionsOfDb(m.selectedDatabase())
 	if err != nil {
 		return err
 	}

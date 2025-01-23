@@ -7,23 +7,17 @@ import (
 	"context"
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/kreulenk/mongotui/pkg/appview"
+	"github.com/kreulenk/mongotui/internal/state"
 	"github.com/kreulenk/mongotui/pkg/components/modal"
+	"github.com/kreulenk/mongotui/pkg/mainview"
 	overlay "github.com/rmhubbert/bubbletea-overlay"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"os"
 )
 
-type sessionState int
-
-const (
-	mainView sessionState = iota
-	modalView
-)
-
 // baseModel implements tea.Model, and manages the browser UI.
 type baseModel struct {
-	state    sessionState
+	state    *state.TuiState
 	errModal tea.Model
 	appView  tea.Model
 	overlay  tea.Model
@@ -31,18 +25,17 @@ type baseModel struct {
 
 func Initialize(client *mongo.Client) {
 	p := tea.NewProgram(initialModel(client))
+	defer client.Disconnect(context.TODO())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error: %v", err)
 		os.Exit(1)
 	}
-	if err := client.Disconnect(context.TODO()); err != nil {
-		fmt.Printf("failed to properly disconnect from db. Closing anyways: %v\n", err)
-	}
 }
 
 func initialModel(client *mongo.Client) tea.Model {
-	errModal := modal.New()
-	appView := appview.New(client, errModal)
+	state := state.DefaultState()
+	errModal := modal.New(state)
+	appView := mainview.New(client, state)
 	view := overlay.New(
 		errModal,
 		appView,
@@ -53,7 +46,7 @@ func initialModel(client *mongo.Client) tea.Model {
 	)
 
 	return &baseModel{
-		state:    mainView,
+		state:    state,
 		errModal: errModal,
 		appView:  appView,
 		overlay:  view,
@@ -76,22 +69,14 @@ func (m *baseModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	var cmds []tea.Cmd
-	if m.errModal.(*modal.Model).ShouldDisplay() { // TODO investigate if we NEED this typecast due to the bubble overlay library
-		m.state = modalView
+	if m.state.GetError() != nil {
 		fg, fgCmd := m.errModal.Update(message)
 		m.errModal = fg
 		cmds = append(cmds, fgCmd)
 	} else {
-		m.state = mainView
 		bg, bgCmd := m.appView.Update(message)
 		m.appView = bg
 		cmds = append(cmds, bgCmd)
-
-		// Check if the appView has an error
-		if m.errModal.(*modal.Model).ShouldDisplay() {
-			m.state = modalView
-		}
-
 	}
 
 	return m, tea.Batch(cmds...)
@@ -100,7 +85,7 @@ func (m *baseModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 // View applies and styling and handles rendering the view. It partly implements the tea.Model
 // interface.
 func (m *baseModel) View() string {
-	if m.state == modalView {
+	if m.state.GetError() != nil {
 		return m.overlay.View()
 	}
 	return m.appView.View()

@@ -9,28 +9,26 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/kreulenk/mongotui/pkg/components/modal"
+	"github.com/kreulenk/mongotui/internal/state"
 	"github.com/kreulenk/mongotui/pkg/mongodata"
 )
 
 type Model struct {
+	state    *state.TuiState
 	Viewport viewport.Model
 	Help     help.Model
-	msgModal *modal.Model
 
 	engine *mongodata.Engine
-	focus  bool
 }
 
-func New(engine *mongodata.Engine, msgModal *modal.Model) *Model {
+func New(engine *mongodata.Engine, state *state.TuiState) *Model {
 	viewPort := viewport.New(0, 0)
 
 	return &Model{
+		state:    state,
 		Viewport: viewPort,
 		Help:     help.New(),
 		engine:   engine,
-		focus:    false,
-		msgModal: msgModal,
 	}
 }
 
@@ -41,13 +39,13 @@ func (m *Model) Init() tea.Cmd {
 func (m *Model) Focus() {
 	selectedDoc, err := m.engine.GetSelectedDocument()
 	if err != nil {
-		m.msgModal.SetError(fmt.Errorf("could not get selected document: %v", err))
+		m.state.SetError(fmt.Errorf("could not get selected document: %v", err))
 		return
 	}
 
 	buf := new(bytes.Buffer)
 	if err := quick.Highlight(buf, string(selectedDoc), "json", "terminal256", "dracula"); err != nil {
-		m.msgModal.SetError(fmt.Errorf("could not highlight json: %v", err))
+		m.state.SetError(fmt.Errorf("could not highlight json: %v", err))
 		return
 	}
 
@@ -57,16 +55,6 @@ func (m *Model) Focus() {
 		Render(buf.String())
 
 	m.Viewport.SetContent(renderedContent)
-	m.focus = true
-}
-
-func (m *Model) Focused() bool {
-	return m.focus
-}
-
-func (m *Model) blur() {
-	m.focus = false
-	m.engine.ClearSelectedDocument()
 }
 
 func (m *Model) SetWidth(w int) {
@@ -78,14 +66,11 @@ func (m *Model) SetHeight(h int) {
 }
 
 func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
-	if !m.focus {
-		return m, nil
-	}
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, keys.Back):
-			m.blur()
+			m.state.MainViewState.ActiveComponent = state.DocList
 			return m, nil
 		}
 	}

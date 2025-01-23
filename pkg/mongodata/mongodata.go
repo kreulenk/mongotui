@@ -5,6 +5,7 @@ package mongodata
 import (
 	"context"
 	"fmt"
+	"github.com/kreulenk/mongotui/internal/state"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"slices"
@@ -24,34 +25,19 @@ type Database struct {
 type Collection struct {
 	Data []bson.M
 }
-
-type selectedData struct {
-	databaseName   string
-	collectionName string
-
-	// The doclist component will set the documentIndex of whatever is highlighted.
-	// This is because we are not guaranteed a consistent Id.
-	// No document selected is represented by a value of -1
-	documentIndex int
-}
-
 type Engine struct {
-	Client       *mongo.Client
-	Server       *Server
-	selectedData selectedData
+	Client *mongo.Client
+	Server *Server
+	state  *state.TuiState
 }
 
-func New(client *mongo.Client) *Engine {
+func New(client *mongo.Client, state *state.TuiState) *Engine {
 	return &Engine{
 		Client: client,
 		Server: &Server{
 			Databases: make(map[string]Database),
 		},
-		selectedData: selectedData{
-			databaseName:   "",
-			collectionName: "",
-			documentIndex:  -1,
-		},
+		state: state,
 	}
 }
 
@@ -65,7 +51,7 @@ func (m *Engine) SetDatabases() error {
 
 	m.Server.Databases = make(map[string]Database)
 	for _, dbName := range dbNames {
-		_, err := m.SetDbAndGetCollections(dbName)
+		_, err := m.GetCollectionsOfDb(dbName)
 		if err != nil {
 			return err
 		}
@@ -75,11 +61,10 @@ func (m *Engine) SetDatabases() error {
 
 }
 
-// SetDbAndGetCollections fetches the Collections for a given database along with the number of records in each collection
-func (m *Engine) SetDbAndGetCollections(dbName string) ([]string, error) {
+// GetCollectionsOfDb fetches the Collections for a given database along with the number of records in each collection
+func (m *Engine) GetCollectionsOfDb(dbName string) ([]string, error) {
 	_, ok := m.Server.Databases[dbName] // If we already have the cached data, don't fetch it again
 	if ok {
-		m.selectedData.databaseName = dbName
 		return getSortedCollectionsByName(m.Server.Databases[dbName].Collections), nil
 	}
 
@@ -96,7 +81,6 @@ func (m *Engine) SetDbAndGetCollections(dbName string) ([]string, error) {
 		m.Server.Databases[dbName].Collections[collectionName] = Collection{}
 	}
 
-	m.selectedData.databaseName = dbName
 	return getSortedCollectionsByName(m.Server.Databases[dbName].Collections), nil
 }
 
@@ -104,7 +88,6 @@ func (m *Engine) ClearCachedData() {
 	m.Server = &Server{
 		Databases: make(map[string]Database),
 	}
-	m.ClearCollectionSelection()
 }
 
 // getSortedCollectionsByName returns a slice of collection names sorted alphabetically
@@ -117,30 +100,12 @@ func getSortedCollectionsByName(collections map[string]Collection) []string {
 	return collectionNames
 }
 
-// SetSelectedCollection Allows parent components to set what data will be displayed within this component.
-func (m *Engine) SetSelectedCollection(databaseName, collectionName string) {
-	m.selectedData.databaseName = databaseName
-	m.selectedData.collectionName = collectionName
-}
-
-func (m *Engine) SetSelectedDocument(documentIndex int) {
-	m.selectedData.documentIndex = documentIndex
-}
-
-func (m *Engine) IsDocumentSelected() bool {
-	return m.selectedData.documentIndex >= 0
-}
-
-func (m *Engine) ClearSelectedDocument() {
-	m.selectedData.documentIndex = -1
-}
-
 func (m *Engine) GetSelectedDocument() ([]byte, error) {
-	if m.selectedData.databaseName == "" || m.selectedData.collectionName == "" || m.selectedData.documentIndex < 0 {
-		return nil, fmt.Errorf("no document selected") // This should never happen if calling components are working correctly
-	}
+	dbName := m.state.MainViewState.DbColTableState.GetSelectedDbName()
+	colName := m.state.MainViewState.DbColTableState.GetSelectedCollectionName()
+	docIndex := m.state.MainViewState.DocListState.GetSelectedDocumentIndex()
 
-	data := m.Server.Databases[m.selectedData.databaseName].Collections[m.selectedData.collectionName].Data[m.selectedData.documentIndex]
+	data := m.Server.Databases[dbName].Collections[colName].Data[docIndex]
 	parsedDoc, err := bson.MarshalExtJSONIndent(data, false, false, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("could not parse document: %v", err)
@@ -149,24 +114,10 @@ func (m *Engine) GetSelectedDocument() ([]byte, error) {
 	return parsedDoc, nil
 }
 
-func (m *Engine) IsCollectionSelected() bool {
-	return m.selectedData.collectionName != "" && m.selectedData.databaseName != ""
-}
-
-func (m *Engine) ClearCollectionSelection() {
-	m.selectedData = selectedData{
-		documentIndex: -1,
-	}
-}
-
 // QueryCollection fetches all the data from a given collection in a given database
 func (m *Engine) QueryCollection(query bson.D) error {
-	if m.selectedData.databaseName == "" || m.selectedData.collectionName == "" {
-		return fmt.Errorf("no collection selected") // This should never happen
-	}
-
-	db := m.Client.Database(m.selectedData.databaseName)
-	coll := db.Collection(m.selectedData.collectionName)
+	db := m.Client.Database(m.state.MainViewState.DbColTableState.GetSelectedDbName())
+	coll := db.Collection(m.state.MainViewState.DbColTableState.GetSelectedCollectionName())
 	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
 
@@ -180,9 +131,9 @@ func (m *Engine) QueryCollection(query bson.D) error {
 		return err
 	}
 
-	curDb, ok := m.Server.Databases[m.selectedData.databaseName]
+	curDb, ok := m.Server.Databases[m.state.MainViewState.DbColTableState.GetSelectedDbName()]
 	if ok {
-		curDb.Collections[m.selectedData.collectionName] = Collection{Data: data}
+		curDb.Collections[m.state.MainViewState.DbColTableState.GetSelectedCollectionName()] = Collection{Data: data}
 	} else {
 		return fmt.Errorf("no database is set") // should never happen
 	}
@@ -205,9 +156,6 @@ func (m *Engine) DropCollection(databaseName, collectionName string) error {
 }
 
 func (m *Engine) UpdateDocument(oldDoc, newDoc []byte) error {
-	if m.selectedData.databaseName == "" || m.selectedData.collectionName == "" {
-		return fmt.Errorf("no collection selected") // This should never happen
-	}
 	var oldDocBson bson.M
 	if err := bson.UnmarshalExtJSON(oldDoc, false, &oldDocBson); err != nil {
 		return fmt.Errorf("failed to parse the original document needed for the replacement: %w", err)
@@ -217,8 +165,8 @@ func (m *Engine) UpdateDocument(oldDoc, newDoc []byte) error {
 		return fmt.Errorf("failed to parse the new document needed for the replacement: %w", err)
 	}
 
-	db := m.Client.Database(m.selectedData.databaseName)
-	coll := db.Collection(m.selectedData.collectionName)
+	db := m.Client.Database(m.state.MainViewState.DbColTableState.GetSelectedDbName())
+	coll := db.Collection(m.state.MainViewState.DbColTableState.GetSelectedCollectionName())
 	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
 
@@ -231,9 +179,9 @@ func (m *Engine) UpdateDocument(oldDoc, newDoc []byte) error {
 
 // GetQueriedDocs returns the data that was last queried from the database for the selected database/collection
 func (m *Engine) GetQueriedDocs() []bson.M {
-	db, ok := m.Server.Databases[m.selectedData.databaseName]
+	db, ok := m.Server.Databases[m.state.MainViewState.DbColTableState.GetSelectedDbName()]
 	if ok {
-		collection, ok := db.Collections[m.selectedData.collectionName]
+		collection, ok := db.Collections[m.state.MainViewState.DbColTableState.GetSelectedCollectionName()]
 		if ok {
 			return collection.Data
 		}

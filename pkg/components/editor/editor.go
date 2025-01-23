@@ -5,6 +5,7 @@ package editor
 
 import (
 	"fmt"
+	"github.com/kreulenk/mongotui/internal/state"
 	"github.com/kreulenk/mongotui/pkg/mongodata"
 	"os"
 	"os/exec"
@@ -12,11 +13,13 @@ import (
 )
 
 type Editor struct {
+	state  *state.TuiState
 	engine *mongodata.Engine
 }
 
-func New(engine *mongodata.Engine) Editor {
+func New(engine *mongodata.Engine, state *state.TuiState) Editor {
 	return Editor{
+		state:  state,
 		engine: engine,
 	}
 }
@@ -53,5 +56,6 @@ func (e Editor) OpenFileInEditor() error {
 		return err
 	}
 
+	e.state.MainViewState.ActiveComponent = state.DocList
 	return nil
 }

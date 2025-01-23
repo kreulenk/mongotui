@@ -4,18 +4,16 @@ import (
 	"fmt"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/kreulenk/mongotui/pkg/components/modal"
+	"github.com/kreulenk/mongotui/internal/state"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type Model struct {
+	state     *state.TuiState
 	textInput textinput.Model
-	textValue string
-
-	msgModal *modal.Model // TODO look if we actually want to pass msgMoal into this component
 }
 
-func New(msgModal *modal.Model) *Model {
+func New(state *state.TuiState) *Model {
 	ti := textinput.New()
 	ti.Placeholder = "Query"
 	ti.SetValue("{}")
@@ -24,9 +22,8 @@ func New(msgModal *modal.Model) *Model {
 	ti.Blur()
 
 	return &Model{
-		textValue: "{}",
+		state:     state,
 		textInput: ti,
-		msgModal:  msgModal,
 	}
 }
 
@@ -43,20 +40,23 @@ func (m *Model) Focus() {
 	m.textInput.Focus()
 }
 
+func (m *Model) Blur() {
+	m.textInput.Blur()
+}
+
 func (m *Model) Focused() bool {
 	return m.textInput.Focused()
 }
 
 func (m *Model) ResetValue() {
 	m.textInput.Reset()
-	m.textValue = "{}"
-	m.textInput.SetValue(m.textValue)
+	m.textInput.SetValue("{}")
 	m.textInput.SetCursor(1)
 }
 
 func (m *Model) GetValue() (bson.D, error) {
 	var query bson.D
-	err := bson.UnmarshalExtJSON([]byte(m.textValue), false, &query)
+	err := bson.UnmarshalExtJSON([]byte(m.textInput.Value()), false, &query)
 	if err != nil {
 		return bson.D{}, fmt.Errorf("invalid query: %v", err)
 	}
@@ -69,10 +69,6 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Type {
-		case tea.KeyEnter:
-			m.textValue = m.textInput.Value()
-			m.textInput.Blur()
-			return m, nil
 		case tea.KeyEsc, tea.KeyDown:
 			m.textInput.Blur()
 			return m, nil

@@ -1,46 +1,49 @@
 // This package contains the main view for the TUI
 // It has been separated from the tui package as the error modal needs to be templated over a valid tea.Model
 
-package appview
+package mainview
 
 import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/kreulenk/mongotui/internal/state"
 	"github.com/kreulenk/mongotui/pkg/components/dbcoltable"
 	"github.com/kreulenk/mongotui/pkg/components/doclist"
 	"github.com/kreulenk/mongotui/pkg/components/editor"
 	"github.com/kreulenk/mongotui/pkg/components/jsonviewer"
-	"github.com/kreulenk/mongotui/pkg/components/modal"
 	"github.com/kreulenk/mongotui/pkg/mongodata"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"os"
 )
 
 type Model struct {
+	state *state.TuiState
+
 	dbColTable      *dbcoltable.Model
 	docList         *doclist.Model
 	singleDocViewer *jsonviewer.Model
 	singleDocEditor editor.Editor
-	msgModal        *modal.Model
 
 	engine *mongodata.Engine
 }
 
-func New(client *mongo.Client, errModal *modal.Model) *Model {
-	engine := mongodata.New(client)
+func New(client *mongo.Client, state *state.TuiState) *Model {
+	engine := mongodata.New(client, state)
 	err := engine.SetDatabases()
 	if err != nil {
 		fmt.Printf("could not initialize data: %v", err)
 		os.Exit(1)
 	}
 
+	d := dbcoltable.New(engine, state) // This will be the first component to be focused on startup
+	d.Focus()
 	return &Model{
-		dbColTable:      dbcoltable.New(engine, errModal),
-		docList:         doclist.New(engine, errModal),
-		singleDocViewer: jsonviewer.New(engine, errModal),
-		singleDocEditor: editor.New(engine),
-		msgModal:        errModal,
+		state:           state,
+		dbColTable:      d,
+		docList:         doclist.New(engine, state),
+		singleDocViewer: jsonviewer.New(engine, state),
+		singleDocEditor: editor.New(engine, state),
 		engine:          engine,
 	}
 }
@@ -61,32 +64,36 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.ClearScreen // Necessary for resizes
 	}
 
-	m.dbColTable, _ = m.dbColTable.Update(msg)
-	m.docList, _ = m.docList.Update(msg)
-	if m.engine.IsDocumentSelected() && m.docList.GetDocAction() == doclist.EditDoc {
-		if err := m.singleDocEditor.OpenFileInEditor(); err != nil {
-			m.msgModal.SetError(err)
+	switch m.state.MainViewState.ActiveComponent {
+	case state.DbColTable:
+		m.dbColTable, _ = m.dbColTable.Update(msg)
+		if m.state.MainViewState.ActiveComponent == state.DocList { // If the state switched, use a fresh docList
+			m.docList.ResetSearchBar()
+			m.docList.RefreshDocs()
+			m.docList.Focus()
 		}
-	}
-
-	if m.engine.IsDocumentSelected() && m.docList.GetDocAction() == doclist.ViewDoc { // Handle viewing of a single document
-		if m.singleDocViewer.Focused() == false {
+	case state.DocList:
+		m.docList, _ = m.docList.Update(msg)
+		if m.state.MainViewState.ActiveComponent == state.DbColTable {
+			m.dbColTable.Focus()
+		} else if m.state.MainViewState.ActiveComponent == state.SingleDocViewer {
 			m.singleDocViewer.Focus()
+		} else if m.state.MainViewState.ActiveComponent == state.SingleDocEditor {
+			if err := m.singleDocEditor.OpenFileInEditor(); err != nil {
+				m.state.SetError(err)
+			}
+			m.docList.RefreshDocs()
 		}
+	case state.SingleDocViewer:
 		m.singleDocViewer, _ = m.singleDocViewer.Update(msg)
-		if m.singleDocViewer.Focused() == false {
-			m.docList.Focus(false)
+		if m.state.MainViewState.ActiveComponent == state.DocList {
+			m.docList.RefreshDocs()
+			m.docList.Focus()
 		}
-		return m, nil
-	}
-
-	// If a collection is selected, pass off control to the docList
-	if !m.docList.Focused() && m.engine.IsCollectionSelected() {
-		m.docList.Focus(true)
-	}
-
-	if !m.dbColTable.Focused() && !m.engine.IsCollectionSelected() {
-		m.dbColTable.Focus()
+	case state.SingleDocEditor:
+		panic("SingleDocEditor should only be selected after an update to DocList")
+	default:
+		panic("unhandled default case")
 	}
 
 	return m, nil
@@ -97,11 +104,11 @@ func (m *Model) Init() tea.Cmd {
 }
 
 func (m *Model) View() string {
-	if m.singleDocViewer.Focused() {
+	if m.state.MainViewState.ActiveComponent == state.SingleDocViewer {
 		return m.singleDocViewer.View()
 	}
 	tables := lipgloss.JoinHorizontal(lipgloss.Left, m.dbColTable.View(), m.docList.View())
-	if m.dbColTable.Focused() {
+	if m.state.MainViewState.ActiveComponent == state.DbColTable {
 		return lipgloss.JoinVertical(lipgloss.Top, tables, m.dbColTable.HelpView())
 	} else {
 		return lipgloss.JoinVertical(lipgloss.Top, tables, m.docList.HelpView())
