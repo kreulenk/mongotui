@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/kreulenk/mongotui/pkg/mongodata"
+	"github.com/kreulenk/mongotui/pkg/mongoengine"
 	"github.com/kreulenk/mongotui/pkg/tui"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -57,7 +57,7 @@ in a more intuitive way.`,
 // TODO more flags need to be added to fully support auth. Hardcoded to always use an auth database of admin for now
 func generateConnectionOptions(connectionString, usernameFlag, passwordFlag, authMechanism string) (*options.ClientOptions, error) {
 	clientOps := options.Client().ApplyURI(connectionString)
-	clientOps.SetTimeout(mongodata.Timeout)
+	clientOps.SetTimeout(mongoengine.Timeout)
 
 	if clientOps.Auth == nil && (usernameFlag != "" || passwordFlag != "") {
 		clientOps.Auth = &options.Credential{

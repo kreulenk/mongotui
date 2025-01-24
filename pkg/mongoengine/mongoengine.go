@@ -1,6 +1,6 @@
-// mongodata handles the fetching and caching of data retrieved from the MongoDB database.
+// mongoengine handles the fetching and caching of data retrieved from the MongoDB database.
 
-package mongodata
+package mongoengine
 
 import (
 	"context"
@@ -41,7 +41,7 @@ func New(client *mongo.Client, state *state.TuiState) *Engine {
 	}
 }
 
-func (m *Engine) SetDatabases() error {
+func (m *Engine) RefreshDatabases() error {
 	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
 	dbNames, err := m.Client.ListDatabaseNames(ctx, bson.D{})
@@ -58,7 +58,6 @@ func (m *Engine) SetDatabases() error {
 	}
 
 	return nil
-
 }
 
 // GetCollectionsOfDb fetches the Collections for a given database along with the number of records in each collection

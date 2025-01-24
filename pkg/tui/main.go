@@ -10,6 +10,7 @@ import (
 	"github.com/kreulenk/mongotui/internal/state"
 	"github.com/kreulenk/mongotui/pkg/components/modal"
 	"github.com/kreulenk/mongotui/pkg/mainview"
+	"github.com/kreulenk/mongotui/pkg/mongoengine"
 	overlay "github.com/rmhubbert/bubbletea-overlay"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"os"
@@ -19,7 +20,7 @@ import (
 type baseModel struct {
 	state    *state.TuiState
 	errModal tea.Model
-	appView  tea.Model
+	mainView tea.Model
 	overlay  tea.Model
 }
 
@@ -34,11 +35,13 @@ func Initialize(client *mongo.Client) {
 
 func initialModel(client *mongo.Client) tea.Model {
 	state := state.DefaultState()
-	errModal := modal.New(state)
-	appView := mainview.New(client, state)
+	engine := mongoengine.New(client, state)
+
+	errModal := modal.New(state, engine)
+	mainView := mainview.New(state, engine)
 	view := overlay.New(
 		errModal,
-		appView,
+		mainView,
 		overlay.Center,
 		overlay.Center,
 		0,
@@ -48,7 +51,7 @@ func initialModel(client *mongo.Client) tea.Model {
 	return &baseModel{
 		state:    state,
 		errModal: errModal,
-		appView:  appView,
+		mainView: mainView,
 		overlay:  view,
 	}
 }
@@ -69,14 +72,18 @@ func (m *baseModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	var cmds []tea.Cmd
-	if m.state.GetError() != nil {
-		fg, fgCmd := m.errModal.Update(message)
-		m.errModal = fg
-		cmds = append(cmds, fgCmd)
+	if m.isModalRequested() {
+		mod, modCmd := m.errModal.Update(message)
+		m.errModal = mod
+		if m.state.MainViewState.DbColTableState.WasDatabaseDeletedViaModal() ||
+			m.state.MainViewState.DbColTableState.WasCollectionDeletedViaModal() {
+			m.mainView.(*mainview.Model).RefreshAfterDeletion() // type cast necessary due to bubbletea-overlay requiring tea.Model
+		}
+		cmds = append(cmds, modCmd)
 	} else {
-		bg, bgCmd := m.appView.Update(message)
-		m.appView = bg
-		cmds = append(cmds, bgCmd)
+		mv, mvCmd := m.mainView.Update(message)
+		m.mainView = mv
+		cmds = append(cmds, mvCmd)
 	}
 
 	return m, tea.Batch(cmds...)
@@ -85,8 +92,14 @@ func (m *baseModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 // View applies and styling and handles rendering the view. It partly implements the tea.Model
 // interface.
 func (m *baseModel) View() string {
-	if m.state.GetError() != nil {
+	if m.isModalRequested() {
 		return m.overlay.View()
 	}
-	return m.appView.View()
+	return m.mainView.View()
+}
+
+func (m *baseModel) isModalRequested() bool {
+	return m.state.ModalState.GetError() != nil ||
+		m.state.ModalState.IsDatabaseDeletionRequested() ||
+		m.state.ModalState.IsCollectionDeletionRequested()
 }

@@ -9,7 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/kreulenk/mongotui/internal/state"
 	"github.com/kreulenk/mongotui/pkg/components/searchbar"
-	"github.com/kreulenk/mongotui/pkg/mongodata"
+	"github.com/kreulenk/mongotui/pkg/mongoengine"
 	"github.com/kreulenk/mongotui/pkg/renderutils"
 	"github.com/mattn/go-runewidth"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -29,7 +29,7 @@ type Model struct {
 	cursor   int
 	viewport viewport.Model
 
-	engine *mongodata.Engine
+	engine *mongoengine.Engine
 }
 
 type Doc []FieldSummary
@@ -41,7 +41,7 @@ type FieldSummary struct {
 }
 
 // New creates a new baseModel for the dbcoltable widget.
-func New(engine *mongodata.Engine, state *state.TuiState) *Model {
+func New(engine *mongoengine.Engine, state *state.TuiState) *Model {
 	m := Model{
 		state:     state,
 		Help:      help.New(),
@@ -64,7 +64,7 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 			if strings.Trim(k.String(), " ") == "enter" { // For some reason enter always comes in with spaces
 				err := m.updateTableRows() // updateTableRows uses the text in the searchBar
 				if err != nil {
-					m.state.SetError(err)
+					m.state.ModalState.SetError(err)
 					m.updateViewport()
 					return m, nil
 				}
@@ -98,7 +98,7 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 		case key.Matches(msg, keys.GotoBottom):
 			m.GotoBottom()
 		case key.Matches(msg, keys.Left):
-			m.state.MainViewState.ActiveComponent = state.DbColTable
+			m.state.MainViewState.SetActiveComponent(state.DbColTable)
 			m.blur()
 		case key.Matches(msg, keys.Edit):
 			m.EditDoc()
@@ -169,7 +169,7 @@ func getFieldType(value interface{}) string {
 func (m *Model) RefreshDocs() {
 	err := m.updateTableRows()
 	if err != nil {
-		m.state.SetError(err)
+		m.state.ModalState.SetError(err)
 	}
 	m.updateViewport()
 }
@@ -188,22 +188,22 @@ func (m *Model) blur() {
 
 func (m *Model) EditDoc() {
 	if m.cursor >= len(m.docs) {
-		m.state.SetError(fmt.Errorf("no document selected"))
+		m.state.ModalState.SetError(fmt.Errorf("no document selected"))
 		return
 	}
 
-	m.state.MainViewState.ActiveComponent = state.SingleDocEditor
+	m.state.MainViewState.SetActiveComponent(state.SingleDocEditor)
 	m.state.MainViewState.DocListState.SetSelectedDocIndex(m.cursor)
 }
 
 // ViewDoc opens the selected document in a new window via the jsonviewer component.
 func (m *Model) ViewDoc() {
 	if m.cursor >= len(m.docs) {
-		m.state.SetError(fmt.Errorf("no document selected"))
+		m.state.ModalState.SetError(fmt.Errorf("no document selected"))
 		return
 	}
 
-	m.state.MainViewState.ActiveComponent = state.SingleDocViewer
+	m.state.MainViewState.SetActiveComponent(state.SingleDocViewer)
 	m.state.MainViewState.DocListState.SetSelectedDocIndex(m.cursor)
 }
 

@@ -10,7 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/kreulenk/mongotui/internal/state"
-	"github.com/kreulenk/mongotui/pkg/mongodata"
+	"github.com/kreulenk/mongotui/pkg/mongoengine"
 )
 
 type Model struct {
@@ -18,10 +18,10 @@ type Model struct {
 	Viewport viewport.Model
 	Help     help.Model
 
-	engine *mongodata.Engine
+	engine *mongoengine.Engine
 }
 
-func New(engine *mongodata.Engine, state *state.TuiState) *Model {
+func New(engine *mongoengine.Engine, state *state.TuiState) *Model {
 	viewPort := viewport.New(0, 0)
 
 	return &Model{
@@ -39,13 +39,13 @@ func (m *Model) Init() tea.Cmd {
 func (m *Model) Focus() {
 	selectedDoc, err := m.engine.GetSelectedDocument()
 	if err != nil {
-		m.state.SetError(fmt.Errorf("could not get selected document: %v", err))
+		m.state.ModalState.SetError(fmt.Errorf("could not get selected document: %v", err))
 		return
 	}
 
 	buf := new(bytes.Buffer)
 	if err := quick.Highlight(buf, string(selectedDoc), "json", "terminal256", "dracula"); err != nil {
-		m.state.SetError(fmt.Errorf("could not highlight json: %v", err))
+		m.state.ModalState.SetError(fmt.Errorf("could not highlight json: %v", err))
 		return
 	}
 
@@ -70,7 +70,7 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, keys.Back):
-			m.state.MainViewState.ActiveComponent = state.DocList
+			m.state.MainViewState.SetActiveComponent(state.DocList)
 			return m, nil
 		}
 	}
