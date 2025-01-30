@@ -36,17 +36,15 @@ func (m *Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m *Model) Focus() {
-	selectedDoc, err := m.engine.GetSelectedDocument()
+func (m *Model) Focus() error {
+	selectedDoc, err := m.engine.GetSelectedDocumentMarshalled()
 	if err != nil {
-		m.state.ModalState.SetError(fmt.Errorf("could not get selected document: %v", err))
-		return
+		return fmt.Errorf("could not get selected document: %v", err)
 	}
 
 	buf := new(bytes.Buffer)
 	if err := quick.Highlight(buf, string(selectedDoc), "json", "terminal256", "dracula"); err != nil {
-		m.state.ModalState.SetError(fmt.Errorf("could not highlight json: %v", err))
-		return
+		return fmt.Errorf("could not highlight json: %v", err)
 	}
 
 	renderedContent := lipgloss.NewStyle().
@@ -55,6 +53,7 @@ func (m *Model) Focus() {
 		Render(buf.String())
 
 	m.Viewport.SetContent(renderedContent)
+	return nil
 }
 
 func (m *Model) SetWidth(w int) {

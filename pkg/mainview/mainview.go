@@ -11,6 +11,7 @@ import (
 	"github.com/kreulenk/mongotui/pkg/components/doclist"
 	"github.com/kreulenk/mongotui/pkg/components/editor"
 	"github.com/kreulenk/mongotui/pkg/components/jsonviewer"
+	"github.com/kreulenk/mongotui/pkg/components/modal"
 	"github.com/kreulenk/mongotui/pkg/mongoengine"
 )
 
@@ -41,10 +42,10 @@ func New(state *state.TuiState, engine *mongoengine.Engine) *Model {
 // RefreshAfterDeletion is used after a deletion has been confirmed and successfully
 // performed by the modal component so that the component with the deleted data can be
 // properly updated
-func (m *Model) RefreshAfterDeletion() {
+func (m *Model) RefreshAfterDeletion() error {
 	switch m.state.MainViewState.GetActiveComponent() {
 	case state.DbColTable:
-		m.dbColTable.RefreshAfterDeletion()
+		return m.dbColTable.RefreshAfterDeletion()
 	default:
 		panic("unhandled default case")
 	}
@@ -66,39 +67,53 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.ClearScreen // Necessary for resizes
 	}
 
+	var cmds []tea.Cmd
+	var cmd tea.Cmd
 	switch m.state.MainViewState.GetActiveComponent() {
 	case state.DbColTable:
-		m.dbColTable, _ = m.dbColTable.Update(msg)
+		m.dbColTable, cmd = m.dbColTable.Update(msg)
 		if m.state.MainViewState.GetActiveComponent() == state.DocList { // If the state switched, use a fresh docList
 			m.docList.ResetSearchBar()
-			m.docList.RefreshDocs()
+			err := m.docList.RefreshDocs()
+			if err != nil {
+				return m, modal.DisplayErrorModal(err)
+			}
 			m.docList.Focus()
 		}
+		cmds = append(cmds, cmd)
 	case state.DocList:
-		m.docList, _ = m.docList.Update(msg)
+		m.docList, cmd = m.docList.Update(msg)
 		if m.state.MainViewState.GetActiveComponent() == state.DbColTable {
 			m.dbColTable.Focus()
 		} else if m.state.MainViewState.GetActiveComponent() == state.SingleDocViewer {
-			m.singleDocViewer.Focus()
+			if err := m.singleDocViewer.Focus(); err != nil {
+				return m, modal.DisplayErrorModal(err)
+			}
 		} else if m.state.MainViewState.GetActiveComponent() == state.SingleDocEditor {
 			if err := m.singleDocEditor.OpenFileInEditor(); err != nil {
-				m.state.ModalState.SetError(err)
+				return m, modal.DisplayErrorModal(err)
 			}
-			m.docList.RefreshDocs()
+			if err := m.docList.RefreshDocs(); err != nil {
+				return m, modal.DisplayErrorModal(err)
+			}
 		}
+		cmds = append(cmds, cmd)
 	case state.SingleDocViewer:
-		m.singleDocViewer, _ = m.singleDocViewer.Update(msg)
+		m.singleDocViewer, cmd = m.singleDocViewer.Update(msg)
 		if m.state.MainViewState.GetActiveComponent() == state.DocList {
-			m.docList.RefreshDocs()
+			if err := m.docList.RefreshDocs(); err != nil {
+				return m, modal.DisplayErrorModal(err)
+			}
 			m.docList.Focus()
 		}
+		cmds = append(cmds, cmd)
 	case state.SingleDocEditor:
 		panic("SingleDocEditor should only be selected after an update to DocList")
 	default:
 		panic("unhandled default case")
 	}
 
-	return m, nil
+	return m, tea.Batch(cmds...)
 }
 
 func (m *Model) Init() tea.Cmd {

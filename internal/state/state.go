@@ -15,20 +15,13 @@ const (
 )
 
 type TuiState struct {
-	ModalState    *ModalState // If err is set, the modal component will be displayed with the message
 	MainViewState *MainViewState
 }
 
 func DefaultState() *TuiState {
 	return &TuiState{
-		ModalState: &ModalState{
-			err: nil,
-		},
 		MainViewState: &MainViewState{
 			activeComponent: DbColTable,
-			DocListState: &DocListState{
-				selectedDocIndex: 0,
-			},
 			DbColTableState: &DbColTableState{
 				databaseName:   "",
 				collectionName: "",

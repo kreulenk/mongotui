@@ -25,7 +25,7 @@ func New(engine *mongoengine.Engine, state *state.TuiState) Editor {
 }
 
 func (e Editor) OpenFileInEditor() error {
-	oldDoc, err := e.engine.GetSelectedDocument()
+	oldDoc, err := e.engine.GetSelectedDocumentMarshalled()
 	if err != nil {
 		return err
 	}

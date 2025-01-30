@@ -2,7 +2,6 @@ package state
 
 type MainViewState struct {
 	activeComponent MainViewComponent
-	DocListState    *DocListState
 	DbColTableState *DbColTableState
 }
 

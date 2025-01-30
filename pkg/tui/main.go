@@ -1,5 +1,5 @@
 // This package is the main entrypoint of the TUI for mongotui.
-// It initializes the Data engine and loads on the various display elements.
+// It initializes the Documents engine and loads on the various display elements.
 
 package tui
 
@@ -19,7 +19,7 @@ import (
 // baseModel implements tea.Model, and manages the browser UI.
 type baseModel struct {
 	state    *state.TuiState
-	errModal tea.Model
+	msgModal tea.Model
 	mainView tea.Model
 	overlay  tea.Model
 }
@@ -34,13 +34,13 @@ func Initialize(client *mongo.Client) {
 }
 
 func initialModel(client *mongo.Client) tea.Model {
-	state := state.DefaultState()
-	engine := mongoengine.New(client, state)
+	s := state.DefaultState()
+	engine := mongoengine.New(client, s)
 
-	errModal := modal.New(state, engine)
-	mainView := mainview.New(state, engine)
+	msgModal := modal.New(s, engine)
+	mainView := mainview.New(s, engine)
 	view := overlay.New(
-		errModal,
+		msgModal,
 		mainView,
 		overlay.Center,
 		overlay.Center,
@@ -49,8 +49,8 @@ func initialModel(client *mongo.Client) tea.Model {
 	)
 
 	return &baseModel{
-		state:    state,
-		errModal: errModal,
+		state:    s,
+		msgModal: msgModal,
 		mainView: mainView,
 		overlay:  view,
 	}
@@ -64,42 +64,31 @@ func (m *baseModel) Init() tea.Cmd {
 // Update handles event and manages internal state. It partly implements the tea.Model interface.
 func (m *baseModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := message.(type) {
+	case modal.ErrMsg: // First see if we need to redirect to the msgModal
+		mod, modCmd := m.msgModal.Update(message)
+		m.msgModal = mod
+		return m, modCmd
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q", "esc", "ctrl+c":
 			return m, tea.Quit
 		}
 	}
-
-	var cmds []tea.Cmd
-	if m.isModalRequested() {
-		mod, modCmd := m.errModal.Update(message)
-		m.errModal = mod
-		if m.state.MainViewState.DbColTableState.WasDatabaseDeletedViaModal() ||
-			m.state.MainViewState.DbColTableState.WasCollectionDeletedViaModal() {
-			m.mainView.(*mainview.Model).RefreshAfterDeletion() // type cast necessary due to bubbletea-overlay requiring tea.Model
-		}
-		cmds = append(cmds, modCmd)
-	} else {
-		mv, mvCmd := m.mainView.Update(message)
-		m.mainView = mv
-		cmds = append(cmds, mvCmd)
+	if m.msgModal.(*modal.Model).IsModalDisplaying() {
+		mod, modCmd := m.msgModal.Update(message)
+		m.msgModal = mod
+		return m, modCmd
 	}
-
-	return m, tea.Batch(cmds...)
+	mv, mvCmd := m.mainView.Update(message)
+	m.mainView = mv
+	return m, mvCmd
 }
 
 // View applies and styling and handles rendering the view. It partly implements the tea.Model
 // interface.
 func (m *baseModel) View() string {
-	if m.isModalRequested() {
+	if m.msgModal.(*modal.Model).IsModalDisplaying() {
 		return m.overlay.View()
 	}
 	return m.mainView.View()
-}
-
-func (m *baseModel) isModalRequested() bool {
-	return m.state.ModalState.GetError() != nil ||
-		m.state.ModalState.IsDatabaseDeletionRequested() ||
-		m.state.ModalState.IsCollectionDeletionRequested()
 }

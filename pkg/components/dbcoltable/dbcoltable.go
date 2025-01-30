@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/kreulenk/mongotui/internal/state"
+	"github.com/kreulenk/mongotui/pkg/components/modal"
 	"github.com/kreulenk/mongotui/pkg/mongoengine"
 	"github.com/kreulenk/mongotui/pkg/renderutils"
 	"github.com/mattn/go-runewidth"
@@ -29,7 +30,6 @@ type Model struct {
 
 	viewport    viewport.Model
 	headersText []string
-	databases   []string
 	collections []string
 
 	cursorColumn     cursorColumn
@@ -50,7 +50,7 @@ func (m *Model) Init() tea.Cmd {
 
 // New creates a new baseModel for the dbcoltable widget.
 func New(engine *mongoengine.Engine, state *state.TuiState) *Model {
-	err := engine.RefreshDatabases()
+	err := engine.RefreshDbAndCollections()
 	if err != nil {
 		fmt.Printf("could not initialize data: %v", err)
 		os.Exit(1)
@@ -63,18 +63,12 @@ func New(engine *mongoengine.Engine, state *state.TuiState) *Model {
 
 		viewport:    viewport.New(0, 20),
 		headersText: []string{"Databases", "Collections"},
-		databases:   mongoengine.GetSortedDatabasesByName(engine.Server.Databases),
 		collections: []string{},
 
-		cursorColumn: databasesColumn,
+		cursorColumn:   databasesColumn,
+		cursorDatabase: 0,
 
 		engine: engine,
-	}
-
-	err = m.updateCollectionsData()
-	if err != nil {
-		fmt.Printf("failed to initialize the database and collection information: %v\n", err)
-		os.Exit(1)
 	}
 	m.updateViewport()
 
@@ -83,57 +77,63 @@ func New(engine *mongoengine.Engine, state *state.TuiState) *Model {
 
 // Update is the Bubble Tea update loop.
 func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
+	var err error
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, keys.LineUp):
-			m.MoveUp(1)
+			err = m.MoveUp(1)
 		case key.Matches(msg, keys.LineDown):
-			m.MoveDown(1)
+			err = m.MoveDown(1)
 		case key.Matches(msg, keys.GotoTop):
-			m.GotoTop()
+			err = m.GotoTop()
 		case key.Matches(msg, keys.GotoBottom):
-			m.GotoBottom()
+			err = m.GotoBottom()
 		case key.Matches(msg, keys.Right):
-			m.GoRight()
+			err = m.GoRight()
 		case key.Matches(msg, keys.Left):
-			m.GoLeft()
+			err = m.GoLeft()
 		case key.Matches(msg, keys.Enter):
 			if m.cursorColumn == collectionsColumn {
 				m.blur()
 			}
 		case key.Matches(msg, keys.Delete):
-			m.DeleteDbOrCol()
+			//m.DeleteDbOrCol()
 		}
+	}
+	if err != nil {
+		return m, modal.DisplayErrorModal(err)
 	}
 
 	return m, nil
 }
 
-func (m *Model) RefreshAfterDeletion() {
+func (m *Model) RefreshAfterDeletion() error {
 	dbColState := m.state.MainViewState.DbColTableState
 	if dbColState.WasDatabaseDeletedViaModal() { // Selectively reset cursors
 		m.cursorDatabase = renderutils.Max(0, m.cursorDatabase-1)
 		m.cursorCollection = renderutils.Max(0, m.cursorCollection-1)
 		m.state.MainViewState.DbColTableState.ResetDatabaseDeletionRefreshFlag()
-		m.RefreshData()
+		return m.RefreshData()
 	} else if dbColState.WasCollectionDeletedViaModal() {
 		m.cursorCollection = renderutils.Max(0, m.cursorCollection-1)
 		m.state.MainViewState.DbColTableState.ResetCollectionDeletionRefreshFlag()
-		m.RefreshData()
+		return m.RefreshData()
 	}
+	return nil
 }
 
-func (m *Model) RefreshData() {
+func (m *Model) RefreshData() error {
 	m.engine.ClearCachedData()
 	m.state.MainViewState.DbColTableState.ClearCollectionSelection()
-	if err := m.refreshDatabasesData(); err != nil {
-		m.state.ModalState.SetError(fmt.Errorf("unable to reinitialize databases after deletion: %w", err))
+	if err := m.engine.RefreshDbAndCollections(); err != nil {
+		return fmt.Errorf("unable to reinitialize databases after deletion: %w", err)
 	}
 	if err := m.updateCollectionsData(); err != nil {
-		m.state.ModalState.SetError(fmt.Errorf("unable to reinitialize collections after deletion: %w", err))
+		return fmt.Errorf("unable to reinitialize collections after deletion: %w", err)
 	}
 	m.updateViewport()
+	return nil
 }
 
 // Focus enables key use on the dbcoltable so that the user can navigate the dbcoltable again. This signal would
@@ -151,14 +151,14 @@ func (m *Model) blur() {
 	m.styles.Table = m.styles.Table.BorderStyle(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("240"))
 }
 
-func (m *Model) DeleteDbOrCol() {
-	m.state.MainViewState.DbColTableState.SetSelectedCollection(m.cursoredDatabase(), m.cursoredCollection())
-	if m.cursorColumn == databasesColumn {
-		m.state.ModalState.RequestDatabaseModalDeletionPrompt()
-	} else {
-		m.state.ModalState.RequestCollectionModalDeletionPrompt()
-	}
-}
+//func (m *Model) DeleteDbOrCol() {
+//	m.state.MainViewState.DbColTableState.SetSelectedCollection(m.cursoredDatabase(), m.cursoredCollection())
+//	if m.cursorColumn == databasesColumn {
+//		m.state.ModalState.RequestDatabaseModalDeletionPrompt()
+//	} else {
+//		m.state.ModalState.RequestCollectionModalDeletionPrompt()
+//	}
+//}
 
 // View renders the component.
 func (m *Model) View() string {
@@ -174,8 +174,8 @@ func (m *Model) updateViewport() {
 	} else {
 		m.databaseStart = 0
 	}
-	m.databaseEnd = renderutils.Clamp(m.cursorDatabase+m.viewport.Height, m.cursorDatabase, len(m.databases))
-	renderedDbCells := make([]string, 0, len(m.databases))
+	m.databaseEnd = renderutils.Clamp(m.cursorDatabase+m.viewport.Height, m.cursorDatabase, len(m.engine.GetDatabases()))
+	renderedDbCells := make([]string, 0, len(m.engine.GetDatabases()))
 	for i := m.databaseStart; i < m.databaseEnd; i++ {
 		renderedDbCells = append(renderedDbCells, m.renderDatabaseCell(i))
 	}
@@ -201,10 +201,10 @@ func (m *Model) updateViewport() {
 
 // cursoredDatabase returns the database that is currently highlighted.
 func (m *Model) cursoredDatabase() string {
-	if m.cursorDatabase < 0 || m.cursorDatabase >= len(m.databases) {
+	if m.cursorDatabase < 0 || m.cursorDatabase >= len(m.engine.GetDatabases()) {
 		return ""
 	}
-	return m.databases[m.cursorDatabase]
+	return m.engine.GetDatabaseByIndex(m.cursorDatabase)
 }
 
 // cursoredCollection returns the collection that is currently highlighted.
@@ -232,61 +232,65 @@ func (m *Model) SetHeight(h int) {
 
 // MoveUp moves the selection up by any number of rows.
 // It can not go above the first row.
-func (m *Model) MoveUp(n int) {
-	oldCursor := m.cursorDatabase
+func (m *Model) MoveUp(n int) error {
+	oldCursorDb := m.cursorDatabase
+	oldCursorCol := m.cursorCollection
 	if m.cursorColumn == databasesColumn {
-		m.cursorDatabase = renderutils.Clamp(m.cursorDatabase-n, 0, len(m.databases)-1)
+		m.cursorDatabase = renderutils.Clamp(m.cursorDatabase-n, 0, len(m.engine.GetDatabases())-1)
 	} else {
 		m.cursorCollection = renderutils.Clamp(m.cursorCollection-n, 0, len(m.collections)-1)
 	}
 
 	err := m.updateCollectionsData()
 	if err != nil {
-		m.state.ModalState.SetError(err)
-		m.cursorDatabase = oldCursor
-		return
+		m.cursorDatabase = oldCursorDb
+		m.cursorCollection = oldCursorCol
+		return err
 	}
 	m.updateViewport()
+	return nil
 }
 
 // MoveDown moves the selection down by any number of rows.
 // It can not go below the last row.
-func (m *Model) MoveDown(n int) {
-	oldCursor := m.cursorDatabase
+func (m *Model) MoveDown(n int) error {
+	oldCursorDb := m.cursorDatabase
+	oldCursorCol := m.cursorCollection
 	if m.cursorColumn == databasesColumn {
-		m.cursorDatabase = renderutils.Clamp(m.cursorDatabase+n, 0, len(m.databases)-1)
+		m.cursorDatabase = renderutils.Clamp(m.cursorDatabase+n, 0, len(m.engine.GetDatabases())-1)
 	} else {
 		m.cursorCollection = renderutils.Clamp(m.cursorCollection+n, 0, len(m.collections)-1)
 	}
 
 	err := m.updateCollectionsData()
 	if err != nil {
-		m.state.ModalState.SetError(err)
-		m.cursorDatabase = oldCursor
-		return
+		m.cursorDatabase = oldCursorDb
+		m.cursorCollection = oldCursorCol
+		return err
 	}
 	m.updateViewport()
+	return nil
 }
 
 // MoveRight moves the column to the right.
-func (m *Model) MoveRight() {
+func (m *Model) MoveRight() error {
 	if m.cursorColumn == collectionsColumn {
 		m.blur()
-		return
+		return nil
 	} else if m.cursorColumn == databasesColumn {
 		m.cursorColumn = collectionsColumn
 		err := m.updateCollectionsData()
 		if err != nil {
-			m.state.ModalState.SetError(err)
 			m.cursorColumn = databasesColumn
-			return
+			return err
 		}
 		m.updateViewport()
 	}
+	return nil
 }
 
 // MoveLeft moves the column to the left.
-func (m *Model) MoveLeft() {
+func (m *Model) MoveLeft() error {
 	oldCursorCollection := m.cursorCollection
 	oldCursorColumn := m.cursorColumn
 	if m.cursorColumn == collectionsColumn {
@@ -295,39 +299,39 @@ func (m *Model) MoveLeft() {
 	m.cursorColumn = databasesColumn
 	err := m.updateCollectionsData()
 	if err != nil {
-		m.state.ModalState.SetError(err)
 		m.cursorCollection = oldCursorCollection
 		m.cursorColumn = oldCursorColumn
-		return
+		return err
 	}
 	m.updateViewport()
+	return nil
 }
 
 // GotoTop moves the selection to the first row.
-func (m *Model) GotoTop() {
+func (m *Model) GotoTop() error {
 	if m.cursorColumn == databasesColumn {
-		m.MoveUp(m.cursorDatabase)
+		return m.MoveUp(m.cursorDatabase)
 	} else {
-		m.MoveUp(m.cursorCollection)
+		return m.MoveUp(m.cursorCollection)
 	}
 }
 
 // GotoBottom moves the selection to the last row.
-func (m *Model) GotoBottom() {
+func (m *Model) GotoBottom() error {
 	if m.cursorColumn == databasesColumn {
-		m.MoveDown(len(m.databases))
+		return m.MoveDown(len(m.engine.GetDatabases()))
 	} else {
-		m.MoveDown(len(m.collections))
+		return m.MoveDown(len(m.collections))
 	}
 }
 
 // GoRight moves to the next column.
-func (m *Model) GoRight() {
-	m.MoveRight()
+func (m *Model) GoRight() error {
+	return m.MoveRight()
 }
 
-func (m *Model) GoLeft() {
-	m.MoveLeft()
+func (m *Model) GoLeft() error {
+	return m.MoveLeft()
 }
 
 func (m *Model) columnWidth() int {
@@ -345,7 +349,7 @@ func (m *Model) headersView() string {
 
 func (m *Model) renderDatabaseCell(r int) string {
 	m.styles.Cell = m.styles.Cell.Width(m.columnWidth()).MaxWidth(m.columnWidth())
-	renderedCell := m.styles.Cell.Render(runewidth.Truncate(m.databases[r], m.columnWidth(), "…"))
+	renderedCell := m.styles.Cell.Render(runewidth.Truncate(m.engine.GetDatabaseByIndex(r), m.columnWidth(), "…"))
 	if r == m.cursorDatabase {
 		renderedCell = m.styles.Selected.Render(renderedCell)
 	}
@@ -363,19 +367,10 @@ func (m *Model) renderCollectionCell(r int) string {
 	return renderedCell
 }
 
-func (m *Model) refreshDatabasesData() error {
-	err := m.engine.RefreshDatabases()
-	if err != nil {
-		return fmt.Errorf("failed to load databases")
-	}
-	m.databases = mongoengine.GetSortedDatabasesByName(m.engine.Server.Databases)
-	return nil
-}
-
 // updateCollectionsData updates the data tracked in the model based on the current cursorDatabase, cursorCollection and cursorColumn position
 // Lots of opportunity for caching with how this function is handled/called, but I like the live data for now
 func (m *Model) updateCollectionsData() error {
-	collections, err := m.engine.GetCollectionsOfDb(m.cursoredDatabase())
+	collections, err := m.engine.FetchCollectionsPerDb(m.cursoredDatabase())
 	if err != nil {
 		return err
 	}
