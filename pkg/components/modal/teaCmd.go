@@ -6,6 +6,14 @@ type ErrModalMsg struct {
 	err error
 }
 
+type DbDeleteModalMsg struct {
+	dbName string
+}
+
+type ExecDbDelete struct {
+	DbName string
+}
+
 type ColDeleteModalMsg struct {
 	dbName         string
 	collectionName string
@@ -24,11 +32,27 @@ func DisplayErrorModal(err error) tea.Cmd {
 	}
 }
 
+func DisplayDatabaseDeleteModal(dbName string) tea.Cmd {
+	return func() tea.Msg {
+		return DbDeleteModalMsg{
+			dbName: dbName,
+		}
+	}
+}
+
 func DisplayCollectionDeleteModal(dbName, collectionName string) tea.Cmd {
 	return func() tea.Msg {
 		return ColDeleteModalMsg{
 			dbName:         dbName,
 			collectionName: collectionName,
+		}
+	}
+}
+
+func execDatabaseDelete(dbName string) tea.Cmd {
+	return func() tea.Msg {
+		return ExecDbDelete{
+			DbName: dbName,
 		}
 	}
 }

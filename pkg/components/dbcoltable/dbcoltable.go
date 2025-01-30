@@ -97,8 +97,7 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 			}
 		case key.Matches(msg, keys.Delete):
 			if m.cursorColumn == databasesColumn {
-				// TODO
-				return m, nil
+				return m, modal.DisplayDatabaseDeleteModal(m.cursoredDatabase())
 			} else {
 				return m, modal.DisplayCollectionDeleteModal(m.cursoredDatabase(), m.cursoredCollection())
 			}
@@ -112,6 +111,16 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 			return m, modal.DisplayErrorModal(fmt.Errorf("unable to reinitialize databases after deletion: %w", err))
 		}
 		m.updateViewport()
+	case modal.ExecDbDelete:
+		m.cursorDatabase = renderutils.Max(0, m.cursorDatabase-1)
+		m.cursorCollection = renderutils.Max(0, m.cursorCollection-1)
+		if err := m.engine.DropDatabase(msg.DbName); err != nil {
+			return m, modal.DisplayErrorModal(err)
+		}
+		if err := m.engine.RefreshDbAndCollections(); err != nil {
+			return m, modal.DisplayErrorModal(fmt.Errorf("unable to reinitialize databases after deletion: %w", err))
+		}
+		m.updateViewport()
 	}
 	if err != nil {
 		return m, modal.DisplayErrorModal(err)
@@ -119,34 +128,6 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 
 	return m, nil
 }
-
-//func (m *Model) RefreshAfterDeletion() error {
-//	dbColState := m.state.MainViewState.DbColTableState
-//	if dbColState.WasDatabaseDeletedViaModal() { // Selectively reset cursors
-//		m.cursorDatabase = renderutils.Max(0, m.cursorDatabase-1)
-//		m.cursorCollection = renderutils.Max(0, m.cursorCollection-1)
-//		m.state.MainViewState.DbColTableState.ResetDatabaseDeletionRefreshFlag()
-//		return m.RefreshData()
-//	} else if dbColState.WasCollectionDeletedViaModal() {
-//		m.cursorCollection = renderutils.Max(0, m.cursorCollection-1)
-//		m.state.MainViewState.DbColTableState.ResetCollectionDeletionRefreshFlag()
-//		return m.RefreshData()
-//	}
-//	return nil
-//}
-//
-//func (m *Model) RefreshData() error {
-//	m.engine.ClearCachedData()
-//	m.state.MainViewState.DbColTableState.ClearCollectionSelection()
-//	if err := m.engine.RefreshDbAndCollections(); err != nil {
-//		return fmt.Errorf("unable to reinitialize databases after deletion: %w", err)
-//	}
-//	if err := m.updateCollectionsData(); err != nil {
-//		return fmt.Errorf("unable to reinitialize collections after deletion: %w", err)
-//	}
-//	m.updateViewport()
-//	return nil
-//}
 
 // Focus enables key use on the dbcoltable so that the user can navigate the dbcoltable again. This signal would
 // be sent from another component

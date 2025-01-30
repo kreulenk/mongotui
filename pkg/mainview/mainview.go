@@ -56,7 +56,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.singleDocViewer.SetWidth(msg.Width)
 		m.singleDocViewer.SetHeight(msg.Height)
 		return m, tea.ClearScreen // Necessary for resizes
-	case modal.ExecColDelete: // A deletion was confirmed via the modal component
+	case modal.ExecColDelete, modal.ExecDbDelete: // A deletion was confirmed via the modal component
 		var cmd tea.Cmd
 		m.dbColTable, cmd = m.dbColTable.Update(msg)
 		return m, cmd
