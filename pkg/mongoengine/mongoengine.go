@@ -93,7 +93,6 @@ func (m *Engine) GetSelectedCollections() []string {
 
 // GetDocumentSummaries will fetch a processed list of document summaries for each document
 // These documents are currently being used to be displayed within the doclist component
-// TODO add cacheing to this
 func (m *Engine) GetDocumentSummaries() []DocSummary {
 	if cachedCol, ok := m.Server.Databases[m.selectedDb].Collections[m.selectedCollection]; ok {
 		return cachedCol.cachedDocSummaries
@@ -113,12 +112,6 @@ func getFieldType(value interface{}) string {
 	default:
 		return fmt.Sprintf("%T", v)
 	}
-}
-
-// TODO consider removing this as it is not needed with m.GetDatbases already existing
-func (m *Engine) GetDatabaseByIndex(index int) string {
-	m.GetDatabases()
-	return m.Server.cachedSortedDbNames[index]
 }
 
 func (m *Engine) RefreshDbAndCollections() error {

@@ -208,7 +208,7 @@ func (m *Model) cursoredDatabase() string {
 	if m.cursorDatabase < 0 || m.cursorDatabase >= len(m.engine.GetDatabases()) {
 		return ""
 	}
-	return m.engine.GetDatabaseByIndex(m.cursorDatabase)
+	return m.engine.GetDatabases()[m.cursorDatabase]
 }
 
 // cursoredCollection returns the collection that is currently highlighted.
@@ -239,10 +239,10 @@ func (m *Model) SetHeight(h int) {
 func (m *Model) MoveUp(n int) error {
 	if m.cursorColumn == databasesColumn {
 		m.cursorDatabase = renderutils.Clamp(m.cursorDatabase-n, 0, len(m.engine.GetDatabases())-1)
-		m.engine.SetSelectedDatabase(m.engine.GetDatabaseByIndex(m.cursorDatabase))
+		m.engine.SetSelectedDatabase(m.engine.GetDatabases()[m.cursorDatabase])
 	} else {
 		m.cursorCollection = renderutils.Clamp(m.cursorCollection-n, 0, len(m.engine.GetSelectedCollections())-1)
-		m.engine.SetSelectedCollection(m.engine.GetDatabaseByIndex(m.cursorDatabase), m.engine.GetSelectedCollections()[m.cursorCollection])
+		m.engine.SetSelectedCollection(m.engine.GetDatabases()[m.cursorDatabase], m.engine.GetSelectedCollections()[m.cursorCollection])
 	}
 
 	m.updateViewport()
@@ -254,10 +254,10 @@ func (m *Model) MoveUp(n int) error {
 func (m *Model) MoveDown(n int) error {
 	if m.cursorColumn == databasesColumn {
 		m.cursorDatabase = renderutils.Clamp(m.cursorDatabase+n, 0, len(m.engine.GetDatabases())-1)
-		m.engine.SetSelectedDatabase(m.engine.GetDatabaseByIndex(m.cursorDatabase))
+		m.engine.SetSelectedDatabase(m.engine.GetDatabases()[m.cursorDatabase])
 	} else {
 		m.cursorCollection = renderutils.Clamp(m.cursorCollection+n, 0, len(m.engine.GetSelectedCollections())-1)
-		m.engine.SetSelectedCollection(m.engine.GetDatabaseByIndex(m.cursorDatabase), m.engine.GetSelectedCollections()[m.cursorCollection])
+		m.engine.SetSelectedCollection(m.engine.GetDatabases()[m.cursorDatabase], m.engine.GetSelectedCollections()[m.cursorCollection])
 	}
 	m.updateViewport()
 	return nil
@@ -271,7 +271,7 @@ func (m *Model) MoveRight() error {
 	} else if m.cursorColumn == databasesColumn {
 		m.cursorColumn = collectionsColumn
 		m.cursorCollection = 0
-		m.engine.SetSelectedCollection(m.engine.GetDatabaseByIndex(m.cursorDatabase), m.engine.GetSelectedCollections()[m.cursorCollection])
+		m.engine.SetSelectedCollection(m.engine.GetDatabases()[m.cursorDatabase], m.engine.GetSelectedCollections()[m.cursorCollection])
 		m.updateViewport()
 	}
 	return nil
@@ -329,7 +329,7 @@ func (m *Model) headersView() string {
 
 func (m *Model) renderDatabaseCell(r int) string {
 	m.styles.Cell = m.styles.Cell.Width(m.columnWidth()).MaxWidth(m.columnWidth())
-	renderedCell := m.styles.Cell.Render(runewidth.Truncate(m.engine.GetDatabaseByIndex(r), m.columnWidth(), "…"))
+	renderedCell := m.styles.Cell.Render(runewidth.Truncate(m.engine.GetDatabases()[r], m.columnWidth(), "…"))
 	if r == m.cursorDatabase {
 		renderedCell = m.styles.Selected.Render(renderedCell)
 	}
