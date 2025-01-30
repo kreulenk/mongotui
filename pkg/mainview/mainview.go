@@ -6,12 +6,12 @@ package mainview
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/kreulenk/mongotui/internal/state"
 	"github.com/kreulenk/mongotui/pkg/components/dbcoltable"
 	"github.com/kreulenk/mongotui/pkg/components/doclist"
 	"github.com/kreulenk/mongotui/pkg/components/editor"
 	"github.com/kreulenk/mongotui/pkg/components/jsonviewer"
 	"github.com/kreulenk/mongotui/pkg/components/modal"
+	"github.com/kreulenk/mongotui/pkg/mainview/state"
 	"github.com/kreulenk/mongotui/pkg/mongoengine"
 )
 

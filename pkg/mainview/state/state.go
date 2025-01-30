@@ -1,7 +1,5 @@
-// The state package intends to keep track of state fields that need to be referenced/set by several different
-// components. State that is only between a parent component and a child component should not be tracked via this package
-
-// Any component can query the state of any other component
+// The state package is used to keep track of which component is currently 'active' within the 'mainview' package
+// of mongotui
 
 package state
 

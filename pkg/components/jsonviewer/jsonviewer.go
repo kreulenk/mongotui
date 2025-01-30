@@ -9,7 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/kreulenk/mongotui/internal/state"
+	"github.com/kreulenk/mongotui/pkg/mainview/state"
 	"github.com/kreulenk/mongotui/pkg/mongoengine"
 )
 

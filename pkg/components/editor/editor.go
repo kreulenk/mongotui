@@ -5,7 +5,7 @@ package editor
 
 import (
 	"fmt"
-	"github.com/kreulenk/mongotui/internal/state"
+	"github.com/kreulenk/mongotui/pkg/mainview/state"
 	"github.com/kreulenk/mongotui/pkg/mongoengine"
 	"os"
 	"os/exec"
