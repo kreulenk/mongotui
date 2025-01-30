@@ -108,7 +108,6 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 		if err := m.engine.DropCollection(msg.DbName, msg.CollectionName); err != nil {
 			return m, modal.DisplayErrorModal(err)
 		}
-		m.engine.ClearCachedData()
 		if err := m.engine.RefreshDbAndCollections(); err != nil {
 			return m, modal.DisplayErrorModal(fmt.Errorf("unable to reinitialize databases after deletion: %w", err))
 		}
