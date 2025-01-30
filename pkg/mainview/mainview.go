@@ -16,7 +16,7 @@ import (
 )
 
 type Model struct {
-	state *state.TuiState
+	state *state.MainViewState
 
 	dbColTable      *dbcoltable.Model
 	docList         *doclist.Model
@@ -26,15 +26,16 @@ type Model struct {
 	engine *mongoengine.Engine
 }
 
-func New(state *state.TuiState, engine *mongoengine.Engine) *Model {
-	d := dbcoltable.New(engine, state) // This will be the first component to be focused on startup
+func New(engine *mongoengine.Engine) *Model {
+	s := state.DefaultState()
+	d := dbcoltable.New(engine, s) // This will be the first component to be focused on startup
 	d.Focus()
 	return &Model{
-		state:           state,
+		state:           s,
 		dbColTable:      d,
-		docList:         doclist.New(engine, state),
-		singleDocViewer: jsonviewer.New(engine, state),
-		singleDocEditor: editor.New(engine, state),
+		docList:         doclist.New(engine, s),
+		singleDocViewer: jsonviewer.New(engine, s),
+		singleDocEditor: editor.New(engine, s),
 		engine:          engine,
 	}
 }
@@ -61,10 +62,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 
-	switch m.state.MainViewState.GetActiveComponent() {
+	switch m.state.GetActiveComponent() {
 	case state.DbColTable:
 		m.dbColTable, cmd = m.dbColTable.Update(msg)
-		if m.state.MainViewState.GetActiveComponent() == state.DocList { // If the state switched, use a fresh docList
+		if m.state.GetActiveComponent() == state.DocList { // If the state switched, use a fresh docList
 			m.docList.ResetSearchBar()
 			err := m.docList.RefreshDocs()
 			if err != nil {
@@ -75,13 +76,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	case state.DocList:
 		m.docList, cmd = m.docList.Update(msg)
-		if m.state.MainViewState.GetActiveComponent() == state.DbColTable {
+		if m.state.GetActiveComponent() == state.DbColTable {
 			m.dbColTable.Focus()
-		} else if m.state.MainViewState.GetActiveComponent() == state.SingleDocViewer {
+		} else if m.state.GetActiveComponent() == state.SingleDocViewer {
 			if err := m.singleDocViewer.Focus(); err != nil {
 				return m, modal.DisplayErrorModal(err)
 			}
-		} else if m.state.MainViewState.GetActiveComponent() == state.SingleDocEditor {
+		} else if m.state.GetActiveComponent() == state.SingleDocEditor {
 			if err := m.singleDocEditor.OpenFileInEditor(); err != nil {
 				return m, modal.DisplayErrorModal(err)
 			}
@@ -92,7 +93,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	case state.SingleDocViewer:
 		m.singleDocViewer, cmd = m.singleDocViewer.Update(msg)
-		if m.state.MainViewState.GetActiveComponent() == state.DocList {
+		if m.state.GetActiveComponent() == state.DocList {
 			if err := m.docList.RefreshDocs(); err != nil {
 				return m, modal.DisplayErrorModal(err)
 			}
@@ -113,11 +114,11 @@ func (m *Model) Init() tea.Cmd {
 }
 
 func (m *Model) View() string {
-	if m.state.MainViewState.GetActiveComponent() == state.SingleDocViewer {
+	if m.state.GetActiveComponent() == state.SingleDocViewer {
 		return m.singleDocViewer.View()
 	}
 	tables := lipgloss.JoinHorizontal(lipgloss.Left, m.dbColTable.View(), m.docList.View())
-	if m.state.MainViewState.GetActiveComponent() == state.DbColTable {
+	if m.state.GetActiveComponent() == state.DbColTable {
 		return lipgloss.JoinVertical(lipgloss.Top, tables, m.dbColTable.HelpView())
 	} else {
 		return lipgloss.JoinVertical(lipgloss.Top, tables, m.docList.HelpView())

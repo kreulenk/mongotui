@@ -3,12 +3,10 @@ package modal
 import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/kreulenk/mongotui/internal/state"
 	"github.com/kreulenk/mongotui/pkg/mongoengine"
 )
 
 type Model struct {
-	state  *state.TuiState
 	engine *mongoengine.Engine
 	styles Styles
 
@@ -17,9 +15,8 @@ type Model struct {
 }
 
 // New returns a modal component with the default styles applied
-func New(state *state.TuiState, engine *mongoengine.Engine) *Model {
+func New(engine *mongoengine.Engine) *Model {
 	return &Model{
-		state:  state,
 		engine: engine,
 		styles: defaultStyles(),
 

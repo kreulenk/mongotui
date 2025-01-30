@@ -17,7 +17,7 @@ import (
 )
 
 type Model struct {
-	state *state.TuiState
+	state *state.MainViewState
 	Help  help.Model
 
 	searchBar *searchbar.Model
@@ -30,11 +30,11 @@ type Model struct {
 }
 
 // New creates a new baseModel for the dbcoltable widget.
-func New(engine *mongoengine.Engine, state *state.TuiState) *Model {
+func New(engine *mongoengine.Engine, state *state.MainViewState) *Model {
 	m := Model{
 		state:     state,
 		Help:      help.New(),
-		searchBar: searchbar.New(state),
+		searchBar: searchbar.New(),
 		viewport:  viewport.New(0, 20),
 
 		styles: defaultStyles(),
@@ -83,7 +83,7 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 		case key.Matches(msg, keys.GotoBottom):
 			m.GotoBottom()
 		case key.Matches(msg, keys.Left):
-			m.state.MainViewState.SetActiveComponent(state.DbColTable)
+			m.state.SetActiveComponent(state.DbColTable)
 			m.blur()
 		case key.Matches(msg, keys.Edit):
 			m.EditDoc()
@@ -142,13 +142,13 @@ func (m *Model) blur() {
 }
 
 func (m *Model) EditDoc() {
-	m.state.MainViewState.SetActiveComponent(state.SingleDocEditor)
+	m.state.SetActiveComponent(state.SingleDocEditor)
 	m.engine.SetSelectedDocument(m.engine.GetQueriedDocs()[m.cursor])
 }
 
 // ViewDoc opens the selected document in a new window via the jsonviewer component.
 func (m *Model) ViewDoc() {
-	m.state.MainViewState.SetActiveComponent(state.SingleDocViewer)
+	m.state.SetActiveComponent(state.SingleDocViewer)
 	m.engine.SetSelectedDocument(m.engine.GetQueriedDocs()[m.cursor])
 }
 

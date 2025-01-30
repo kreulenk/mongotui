@@ -5,10 +5,8 @@ package mongoengine
 import (
 	"context"
 	"fmt"
-	"github.com/kreulenk/mongotui/internal/state"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
-	"log/slog"
 	"slices"
 	"strings"
 	"time"
@@ -42,20 +40,18 @@ type FieldSummary struct {
 type Engine struct {
 	Client *mongo.Client
 	Server *Server
-	state  *state.TuiState
 
 	selectedDb         string
 	selectedCollection string
 	selectedDoc        *bson.M
 }
 
-func New(client *mongo.Client, state *state.TuiState) *Engine {
+func New(client *mongo.Client) *Engine {
 	return &Engine{
 		Client: client,
 		Server: &Server{
 			Databases: make(map[string]Database),
 		},
-		state: state,
 	}
 }
 
@@ -91,7 +87,6 @@ func (m *Engine) GetSelectedCollections() []string {
 	if db, ok := m.Server.Databases[m.selectedDb]; ok {
 		return db.cachedSortedCollectionNames
 	} else {
-		slog.Info("GetSelectedCollections called with no selectedDb")
 		return []string{}
 	}
 }

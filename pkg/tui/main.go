@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/kreulenk/mongotui/internal/state"
 	"github.com/kreulenk/mongotui/pkg/components/modal"
 	"github.com/kreulenk/mongotui/pkg/mainview"
 	"github.com/kreulenk/mongotui/pkg/mongoengine"
@@ -18,7 +17,6 @@ import (
 
 // baseModel implements tea.Model, and manages the browser UI.
 type baseModel struct {
-	state    *state.TuiState
 	msgModal tea.Model
 	mainView tea.Model
 	overlay  tea.Model
@@ -34,11 +32,10 @@ func Initialize(client *mongo.Client) {
 }
 
 func initialModel(client *mongo.Client) tea.Model {
-	s := state.DefaultState()
-	engine := mongoengine.New(client, s)
+	engine := mongoengine.New(client)
 
-	msgModal := modal.New(s, engine)
-	mainView := mainview.New(s, engine)
+	msgModal := modal.New(engine)
+	mainView := mainview.New(engine)
 	view := overlay.New(
 		msgModal,
 		mainView,
@@ -49,7 +46,6 @@ func initialModel(client *mongo.Client) tea.Model {
 	)
 
 	return &baseModel{
-		state:    s,
 		msgModal: msgModal,
 		mainView: mainView,
 		overlay:  view,

@@ -13,11 +13,11 @@ import (
 )
 
 type Editor struct {
-	state  *state.TuiState
+	state  *state.MainViewState
 	engine *mongoengine.Engine
 }
 
-func New(engine *mongoengine.Engine, state *state.TuiState) Editor {
+func New(engine *mongoengine.Engine, state *state.MainViewState) Editor {
 	return Editor{
 		state:  state,
 		engine: engine,
@@ -56,6 +56,6 @@ func (e Editor) OpenFileInEditor() error {
 		return err
 	}
 
-	e.state.MainViewState.SetActiveComponent(state.DocList)
+	e.state.SetActiveComponent(state.DocList)
 	return nil
 }

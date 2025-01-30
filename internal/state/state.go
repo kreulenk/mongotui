@@ -5,23 +5,29 @@
 
 package state
 
-type MainViewComponent int
+type ActiveComponent int
 
 const (
-	DbColTable MainViewComponent = iota
+	DbColTable ActiveComponent = iota
 	DocList
 	SingleDocViewer
 	SingleDocEditor
 )
 
-type TuiState struct {
-	MainViewState *MainViewState
+func DefaultState() *MainViewState {
+	return &MainViewState{
+		activeComponent: DbColTable,
+	}
 }
 
-func DefaultState() *TuiState {
-	return &TuiState{
-		MainViewState: &MainViewState{
-			activeComponent: DbColTable,
-		},
-	}
+type MainViewState struct {
+	activeComponent ActiveComponent
+}
+
+func (m *MainViewState) SetActiveComponent(componentName ActiveComponent) {
+	m.activeComponent = componentName
+}
+
+func (m *MainViewState) GetActiveComponent() ActiveComponent {
+	return m.activeComponent
 }

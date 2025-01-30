@@ -4,16 +4,14 @@ import (
 	"fmt"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/kreulenk/mongotui/internal/state"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type Model struct {
-	state     *state.TuiState
 	textInput textinput.Model
 }
 
-func New(state *state.TuiState) *Model {
+func New() *Model {
 	ti := textinput.New()
 	ti.Placeholder = "Query"
 	ti.SetValue("{}")
@@ -22,7 +20,6 @@ func New(state *state.TuiState) *Model {
 	ti.Blur()
 
 	return &Model{
-		state:     state,
 		textInput: ti,
 	}
 }

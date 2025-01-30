@@ -24,7 +24,7 @@ const (
 
 // Model defines a state for the dbcoltable widget.
 type Model struct {
-	state  *state.TuiState
+	state  *state.MainViewState
 	Help   help.Model
 	styles Styles
 
@@ -48,7 +48,7 @@ func (m *Model) Init() tea.Cmd {
 }
 
 // New creates a new baseModel for the dbcoltable widget.
-func New(engine *mongoengine.Engine, state *state.TuiState) *Model {
+func New(engine *mongoengine.Engine, state *state.MainViewState) *Model {
 	err := engine.RefreshDbAndCollections()
 	if err != nil {
 		fmt.Printf("could not initialize data: %v", err)
@@ -159,7 +159,7 @@ func (m *Model) Focus() {
 // blur disables key use on the dbcoltable so that the parent mainview component can switch the focus to
 // the doclist component
 func (m *Model) blur() {
-	m.state.MainViewState.SetActiveComponent(state.DocList)
+	m.state.SetActiveComponent(state.DocList)
 	m.engine.SetSelectedCollection(m.cursoredDatabase(), m.cursoredCollection())
 	m.styles.Table = m.styles.Table.BorderStyle(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("240"))
 }

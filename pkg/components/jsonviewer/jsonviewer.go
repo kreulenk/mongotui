@@ -14,14 +14,14 @@ import (
 )
 
 type Model struct {
-	state    *state.TuiState
+	state    *state.MainViewState
 	Viewport viewport.Model
 	Help     help.Model
 
 	engine *mongoengine.Engine
 }
 
-func New(engine *mongoengine.Engine, state *state.TuiState) *Model {
+func New(engine *mongoengine.Engine, state *state.MainViewState) *Model {
 	viewPort := viewport.New(0, 0)
 
 	return &Model{
@@ -69,7 +69,7 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, keys.Back):
-			m.state.MainViewState.SetActiveComponent(state.DocList)
+			m.state.SetActiveComponent(state.DocList)
 			return m, nil
 		}
 	}
