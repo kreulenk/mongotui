@@ -30,7 +30,6 @@ type Model struct {
 
 	viewport    viewport.Model
 	headersText []string
-	collections []string
 
 	cursorColumn     cursorColumn
 	cursorDatabase   int
@@ -63,7 +62,6 @@ func New(engine *mongoengine.Engine, state *state.TuiState) *Model {
 
 		viewport:    viewport.New(0, 20),
 		headersText: []string{"Databases", "Collections"},
-		collections: []string{},
 
 		cursorColumn:   databasesColumn,
 		cursorDatabase: 0,
@@ -98,8 +96,23 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 				m.blur()
 			}
 		case key.Matches(msg, keys.Delete):
-			//m.DeleteDbOrCol()
+			if m.cursorColumn == databasesColumn {
+				// TODO
+				return m, nil
+			} else {
+				return m, modal.DisplayCollectionDeleteModal(m.cursoredDatabase(), m.cursoredCollection())
+			}
 		}
+	case modal.ExecColDelete:
+		m.cursorCollection = renderutils.Max(0, m.cursorCollection-1)
+		if err := m.engine.DropCollection(msg.DbName, msg.CollectionName); err != nil {
+			return m, modal.DisplayErrorModal(err)
+		}
+		m.engine.ClearCachedData()
+		if err := m.engine.RefreshDbAndCollections(); err != nil {
+			return m, modal.DisplayErrorModal(fmt.Errorf("unable to reinitialize databases after deletion: %w", err))
+		}
+		m.updateViewport()
 	}
 	if err != nil {
 		return m, modal.DisplayErrorModal(err)
@@ -108,33 +121,33 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *Model) RefreshAfterDeletion() error {
-	dbColState := m.state.MainViewState.DbColTableState
-	if dbColState.WasDatabaseDeletedViaModal() { // Selectively reset cursors
-		m.cursorDatabase = renderutils.Max(0, m.cursorDatabase-1)
-		m.cursorCollection = renderutils.Max(0, m.cursorCollection-1)
-		m.state.MainViewState.DbColTableState.ResetDatabaseDeletionRefreshFlag()
-		return m.RefreshData()
-	} else if dbColState.WasCollectionDeletedViaModal() {
-		m.cursorCollection = renderutils.Max(0, m.cursorCollection-1)
-		m.state.MainViewState.DbColTableState.ResetCollectionDeletionRefreshFlag()
-		return m.RefreshData()
-	}
-	return nil
-}
-
-func (m *Model) RefreshData() error {
-	m.engine.ClearCachedData()
-	m.state.MainViewState.DbColTableState.ClearCollectionSelection()
-	if err := m.engine.RefreshDbAndCollections(); err != nil {
-		return fmt.Errorf("unable to reinitialize databases after deletion: %w", err)
-	}
-	if err := m.updateCollectionsData(); err != nil {
-		return fmt.Errorf("unable to reinitialize collections after deletion: %w", err)
-	}
-	m.updateViewport()
-	return nil
-}
+//func (m *Model) RefreshAfterDeletion() error {
+//	dbColState := m.state.MainViewState.DbColTableState
+//	if dbColState.WasDatabaseDeletedViaModal() { // Selectively reset cursors
+//		m.cursorDatabase = renderutils.Max(0, m.cursorDatabase-1)
+//		m.cursorCollection = renderutils.Max(0, m.cursorCollection-1)
+//		m.state.MainViewState.DbColTableState.ResetDatabaseDeletionRefreshFlag()
+//		return m.RefreshData()
+//	} else if dbColState.WasCollectionDeletedViaModal() {
+//		m.cursorCollection = renderutils.Max(0, m.cursorCollection-1)
+//		m.state.MainViewState.DbColTableState.ResetCollectionDeletionRefreshFlag()
+//		return m.RefreshData()
+//	}
+//	return nil
+//}
+//
+//func (m *Model) RefreshData() error {
+//	m.engine.ClearCachedData()
+//	m.state.MainViewState.DbColTableState.ClearCollectionSelection()
+//	if err := m.engine.RefreshDbAndCollections(); err != nil {
+//		return fmt.Errorf("unable to reinitialize databases after deletion: %w", err)
+//	}
+//	if err := m.updateCollectionsData(); err != nil {
+//		return fmt.Errorf("unable to reinitialize collections after deletion: %w", err)
+//	}
+//	m.updateViewport()
+//	return nil
+//}
 
 // Focus enables key use on the dbcoltable so that the user can navigate the dbcoltable again. This signal would
 // be sent from another component
@@ -147,18 +160,9 @@ func (m *Model) Focus() {
 // the doclist component
 func (m *Model) blur() {
 	m.state.MainViewState.SetActiveComponent(state.DocList)
-	m.state.MainViewState.DbColTableState.SetSelectedCollection(m.cursoredDatabase(), m.cursoredCollection())
+	m.engine.SetSelectedCollection(m.cursoredDatabase(), m.cursoredCollection())
 	m.styles.Table = m.styles.Table.BorderStyle(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("240"))
 }
-
-//func (m *Model) DeleteDbOrCol() {
-//	m.state.MainViewState.DbColTableState.SetSelectedCollection(m.cursoredDatabase(), m.cursoredCollection())
-//	if m.cursorColumn == databasesColumn {
-//		m.state.ModalState.RequestDatabaseModalDeletionPrompt()
-//	} else {
-//		m.state.ModalState.RequestCollectionModalDeletionPrompt()
-//	}
-//}
 
 // View renders the component.
 func (m *Model) View() string {
@@ -187,8 +191,8 @@ func (m *Model) updateViewport() {
 	} else {
 		m.collectionStart = 0
 	}
-	m.collectionEnd = renderutils.Clamp(m.cursorCollection+m.viewport.Height, m.cursorCollection, len(m.collections))
-	renderedCollectionCells := make([]string, 0, len(m.collections))
+	m.collectionEnd = renderutils.Clamp(m.cursorCollection+m.viewport.Height, m.cursorCollection, len(m.engine.GetSelectedCollections()))
+	renderedCollectionCells := make([]string, 0, len(m.engine.GetSelectedCollections()))
 	for i := m.collectionStart; i < m.collectionEnd; i++ {
 		renderedCollectionCells = append(renderedCollectionCells, m.renderCollectionCell(i))
 	}
@@ -210,12 +214,12 @@ func (m *Model) cursoredDatabase() string {
 // cursoredCollection returns the collection that is currently highlighted.
 func (m *Model) cursoredCollection() string {
 	if m.cursorCollection < 0 ||
-		m.cursorCollection >= len(m.collections) ||
+		m.cursorCollection >= len(m.engine.GetSelectedCollections()) ||
 		m.cursorColumn == databasesColumn {
 		return ""
 	}
 
-	return m.collections[m.cursorCollection]
+	return m.engine.GetSelectedCollections()[m.cursorCollection]
 }
 
 // SetWidth sets the width of the viewport of the dbcoltable.
@@ -233,20 +237,14 @@ func (m *Model) SetHeight(h int) {
 // MoveUp moves the selection up by any number of rows.
 // It can not go above the first row.
 func (m *Model) MoveUp(n int) error {
-	oldCursorDb := m.cursorDatabase
-	oldCursorCol := m.cursorCollection
 	if m.cursorColumn == databasesColumn {
 		m.cursorDatabase = renderutils.Clamp(m.cursorDatabase-n, 0, len(m.engine.GetDatabases())-1)
+		m.engine.SetSelectedDatabase(m.engine.GetDatabaseByIndex(m.cursorDatabase))
 	} else {
-		m.cursorCollection = renderutils.Clamp(m.cursorCollection-n, 0, len(m.collections)-1)
+		m.cursorCollection = renderutils.Clamp(m.cursorCollection-n, 0, len(m.engine.GetSelectedCollections())-1)
+		m.engine.SetSelectedCollection(m.engine.GetDatabaseByIndex(m.cursorDatabase), m.engine.GetSelectedCollections()[m.cursorCollection])
 	}
 
-	err := m.updateCollectionsData()
-	if err != nil {
-		m.cursorDatabase = oldCursorDb
-		m.cursorCollection = oldCursorCol
-		return err
-	}
 	m.updateViewport()
 	return nil
 }
@@ -254,19 +252,12 @@ func (m *Model) MoveUp(n int) error {
 // MoveDown moves the selection down by any number of rows.
 // It can not go below the last row.
 func (m *Model) MoveDown(n int) error {
-	oldCursorDb := m.cursorDatabase
-	oldCursorCol := m.cursorCollection
 	if m.cursorColumn == databasesColumn {
 		m.cursorDatabase = renderutils.Clamp(m.cursorDatabase+n, 0, len(m.engine.GetDatabases())-1)
+		m.engine.SetSelectedDatabase(m.engine.GetDatabaseByIndex(m.cursorDatabase))
 	} else {
-		m.cursorCollection = renderutils.Clamp(m.cursorCollection+n, 0, len(m.collections)-1)
-	}
-
-	err := m.updateCollectionsData()
-	if err != nil {
-		m.cursorDatabase = oldCursorDb
-		m.cursorCollection = oldCursorCol
-		return err
+		m.cursorCollection = renderutils.Clamp(m.cursorCollection+n, 0, len(m.engine.GetSelectedCollections())-1)
+		m.engine.SetSelectedCollection(m.engine.GetDatabaseByIndex(m.cursorDatabase), m.engine.GetSelectedCollections()[m.cursorCollection])
 	}
 	m.updateViewport()
 	return nil
@@ -279,11 +270,8 @@ func (m *Model) MoveRight() error {
 		return nil
 	} else if m.cursorColumn == databasesColumn {
 		m.cursorColumn = collectionsColumn
-		err := m.updateCollectionsData()
-		if err != nil {
-			m.cursorColumn = databasesColumn
-			return err
-		}
+		m.cursorCollection = 0
+		m.engine.SetSelectedCollection(m.engine.GetDatabaseByIndex(m.cursorDatabase), m.engine.GetSelectedCollections()[m.cursorCollection])
 		m.updateViewport()
 	}
 	return nil
@@ -291,18 +279,10 @@ func (m *Model) MoveRight() error {
 
 // MoveLeft moves the column to the left.
 func (m *Model) MoveLeft() error {
-	oldCursorCollection := m.cursorCollection
-	oldCursorColumn := m.cursorColumn
 	if m.cursorColumn == collectionsColumn {
 		m.cursorCollection = 0
 	}
 	m.cursorColumn = databasesColumn
-	err := m.updateCollectionsData()
-	if err != nil {
-		m.cursorCollection = oldCursorCollection
-		m.cursorColumn = oldCursorColumn
-		return err
-	}
 	m.updateViewport()
 	return nil
 }
@@ -321,7 +301,7 @@ func (m *Model) GotoBottom() error {
 	if m.cursorColumn == databasesColumn {
 		return m.MoveDown(len(m.engine.GetDatabases()))
 	} else {
-		return m.MoveDown(len(m.collections))
+		return m.MoveDown(len(m.engine.GetSelectedCollections()))
 	}
 }
 
@@ -359,21 +339,10 @@ func (m *Model) renderDatabaseCell(r int) string {
 
 func (m *Model) renderCollectionCell(r int) string {
 	m.styles.Cell = m.styles.Cell.Width(m.columnWidth()).MaxWidth(m.columnWidth())
-	renderedCell := m.styles.Cell.Render(runewidth.Truncate(m.collections[r], m.columnWidth(), "…"))
+	renderedCell := m.styles.Cell.Render(runewidth.Truncate(m.engine.GetSelectedCollections()[r], m.columnWidth(), "…"))
 	if r == m.cursorCollection && m.cursorColumn == collectionsColumn {
 		renderedCell = m.styles.Selected.Render(renderedCell)
 	}
 
 	return renderedCell
-}
-
-// updateCollectionsData updates the data tracked in the model based on the current cursorDatabase, cursorCollection and cursorColumn position
-// Lots of opportunity for caching with how this function is handled/called, but I like the live data for now
-func (m *Model) updateCollectionsData() error {
-	collections, err := m.engine.FetchCollectionsPerDb(m.cursoredDatabase())
-	if err != nil {
-		return err
-	}
-	m.collections = collections
-	return nil
 }

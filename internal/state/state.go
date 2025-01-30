@@ -22,10 +22,6 @@ func DefaultState() *TuiState {
 	return &TuiState{
 		MainViewState: &MainViewState{
 			activeComponent: DbColTable,
-			DbColTableState: &DbColTableState{
-				databaseName:   "",
-				collectionName: "",
-			},
 		},
 	}
 }

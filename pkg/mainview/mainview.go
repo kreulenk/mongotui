@@ -39,19 +39,10 @@ func New(state *state.TuiState, engine *mongoengine.Engine) *Model {
 	}
 }
 
-// RefreshAfterDeletion is used after a deletion has been confirmed and successfully
-// performed by the modal component so that the component with the deleted data can be
-// properly updated
-func (m *Model) RefreshAfterDeletion() error {
-	switch m.state.MainViewState.GetActiveComponent() {
-	case state.DbColTable:
-		return m.dbColTable.RefreshAfterDeletion()
-	default:
-		panic("unhandled default case")
-	}
-}
-
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmds []tea.Cmd
+	var cmd tea.Cmd
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		leftRightBorderWidth := 2
@@ -63,12 +54,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		m.singleDocViewer.SetWidth(msg.Width)
 		m.singleDocViewer.SetHeight(msg.Height)
-
 		return m, tea.ClearScreen // Necessary for resizes
+	case modal.ExecColDelete: // A deletion was confirmed via the modal component
+		var cmd tea.Cmd
+		m.dbColTable, cmd = m.dbColTable.Update(msg)
+		return m, cmd
 	}
 
-	var cmds []tea.Cmd
-	var cmd tea.Cmd
 	switch m.state.MainViewState.GetActiveComponent() {
 	case state.DbColTable:
 		m.dbColTable, cmd = m.dbColTable.Update(msg)

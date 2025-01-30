@@ -2,7 +2,6 @@ package state
 
 type MainViewState struct {
 	activeComponent MainViewComponent
-	DbColTableState *DbColTableState
 }
 
 func (m *MainViewState) SetActiveComponent(componentName MainViewComponent) {

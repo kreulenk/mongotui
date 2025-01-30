@@ -1,6 +1,7 @@
 package modal
 
 import (
+	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/kreulenk/mongotui/internal/state"
 	"github.com/kreulenk/mongotui/pkg/mongoengine"
@@ -9,9 +10,10 @@ import (
 type Model struct {
 	state  *state.TuiState
 	engine *mongoengine.Engine
-	err    error // Sent in as a tea.Cmd from elsewhere in the program
-
 	styles Styles
+
+	errMsg       *ErrModalMsg // Sent in as a tea.Cmd from elsewhere in the program
+	colDeleteMsg *ColDeleteModalMsg
 }
 
 // New returns a modal component with the default styles applied
@@ -19,8 +21,9 @@ func New(state *state.TuiState, engine *mongoengine.Engine) *Model {
 	return &Model{
 		state:  state,
 		engine: engine,
-		err:    nil,
 		styles: defaultStyles(),
+
+		errMsg: nil,
 	}
 }
 
@@ -29,52 +32,47 @@ func (m *Model) Init() tea.Cmd {
 }
 
 func (m *Model) IsModalDisplaying() bool {
-	return m.err != nil
+	return m.errMsg != nil || m.colDeleteMsg != nil
 }
 
-// TODO allow for resizing
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	//db := m.state.MainViewState.DbColTableState.GetSelectedDbName()
 	//col := m.state.MainViewState.DbColTableState.GetSelectedCollectionName()
 	switch msg := msg.(type) {
-	case ErrMsg:
-		m.err = msg.err
+	case ErrModalMsg:
+		m.errMsg = &msg
+	case ColDeleteModalMsg:
+		m.colDeleteMsg = &msg
 	case tea.KeyMsg:
 		if !m.IsModalDisplaying() {
 			return m, nil
 		}
 		switch msg.Type {
 		case tea.KeyEnter:
-			m.err = nil
-			//if m.state.ModalState.GetError() != nil {
-			//	m.state.ModalState.ClearError()
-			//} else if m.state.ModalState.IsDatabaseDeletionRequested() {
-			//	if err := m.engine.DropDatabase(db); err != nil {
-			//		m.state.ModalState.SetError(fmt.Errorf("failed to drop database '%s': %w", db, err))
-			//	}
-			//	m.state.ModalState.ResetDatabaseDeletionPromptRequest()
-			//	m.state.MainViewState.DbColTableState.RequestRefreshAfterDatabaseDeletion()
-			//} else if m.state.ModalState.IsCollectionDeletionRequested() {
-			//	if err := m.engine.DropCollection(db, col); err != nil {
-			//		m.state.ModalState.SetError(fmt.Errorf("failed to drop collection '%s' within database '%s': %w", col, db, err))
-			//	}
-			//	m.state.ModalState.ResetCollectionDeletionPromptRequest()
-			//	m.state.MainViewState.DbColTableState.RequestRefreshAfterCollectionDeletion()
-			//}
+			if m.errMsg != nil {
+				m.errMsg = nil
+			} else if m.colDeleteMsg != nil {
+				execCmd := execCollectionDelete(m.colDeleteMsg.dbName, m.colDeleteMsg.collectionName)
+				m.colDeleteMsg = nil
+				return m, execCmd
+			}
 		default: // If it is a confirmation modal and enter was not selected, exit the modal with no actions performed
-			//if m.state.ModalState.IsDatabaseDeletionRequested() || m.state.ModalState.IsCollectionDeletionRequested() {
-			//	m.state.ModalState.ResetDatabaseDeletionPromptRequest()
-			//	m.state.ModalState.ResetCollectionDeletionPromptRequest()
-			//}
+			if m.colDeleteMsg != nil {
+				m.colDeleteMsg = nil
+			}
 		}
 	}
 	return m, nil
 }
 
 func (m *Model) View() string {
-	if m.err != nil {
+	if m.errMsg != nil {
 		title := m.styles.ErrorHeader.Render("Error")
-		return m.styles.Modal.Render(title + "\n\n" + m.err.Error())
+		return m.styles.Modal.Render(title + "\n\n" + m.errMsg.err.Error())
+	} else if m.colDeleteMsg != nil {
+		title := m.styles.DeletionHeader.Render("Confirm")
+		msg := fmt.Sprintf("%s\n\nAre you sure you would like to delete the collection %s?\nPress Enter to confirm.", title, m.colDeleteMsg.collectionName)
+		return m.styles.Modal.Render(msg)
 	}
 
 	//if m.state.ModalState.GetError() != nil {
