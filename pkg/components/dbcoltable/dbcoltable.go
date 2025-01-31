@@ -112,6 +112,11 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 	case modal.ExecDbDelete:
 		m.cursorDatabase = renderutils.Max(0, m.cursorDatabase-1)
 		m.cursorCollection = renderutils.Max(0, m.cursorCollection-1)
+		if len(m.engine.GetDatabases()) == 1 { // If we are about to drop last collection making db disappear
+			m.engine.SetSelectedDatabase("")
+		} else {
+			m.engine.SetSelectedDatabase(m.engine.GetDatabases()[m.cursorDatabase])
+		}
 		return m, m.engine.DropDatabase(msg.DbName)
 	}
 	if err != nil {
