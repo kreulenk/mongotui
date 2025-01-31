@@ -49,9 +49,8 @@ func (m *Model) Init() tea.Cmd {
 
 // New creates a new baseModel for the dbcoltable widget.
 func New(engine *mongoengine.Engine, state *state.MainViewState) *Model {
-	err := engine.RefreshDbAndCollections()
-	if err != nil {
-		fmt.Printf("could not initialize data: %v\n", err()) // Crash and run tea.Cmd func to display err
+	if err := engine.RefreshDbAndCollections(); err != nil {
+		fmt.Printf("could not initialize data: %v\n", err)
 		os.Exit(1)
 	}
 	if len(engine.GetDatabases()) > 0 {
@@ -106,7 +105,7 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 	case modal.ExecColDelete:
 		m.cursorCollection = renderutils.Max(0, m.cursorCollection-1)
 		m.engine.SetSelectedCollection(msg.DbName, m.engine.GetSelectedCollections()[m.cursorCollection])
-		if len(m.engine.GetSelectedCollections()) == 1 { // If we are about to drop last collection making db dissapear
+		if len(m.engine.GetSelectedCollections()) == 1 { // If we are about to drop last collection making db disappear
 			m.cursorColumn = databasesColumn
 		}
 		return m, m.engine.DropCollection(msg.DbName, msg.CollectionName)

@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-func (m *Engine) RefreshDbAndCollections() tea.Cmd {
+func (m *Engine) RefreshDbAndCollections() error {
 	m.Server = &Server{ // Clear all cached data
 		Databases: make(map[string]Database),
 	}
@@ -22,13 +22,13 @@ func (m *Engine) RefreshDbAndCollections() tea.Cmd {
 	defer cancel()
 	dbNames, err := m.Client.ListDatabaseNames(ctx, bson.D{})
 	if err != nil {
-		return modal.DisplayErrorModal(err)
+		return err
 	}
 
 	m.Server.Databases = make(map[string]Database)
 	for _, dbName := range dbNames {
 		if err := m.fetchCollectionsPerDb(dbName); err != nil {
-			return modal.DisplayErrorModal(err)
+			return err
 		}
 	}
 	return nil
@@ -53,45 +53,47 @@ func (m *Engine) fetchCollectionsPerDb(dbName string) error {
 
 // QueryCollection fetches all the data from a given collection in a given database
 func (m *Engine) QueryCollection(query bson.D) tea.Cmd {
-	db := m.Client.Database(m.selectedDb)
-	coll := db.Collection(m.selectedCollection)
-	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
-	defer cancel()
+	return func() tea.Msg {
+		db := m.Client.Database(m.selectedDb)
+		coll := db.Collection(m.selectedCollection)
+		ctx, cancel := context.WithTimeout(context.Background(), Timeout)
+		defer cancel()
 
-	cur, err := coll.Find(ctx, query)
-	if err != nil {
-		return modal.DisplayErrorModal(err)
-	}
-
-	var data []*bson.M
-	if err = cur.All(ctx, &data); err != nil {
-		return modal.DisplayErrorModal(err)
-	}
-
-	// Create doc summary cache
-	var newDocsSummaries []DocSummary
-	for _, doc := range data {
-		var row DocSummary
-		for k, v := range *doc {
-			val := fmt.Sprintf("%v", v)
-			fType := getFieldType(v)
-			if fType == "Object" || fType == "Array" { // TODO restrict to a set of types
-				val = fType
-			}
-			row = append(row, FieldSummary{
-				Name:  k,
-				Type:  fType,
-				Value: val,
-			})
+		cur, err := coll.Find(ctx, query)
+		if err != nil {
+			return modal.DisplayErrorModal(err)
 		}
-		slices.SortFunc(row, func(i, j FieldSummary) int { // Sort the fields being returned
-			return strings.Compare(i.Name, j.Name)
-		})
-		newDocsSummaries = append(newDocsSummaries, row)
-	}
 
-	m.Server.Databases[m.selectedDb].Collections[m.selectedCollection] = Collection{Documents: data, cachedDocSummaries: newDocsSummaries}
-	return nil
+		var data []*bson.M
+		if err = cur.All(ctx, &data); err != nil {
+			return modal.DisplayErrorModal(err)
+		}
+
+		// Create doc summary cache
+		var newDocsSummaries []DocSummary
+		for _, doc := range data {
+			var row DocSummary
+			for k, v := range *doc {
+				val := fmt.Sprintf("%v", v)
+				fType := getFieldType(v)
+				if fType == "Object" || fType == "Array" { // TODO restrict to a set of types
+					val = fType
+				}
+				row = append(row, FieldSummary{
+					Name:  k,
+					Type:  fType,
+					Value: val,
+				})
+			}
+			slices.SortFunc(row, func(i, j FieldSummary) int { // Sort the fields being returned
+				return strings.Compare(i.Name, j.Name)
+			})
+			newDocsSummaries = append(newDocsSummaries, row)
+		}
+
+		m.Server.Databases[m.selectedDb].Collections[m.selectedCollection] = Collection{Documents: data, cachedDocSummaries: newDocsSummaries}
+		return RedrawMessage{}
+	}
 }
 
 func getFieldType(value interface{}) string {

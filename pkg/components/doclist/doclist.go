@@ -109,10 +109,7 @@ func (m *Model) ExecuteQuery() tea.Cmd {
 		return modal.DisplayErrorModal(err)
 	}
 	m.cursor = 0
-	if err := m.engine.QueryCollection(val); err != nil {
-		return err
-	}
-	return nil
+	return m.engine.QueryCollection(val)
 }
 
 func (m *Model) ResetSearchBar() {

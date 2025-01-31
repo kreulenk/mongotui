@@ -6,10 +6,6 @@ type ErrModalMsg struct {
 	Err error
 }
 
-func (e ErrModalMsg) Error() string { // Implement error interface for when we display as a value before os.Exit
-	return e.Err.Error()
-}
-
 type DbDeleteModalMsg struct {
 	dbName string
 }

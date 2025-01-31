@@ -70,28 +70,38 @@ func (m *Engine) SetSelectedDocument(d *bson.M) {
 }
 
 func (m *Engine) DropDatabase(databaseName string) tea.Cmd {
-	db := m.Client.Database(databaseName)
-	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
-	defer cancel()
-	if err := db.Drop(ctx); err != nil {
-		return modal.DisplayErrorModal(err)
+	return func() tea.Msg {
+		db := m.Client.Database(databaseName)
+		ctx, cancel := context.WithTimeout(context.Background(), Timeout)
+		defer cancel()
+		if err := db.Drop(ctx); err != nil {
+			return modal.DisplayErrorModal(err)
+		}
+		if err := m.RefreshDbAndCollections(); err != nil {
+			return modal.DisplayErrorModal(err)
+		}
+		return RedrawMessage{}
 	}
-	return m.RefreshDbAndCollections()
 }
 
 func (m *Engine) DropCollection(databaseName, collectionName string) tea.Cmd {
-	db := m.Client.Database(databaseName)
-	col := db.Collection(collectionName)
-	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
-	defer cancel()
-	if err := col.Drop(ctx); err != nil {
-		return modal.DisplayErrorModal(err)
-	}
+	return func() tea.Msg {
+		db := m.Client.Database(databaseName)
+		col := db.Collection(collectionName)
+		ctx, cancel := context.WithTimeout(context.Background(), Timeout)
+		defer cancel()
+		if err := col.Drop(ctx); err != nil {
+			return modal.DisplayErrorModal(err)
+		}
 
-	if len(m.GetSelectedCollections()) == 1 { // If we just dropped the last collection, reset selectedCollection
-		m.SetSelectedDatabase(databaseName)
+		if len(m.GetSelectedCollections()) == 1 { // If we just dropped the last collection, reset selectedCollection
+			m.SetSelectedDatabase(databaseName)
+		}
+		if err := m.RefreshDbAndCollections(); err != nil {
+			return modal.DisplayErrorModal(err)
+		}
+		return RedrawMessage{}
 	}
-	return m.RefreshDbAndCollections()
 }
 
 // UpdateDocument will find and replace a given oldDoc with a newDoc within the db/collection
@@ -117,3 +127,7 @@ func (m *Engine) UpdateDocument(oldDoc, newDoc []byte) error {
 	}
 	return nil
 }
+
+// RedrawMessage is used to trigger a bubbletea update so that the components refresh their View functions
+// whenever the underlying data within mongoengine has updated
+type RedrawMessage struct{}
