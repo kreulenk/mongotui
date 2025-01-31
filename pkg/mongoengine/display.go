@@ -56,6 +56,12 @@ func (m *Engine) GetSelectedDocumentMarshalled() ([]byte, error) {
 	return parsedDoc, nil
 }
 
+// GetSelectedDocument will return a reference to the bson of the highlighted doc
+// last selected via SetSelectedDocument
+func (m *Engine) GetSelectedDocument() *bson.M {
+	return m.selectedDoc
+}
+
 // GetQueriedDocs returns the a slice of all documents cached by mongotui given the collection
 // last selected via SetSelectedCollection
 func (m *Engine) GetQueriedDocs() []*bson.M {

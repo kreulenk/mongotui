@@ -5,18 +5,17 @@ import "github.com/charmbracelet/bubbles/key"
 // keyMap defines keybindings. It satisfies to the help.KeyMap interface, which
 // is used to render the help menu.
 type keyMap struct {
-	Esc          key.Binding
-	LineUp       key.Binding
-	LineDown     key.Binding
-	PageUp       key.Binding
-	PageDown     key.Binding // TODO get page/half-page/line/go-to to work with new larger cells
-	HalfPageUp   key.Binding
-	HalfPageDown key.Binding
-	GotoTop      key.Binding
-	GotoBottom   key.Binding
-	Left         key.Binding
-	Edit         key.Binding
-	View         key.Binding
+	Esc        key.Binding
+	LineUp     key.Binding
+	LineDown   key.Binding
+	PageUp     key.Binding
+	PageDown   key.Binding // TODO get page/half-page/line/go-to to work with new larger cells
+	GotoTop    key.Binding
+	GotoBottom key.Binding
+	Left       key.Binding
+	Edit       key.Binding
+	View       key.Binding
+	Delete     key.Binding
 }
 
 // HelpView is a helper method for rendering the help menu from the keymap.
@@ -27,15 +26,13 @@ func (m *Model) HelpView() string {
 }
 
 func (km keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{km.LineUp, km.LineDown, km.Edit, km.View}
+	return []key.Binding{km.LineUp, km.LineDown, km.Edit, km.View, km.Delete}
 }
 
-// FullHelp implements the keyMap interface.
+// FullHelp is needed to satisfy the keyMap interface
 func (km keyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
-		{km.Edit, km.View},
-		{km.LineUp, km.LineDown, km.GotoTop, km.GotoBottom},
-		{km.PageUp, km.PageDown, km.HalfPageUp, km.HalfPageDown},
+		km.ShortHelp(),
 	}
 }
 
@@ -60,14 +57,6 @@ var keys = keyMap{
 		key.WithKeys("f", "pgdown", " "),
 		key.WithHelp("f/pgdn", "page down"),
 	),
-	HalfPageUp: key.NewBinding(
-		key.WithKeys("u", "ctrl+u"),
-		key.WithHelp("u", "½ page up"),
-	),
-	HalfPageDown: key.NewBinding(
-		key.WithKeys("d", "ctrl+d"),
-		key.WithHelp("d", "½ page down"),
-	),
 	GotoTop: key.NewBinding(
 		key.WithKeys("home", "g"),
 		key.WithHelp("g/home", "go to start"),
@@ -82,10 +71,14 @@ var keys = keyMap{
 	),
 	Edit: key.NewBinding(
 		key.WithKeys("e"),
-		key.WithHelp("e", "edit document"),
+		key.WithHelp("e", "edit"),
 	),
 	View: key.NewBinding(
 		key.WithKeys("v"),
-		key.WithHelp("v", "view document"),
+		key.WithHelp("v", "view"),
+	),
+	Delete: key.NewBinding(
+		key.WithKeys("d"),
+		key.WithHelp("d", "delete"),
 	),
 }

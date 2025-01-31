@@ -1,29 +1,18 @@
 package modal
 
-import tea "github.com/charmbracelet/bubbletea"
+import (
+	tea "github.com/charmbracelet/bubbletea"
+	"go.mongodb.org/mongo-driver/v2/bson"
+)
+
+/*
+************************
+Error Modal
+************************
+*/
 
 type ErrModalMsg struct {
 	Err error
-}
-
-type DbDeleteModalMsg struct {
-	dbName string
-}
-
-type ExecDbDelete struct {
-	DbName string
-}
-
-type ColDeleteModalMsg struct {
-	dbName         string
-	collectionName string
-}
-
-// ExecColDelete will be sent down to the dbcoltable to actually delete a collection after a modal confirmation as
-// well as tell the table to refresh its data
-type ExecColDelete struct {
-	DbName         string
-	CollectionName string
 }
 
 func DisplayErrorModal(err error) tea.Cmd {
@@ -32,12 +21,45 @@ func DisplayErrorModal(err error) tea.Cmd {
 	}
 }
 
+/*
+************************
+Database Delete Modal
+************************
+*/
+
+type DbDeleteModalMsg struct {
+	dbName string
+}
+
 func DisplayDatabaseDeleteModal(dbName string) tea.Cmd {
 	return func() tea.Msg {
 		return DbDeleteModalMsg{
 			dbName: dbName,
 		}
 	}
+}
+
+type ExecDbDelete struct {
+	DbName string
+}
+
+func execDatabaseDelete(dbName string) tea.Cmd {
+	return func() tea.Msg {
+		return ExecDbDelete{
+			DbName: dbName,
+		}
+	}
+}
+
+/*
+************************
+Collection Delete Modal
+************************
+*/
+
+type ColDeleteModalMsg struct {
+	dbName         string
+	collectionName string
 }
 
 func DisplayCollectionDeleteModal(dbName, collectionName string) tea.Cmd {
@@ -49,12 +71,11 @@ func DisplayCollectionDeleteModal(dbName, collectionName string) tea.Cmd {
 	}
 }
 
-func execDatabaseDelete(dbName string) tea.Cmd {
-	return func() tea.Msg {
-		return ExecDbDelete{
-			DbName: dbName,
-		}
-	}
+// ExecColDelete will be sent down to the dbcoltable to actually delete a collection after a modal confirmation as
+// well as tell the table to refresh its data
+type ExecColDelete struct {
+	DbName         string
+	CollectionName string
 }
 
 func execCollectionDelete(dbName, collectionName string) tea.Cmd {
@@ -63,5 +84,33 @@ func execCollectionDelete(dbName, collectionName string) tea.Cmd {
 			DbName:         dbName,
 			CollectionName: collectionName,
 		}
+	}
+}
+
+/*
+************************
+Document Delete Modal
+************************
+*/
+
+type DocDeleteModalMsg struct {
+	doc *bson.M
+}
+
+func DisplayDocDeleteModal(doc *bson.M) tea.Cmd {
+	return func() tea.Msg {
+		return DocDeleteModalMsg{
+			doc: doc,
+		}
+	}
+}
+
+type ExecDocDelete struct {
+	Doc *bson.M
+}
+
+func execDocDelete(doc *bson.M) tea.Cmd {
+	return func() tea.Msg {
+		return ExecDocDelete{Doc: doc}
 	}
 }

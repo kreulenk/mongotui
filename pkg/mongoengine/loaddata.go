@@ -61,12 +61,12 @@ func (m *Engine) QueryCollection(query bson.D) tea.Cmd {
 
 		cur, err := coll.Find(ctx, query)
 		if err != nil {
-			return modal.DisplayErrorModal(err)
+			return modal.ErrModalMsg{Err: err}
 		}
 
 		var data []*bson.M
 		if err = cur.All(ctx, &data); err != nil {
-			return modal.DisplayErrorModal(err)
+			return modal.ErrModalMsg{Err: err}
 		}
 
 		// Create doc summary cache
@@ -92,6 +92,7 @@ func (m *Engine) QueryCollection(query bson.D) tea.Cmd {
 		}
 
 		m.Server.Databases[m.selectedDb].Collections[m.selectedCollection] = Collection{Documents: data, cachedDocSummaries: newDocsSummaries}
+		m.lastExecutedQuery = query
 		return RedrawMessage{}
 	}
 }

@@ -11,6 +11,7 @@ type Model struct {
 	errMsg       *ErrModalMsg // Sent in as a tea.Cmd from elsewhere in the program
 	colDeleteMsg *ColDeleteModalMsg
 	dbDeleteMsg  *DbDeleteModalMsg
+	docDeleteMsg *DocDeleteModalMsg
 }
 
 // New returns a modal component with the default styles applied
@@ -21,6 +22,7 @@ func New() *Model {
 		errMsg:       nil,
 		colDeleteMsg: nil,
 		dbDeleteMsg:  nil,
+		docDeleteMsg: nil,
 	}
 }
 
@@ -29,7 +31,7 @@ func (m *Model) Init() tea.Cmd {
 }
 
 func (m *Model) IsModalDisplaying() bool {
-	return m.errMsg != nil || m.colDeleteMsg != nil || m.dbDeleteMsg != nil
+	return m.errMsg != nil || m.colDeleteMsg != nil || m.dbDeleteMsg != nil || m.docDeleteMsg != nil
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -40,6 +42,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.colDeleteMsg = &msg
 	case DbDeleteModalMsg:
 		m.dbDeleteMsg = &msg
+	case DocDeleteModalMsg:
+		m.docDeleteMsg = &msg
 	case tea.KeyMsg:
 		if !m.IsModalDisplaying() {
 			return m, nil
@@ -56,6 +60,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				execCmd := execDatabaseDelete(m.dbDeleteMsg.dbName)
 				m.dbDeleteMsg = nil
 				return m, execCmd
+			} else if m.docDeleteMsg != nil {
+				execCmd := execDocDelete(m.docDeleteMsg.doc)
+				m.docDeleteMsg = nil
+				return m, execCmd
 			}
 		default: // If it is a confirmation modal and enter was not selected, exit the modal with no actions performed
 			if m.errMsg != nil {
@@ -64,6 +72,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.colDeleteMsg = nil
 			} else if m.dbDeleteMsg != nil {
 				m.dbDeleteMsg = nil
+			} else if m.docDeleteMsg != nil {
+				m.docDeleteMsg = nil
 			}
 		}
 	}
@@ -81,6 +91,10 @@ func (m *Model) View() string {
 	} else if m.dbDeleteMsg != nil {
 		title := m.styles.DeletionHeader.Render("Confirm")
 		msg := fmt.Sprintf("%s\n\n"+"Are you sure you would like to delete the database %s?\nPress Enter to confirm.", title, m.dbDeleteMsg.dbName)
+		return m.styles.Modal.Render(msg)
+	} else if m.docDeleteMsg != nil {
+		title := m.styles.DeletionHeader.Render("Confirm")
+		msg := fmt.Sprintf("%s\n\n"+"Are you sure you would like to delete the selected document?\nPress Enter to confirm.", title)
 		return m.styles.Modal.Render(msg)
 	}
 	return ""

@@ -60,7 +60,8 @@ func (m *baseModel) Init() tea.Cmd {
 // Update handles event and manages internal state. It partly implements the tea.Model interface.
 func (m *baseModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := message.(type) {
-	case modal.ErrModalMsg, modal.ColDeleteModalMsg, modal.DbDeleteModalMsg: // First see if we need to redirect to the msgModal
+	// First see if we need to redirect to the msgModal
+	case modal.ErrModalMsg, modal.ColDeleteModalMsg, modal.DbDeleteModalMsg, modal.DocDeleteModalMsg:
 		mod, modCmd := m.msgModal.Update(message)
 		m.msgModal = mod
 		return m, modCmd

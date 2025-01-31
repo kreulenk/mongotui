@@ -68,10 +68,6 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 			m.MoveUp(m.viewport.Height)
 		case key.Matches(msg, keys.PageDown):
 			m.MoveDown(m.viewport.Height)
-		case key.Matches(msg, keys.HalfPageUp):
-			m.MoveUp(m.viewport.Height / 2)
-		case key.Matches(msg, keys.HalfPageDown):
-			m.MoveDown(m.viewport.Height / 2)
 		case key.Matches(msg, keys.LineDown):
 			m.MoveDown(1)
 		case key.Matches(msg, keys.GotoTop):
@@ -85,7 +81,13 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 			m.EditDoc()
 		case key.Matches(msg, keys.View):
 			m.ViewDoc()
+		case key.Matches(msg, keys.Delete):
+			m.engine.SetSelectedDocument(m.engine.GetQueriedDocs()[m.cursor])
+			return m, modal.DisplayDocDeleteModal(m.engine.GetSelectedDocument())
 		}
+	case modal.ExecDocDelete:
+		m.cursor = renderutils.Max(0, m.cursor-1)
+		return m, m.engine.DropDocument(msg.Doc)
 	}
 
 	return m, nil
