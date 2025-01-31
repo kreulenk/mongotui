@@ -106,6 +106,9 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 	case modal.ExecColDelete:
 		m.cursorCollection = renderutils.Max(0, m.cursorCollection-1)
 		m.engine.SetSelectedCollection(msg.DbName, m.engine.GetSelectedCollections()[m.cursorCollection])
+		if len(m.engine.GetSelectedCollections()) == 1 { // If we are about to drop last collection making db dissapear
+			m.cursorColumn = databasesColumn
+		}
 		return m, m.engine.DropCollection(msg.DbName, msg.CollectionName)
 	case modal.ExecDbDelete:
 		m.cursorDatabase = renderutils.Max(0, m.cursorDatabase-1)

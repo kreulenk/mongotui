@@ -87,6 +87,10 @@ func (m *Engine) DropCollection(databaseName, collectionName string) tea.Cmd {
 	if err := col.Drop(ctx); err != nil {
 		return modal.DisplayErrorModal(err)
 	}
+
+	if len(m.GetSelectedCollections()) == 1 { // If we just dropped the last collection, reset selectedCollection
+		m.SetSelectedDatabase(databaseName)
+	}
 	return m.RefreshDbAndCollections()
 }
 
