@@ -6,12 +6,14 @@ package mongoengine
 import (
 	"context"
 	"fmt"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/kreulenk/mongotui/pkg/components/modal"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"slices"
 	"strings"
 )
 
-func (m *Engine) RefreshDbAndCollections() error {
+func (m *Engine) RefreshDbAndCollections() tea.Cmd {
 	m.Server = &Server{ // Clear all cached data
 		Databases: make(map[string]Database),
 	}
@@ -20,16 +22,15 @@ func (m *Engine) RefreshDbAndCollections() error {
 	defer cancel()
 	dbNames, err := m.Client.ListDatabaseNames(ctx, bson.D{})
 	if err != nil {
-		return err
+		return modal.DisplayErrorModal(err)
 	}
 
 	m.Server.Databases = make(map[string]Database)
 	for _, dbName := range dbNames {
 		if err := m.fetchCollectionsPerDb(dbName); err != nil {
-			return err
+			return modal.DisplayErrorModal(err)
 		}
 	}
-
 	return nil
 }
 
@@ -51,7 +52,7 @@ func (m *Engine) fetchCollectionsPerDb(dbName string) error {
 }
 
 // QueryCollection fetches all the data from a given collection in a given database
-func (m *Engine) QueryCollection(query bson.D) error {
+func (m *Engine) QueryCollection(query bson.D) tea.Cmd {
 	db := m.Client.Database(m.selectedDb)
 	coll := db.Collection(m.selectedCollection)
 	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
@@ -59,12 +60,12 @@ func (m *Engine) QueryCollection(query bson.D) error {
 
 	cur, err := coll.Find(ctx, query)
 	if err != nil {
-		return err
+		return modal.DisplayErrorModal(err)
 	}
 
 	var data []*bson.M
 	if err = cur.All(ctx, &data); err != nil {
-		return err
+		return modal.DisplayErrorModal(err)
 	}
 
 	// Create doc summary cache

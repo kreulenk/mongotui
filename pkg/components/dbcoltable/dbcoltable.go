@@ -51,8 +51,11 @@ func (m *Model) Init() tea.Cmd {
 func New(engine *mongoengine.Engine, state *state.MainViewState) *Model {
 	err := engine.RefreshDbAndCollections()
 	if err != nil {
-		fmt.Printf("could not initialize data: %v", err)
+		fmt.Printf("could not initialize data: %v\n", err()) // Crash and run tea.Cmd func to display err
 		os.Exit(1)
+	}
+	if len(engine.GetDatabases()) > 0 {
+		engine.SetSelectedDatabase(engine.GetDatabases()[0])
 	}
 
 	m := Model{
@@ -68,8 +71,6 @@ func New(engine *mongoengine.Engine, state *state.MainViewState) *Model {
 
 		engine: engine,
 	}
-	m.updateViewport()
-
 	return &m
 }
 
@@ -104,23 +105,12 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 		}
 	case modal.ExecColDelete:
 		m.cursorCollection = renderutils.Max(0, m.cursorCollection-1)
-		if err := m.engine.DropCollection(msg.DbName, msg.CollectionName); err != nil {
-			return m, modal.DisplayErrorModal(err)
-		}
-		if err := m.engine.RefreshDbAndCollections(); err != nil {
-			return m, modal.DisplayErrorModal(fmt.Errorf("unable to reinitialize databases after deletion: %w", err))
-		}
-		m.updateViewport()
+		m.engine.SetSelectedCollection(msg.DbName, m.engine.GetSelectedCollections()[m.cursorCollection])
+		return m, m.engine.DropCollection(msg.DbName, msg.CollectionName)
 	case modal.ExecDbDelete:
 		m.cursorDatabase = renderutils.Max(0, m.cursorDatabase-1)
 		m.cursorCollection = renderutils.Max(0, m.cursorCollection-1)
-		if err := m.engine.DropDatabase(msg.DbName); err != nil {
-			return m, modal.DisplayErrorModal(err)
-		}
-		if err := m.engine.RefreshDbAndCollections(); err != nil {
-			return m, modal.DisplayErrorModal(fmt.Errorf("unable to reinitialize databases after deletion: %w", err))
-		}
-		m.updateViewport()
+		return m, m.engine.DropDatabase(msg.DbName)
 	}
 	if err != nil {
 		return m, modal.DisplayErrorModal(err)
@@ -133,7 +123,6 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 // be sent from another component
 func (m *Model) Focus() {
 	m.styles.Table = m.styles.Table.BorderStyle(lipgloss.ThickBorder()).BorderForeground(lipgloss.Color("57"))
-	m.updateViewport()
 }
 
 // blur disables key use on the dbcoltable so that the parent mainview component can switch the focus to
@@ -146,6 +135,7 @@ func (m *Model) blur() {
 
 // View renders the component.
 func (m *Model) View() string {
+	m.updateViewport()
 	return m.styles.Table.Render(m.headersView() + "\n" + m.viewport.View())
 }
 
@@ -205,13 +195,11 @@ func (m *Model) cursoredCollection() string {
 // SetWidth sets the width of the viewport of the dbcoltable.
 func (m *Model) SetWidth(w int) {
 	m.viewport.Width = w
-	m.updateViewport()
 }
 
 // SetHeight sets the height of the viewport of the dbcoltable.
 func (m *Model) SetHeight(h int) {
 	m.viewport.Height = h - lipgloss.Height(m.headersView())
-	m.updateViewport()
 }
 
 // MoveUp moves the selection up by any number of rows.
@@ -225,7 +213,6 @@ func (m *Model) MoveUp(n int) error {
 		m.engine.SetSelectedCollection(m.engine.GetDatabases()[m.cursorDatabase], m.engine.GetSelectedCollections()[m.cursorCollection])
 	}
 
-	m.updateViewport()
 	return nil
 }
 
@@ -239,7 +226,6 @@ func (m *Model) MoveDown(n int) error {
 		m.cursorCollection = renderutils.Clamp(m.cursorCollection+n, 0, len(m.engine.GetSelectedCollections())-1)
 		m.engine.SetSelectedCollection(m.engine.GetDatabases()[m.cursorDatabase], m.engine.GetSelectedCollections()[m.cursorCollection])
 	}
-	m.updateViewport()
 	return nil
 }
 
@@ -252,7 +238,6 @@ func (m *Model) MoveRight() error {
 		m.cursorColumn = collectionsColumn
 		m.cursorCollection = 0
 		m.engine.SetSelectedCollection(m.engine.GetDatabases()[m.cursorDatabase], m.engine.GetSelectedCollections()[m.cursorCollection])
-		m.updateViewport()
 	}
 	return nil
 }
@@ -263,7 +248,6 @@ func (m *Model) MoveLeft() error {
 		m.cursorCollection = 0
 	}
 	m.cursorColumn = databasesColumn
-	m.updateViewport()
 	return nil
 }
 

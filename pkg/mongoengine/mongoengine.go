@@ -5,6 +5,8 @@ package mongoengine
 import (
 	"context"
 	"fmt"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/kreulenk/mongotui/pkg/components/modal"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"time"
@@ -67,19 +69,25 @@ func (m *Engine) SetSelectedDocument(d *bson.M) {
 	m.selectedDoc = d
 }
 
-func (m *Engine) DropDatabase(databaseName string) error {
+func (m *Engine) DropDatabase(databaseName string) tea.Cmd {
 	db := m.Client.Database(databaseName)
 	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
-	return db.Drop(ctx)
+	if err := db.Drop(ctx); err != nil {
+		return modal.DisplayErrorModal(err)
+	}
+	return m.RefreshDbAndCollections()
 }
 
-func (m *Engine) DropCollection(databaseName, collectionName string) error {
+func (m *Engine) DropCollection(databaseName, collectionName string) tea.Cmd {
 	db := m.Client.Database(databaseName)
 	col := db.Collection(collectionName)
 	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
-	return col.Drop(ctx)
+	if err := col.Drop(ctx); err != nil {
+		return modal.DisplayErrorModal(err)
+	}
+	return m.RefreshDbAndCollections()
 }
 
 // UpdateDocument will find and replace a given oldDoc with a newDoc within the db/collection

@@ -3,11 +3,9 @@ package modal
 import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/kreulenk/mongotui/pkg/mongoengine"
 )
 
 type Model struct {
-	engine *mongoengine.Engine
 	styles Styles
 
 	errMsg       *ErrModalMsg // Sent in as a tea.Cmd from elsewhere in the program
@@ -16,9 +14,8 @@ type Model struct {
 }
 
 // New returns a modal component with the default styles applied
-func New(engine *mongoengine.Engine) *Model {
+func New() *Model {
 	return &Model{
-		engine: engine,
 		styles: defaultStyles(),
 
 		errMsg:       nil,
@@ -76,7 +73,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *Model) View() string {
 	if m.errMsg != nil {
 		title := m.styles.ErrorHeader.Render("Error")
-		return m.styles.Modal.Render(title + "\n\n" + m.errMsg.err.Error())
+		return m.styles.Modal.Render(title + "\n\n" + m.errMsg.Err.Error())
 	} else if m.colDeleteMsg != nil {
 		title := m.styles.DeletionHeader.Render("Confirm")
 		msg := fmt.Sprintf("%s\n\nAre you sure you would like to delete the collection %s?\nPress Enter to confirm.", title, m.colDeleteMsg.collectionName)

@@ -3,7 +3,11 @@ package modal
 import tea "github.com/charmbracelet/bubbletea"
 
 type ErrModalMsg struct {
-	err error
+	Err error
+}
+
+func (e ErrModalMsg) Error() string { // Implement error interface for when we display as a value before os.Exit
+	return e.Err.Error()
 }
 
 type DbDeleteModalMsg struct {
@@ -28,7 +32,7 @@ type ExecColDelete struct {
 
 func DisplayErrorModal(err error) tea.Cmd {
 	return func() tea.Msg {
-		return ErrModalMsg{err: err}
+		return ErrModalMsg{Err: err}
 	}
 }
 

@@ -49,15 +49,11 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 	if m.searchBar.Focused() {
 		if k, ok := msg.(tea.KeyMsg); ok { // If the user hit enter into the search bar, update the docList
 			if strings.Trim(k.String(), " ") == "enter" { // For some reason enter always comes in with spaces
-				err := m.updateTableRows() // updateTableRows uses the text in the searchBar
-				if err != nil {
-					return m, modal.DisplayErrorModal(err)
-				}
 				m.searchBar.Blur()
+				return m, m.ExecuteQuery()
 			}
 		}
 		m.searchBar, _ = m.searchBar.Update(msg)
-		m.updateViewport()
 		return m, nil
 	}
 
@@ -101,31 +97,21 @@ func (m *Model) Init() tea.Cmd {
 
 // View renders the component.
 func (m *Model) View() string {
+	m.updateViewport()
 	return m.styles.Table.Render(m.viewport.View())
 }
 
-// updateTableRows updates the list of document summaries shown in the right hand bar based on the database/collection
+// ExecuteQuery updates the list of document summaries shown in the right hand bar based on the database/collection
 // selected in the left hand bar as well as the query that was last entered in the search bar.
-func (m *Model) updateTableRows() error {
+func (m *Model) ExecuteQuery() tea.Cmd {
 	val, err := m.searchBar.GetValue()
 	if err != nil {
-		return err
+		return modal.DisplayErrorModal(err)
 	}
-	err = m.engine.QueryCollection(val)
-	if err != nil {
-		return err
-	}
-
 	m.cursor = 0
-	return nil
-}
-
-func (m *Model) RefreshDocs() error {
-	err := m.updateTableRows()
-	if err != nil {
+	if err := m.engine.QueryCollection(val); err != nil {
 		return err
 	}
-	m.updateViewport()
 	return nil
 }
 
@@ -205,13 +191,11 @@ func (m *Model) getStartIndex() int {
 func (m *Model) SetWidth(w int) {
 	m.viewport.Width = w
 	m.searchBar.SetWidth(w)
-	m.updateViewport()
 }
 
 // SetHeight sets the height of the viewport of the dbcoltable.
 func (m *Model) SetHeight(h int) {
 	m.viewport.Height = h
-	m.updateViewport()
 }
 
 // MoveUp moves the selection up by any number of rows.
@@ -222,14 +206,12 @@ func (m *Model) MoveUp(n int) {
 	}
 
 	m.cursor = renderutils.Clamp(m.cursor-n, 0, len(m.engine.GetDocumentSummaries())-1)
-	m.updateViewport()
 }
 
 // MoveDown moves the selection down by any number of rows.
 // It can not go below the last row.
 func (m *Model) MoveDown(n int) {
 	m.cursor = renderutils.Clamp(m.cursor+n, 0, len(m.engine.GetDocumentSummaries())-1)
-	m.updateViewport()
 }
 
 // GotoTop moves the selection to the first row.

@@ -34,7 +34,7 @@ func Initialize(client *mongo.Client) {
 func initialModel(client *mongo.Client) tea.Model {
 	engine := mongoengine.New(client)
 
-	msgModal := modal.New(engine)
+	msgModal := modal.New()
 	mainView := mainview.New(engine)
 	view := overlay.New(
 		msgModal,
