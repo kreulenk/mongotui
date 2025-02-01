@@ -21,6 +21,10 @@ func genRootCmd() *cobra.Command {
 	var passwordFlag string
 	var authDatabaseFlag string
 	var authMechanismFlag string
+	var awsIamSessionTokenFlag string
+	var gssApiServiceNameFlag string
+	var sspiHostnameCanonicalizationFlag string
+	var sspiRealmOverrideFlag string
 
 	var cmd = &cobra.Command{
 		Use:   "mtui <db-address>",
@@ -37,6 +41,13 @@ func genRootCmd() *cobra.Command {
 				return fmt.Errorf("invalid authenticationMechanism of %s provided. Must be one of %v", authMechanismFlag, validAuthMechs)
 			}
 
+			validSspiHostnameCanonicalization := []string{"", "forward", "none"}
+			if ok := slices.Contains(validSspiHostnameCanonicalization, sspiHostnameCanonicalizationFlag); !ok {
+				return fmt.Errorf("invalid validSspiHostnameCanonicalization of %s provided. Must be one of %v",
+					sspiHostnameCanonicalizationFlag, validSspiHostnameCanonicalization,
+				)
+			}
+
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
@@ -51,7 +62,16 @@ func genRootCmd() *cobra.Command {
 			}
 
 			applyHostConfig(clientOps, hostFlag, portFlag)
-			applyAuthConfig(clientOps, usernameFlag, passwordFlag, authMechanismFlag, authDatabaseFlag)
+			applyAuthConfig(clientOps,
+				usernameFlag,
+				passwordFlag,
+				authDatabaseFlag,
+				authMechanismFlag,
+				awsIamSessionTokenFlag,
+				gssApiServiceNameFlag,
+				sspiHostnameCanonicalizationFlag,
+				sspiRealmOverrideFlag,
+			)
 
 			client, err := mongo.Connect(clientOps)
 			cobra.CheckErr(err)
@@ -66,10 +86,14 @@ func genRootCmd() *cobra.Command {
 	cmd.Flags().AddFlagSet(regularFlags)
 
 	authenticationFlags := pflag.NewFlagSet("authenticationFlags", pflag.ExitOnError)
-	cmd.Flags().StringVarP(&usernameFlag, "username", "u", "", "Username for authentication")
-	cmd.Flags().StringVarP(&passwordFlag, "password", "p", "", "Password for authentication")
-	cmd.Flags().StringVar(&authDatabaseFlag, "authenticationDatabase", "", "User source (defaults to dbname)")
-	cmd.Flags().StringVar(&authMechanismFlag, "authenticationMechanism", "", "Authentication mechanism to use")
+	authenticationFlags.StringVarP(&usernameFlag, "username", "u", "", "Username for authentication")
+	authenticationFlags.StringVarP(&passwordFlag, "password", "p", "", "Password for authentication")
+	authenticationFlags.StringVar(&authDatabaseFlag, "authenticationDatabase", "", "User source (defaults to dbname)")
+	authenticationFlags.StringVar(&authMechanismFlag, "authenticationMechanism", "", "Authentication mechanism to use")
+	authenticationFlags.StringVar(&awsIamSessionTokenFlag, "awsIamSessionToken", "", "AWS IAM Temporary Session Token ID")
+	authenticationFlags.StringVar(&gssApiServiceNameFlag, "gssapiServiceName", "", "Service name to use when authenticating using GSSAPI/Kerberos")
+	authenticationFlags.StringVar(&sspiHostnameCanonicalizationFlag, "sspiHostnameCanonicalization", "", "Specify the SSPI hostname canonicalization (none or forward, available on Windows)")
+	authenticationFlags.StringVar(&sspiRealmOverrideFlag, "sspiRealmOverride", "", "Specify the SSPI server realm (available on Windows)")
 	cmd.Flags().AddFlagSet(authenticationFlags)
 
 	return cmd
