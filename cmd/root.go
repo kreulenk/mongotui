@@ -43,11 +43,6 @@ func genRootCmd() *cobra.Command {
 				)
 			}
 
-			// Supporting this option as it's in mongosh but mongo only has v1 of its API
-			if flags.apiVersionOptions.apiVersion != "" && flags.apiVersionOptions.apiVersion != options.ServerAPIVersion1 {
-				return fmt.Errorf("invalid --apiVersion of %s provided. Must be set to 1", flags.apiVersionOptions.apiVersion)
-			}
-
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
