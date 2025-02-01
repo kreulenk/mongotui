@@ -4,14 +4,12 @@ import (
 	"fmt"
 	"github.com/kreulenk/mongotui/pkg/mongoengine"
 	"github.com/kreulenk/mongotui/pkg/tui"
+	"github.com/spf13/cobra"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
-	"net"
-	"net/url"
 	"os"
+	"slices"
 	"strings"
-
-	"github.com/spf13/cobra"
 )
 
 func genRootCmd() *cobra.Command {
@@ -20,22 +18,38 @@ func genRootCmd() *cobra.Command {
 	var usernameFlag string
 	var passwordFlag string
 	var authMechanismFlag string
+	var authDatabaseFlag string
 
 	var cmd = &cobra.Command{
 		Use:   "mtui <db-address>",
 		Short: "A MongoDB Terminal User Interface",
-		Long: `mtui is a MongoDB Terminal User Interface that allows you to interact with MongoDB databases from the CLI
-in a more intuitive way.`,
-		Run: func(cmd *cobra.Command, args []string) {
-			var dbAddress string
-			if len(args) == 1 {
-				dbAddress = args[0]
+		Long:  `mongotui is a MongoDB Terminal User Interface`,
+		Args: func(cmd *cobra.Command, args []string) error {
+			// Verify that a host has been provided
+			if len(args) != 1 && hostFlag == "" {
+				return fmt.Errorf("you must provide a valid hostname")
+			}
+			// Verify that authMechanism is a supported value if provided
+			validAuthMechs := []string{"", "SCRAM-SHA-1", "SCRAM-SHA-256", "MONGODB-X509", "GSSAPI", "PLAIN"}
+			if ok := slices.Contains(validAuthMechs, authMechanismFlag); !ok {
+				return fmt.Errorf("invalid authenticationMechanism of %s provided. Must be one of %v", authMechanismFlag, validAuthMechs)
 			}
 
-			parsedConStr, err := getConnectionString(dbAddress, hostFlag, portFlag)
-			cobra.CheckErr(err)
-			clientOps, err := generateConnectionOptions(parsedConStr, usernameFlag, passwordFlag, authMechanismFlag)
-			cobra.CheckErr(err)
+			return nil
+		},
+		Run: func(cmd *cobra.Command, args []string) {
+			clientOps := options.Client()
+			clientOps.SetTimeout(mongoengine.Timeout)
+			if len(args) == 1 {
+				dbAddress := args[0]
+				if !strings.Contains(dbAddress, "://") {
+					dbAddress = "mongodb://" + dbAddress
+					clientOps.ApplyURI(dbAddress) // May or may not be set
+				}
+			}
+
+			applyHostConfig(clientOps, hostFlag, portFlag)
+			applyAuthConfig(clientOps, usernameFlag, passwordFlag, authMechanismFlag, authDatabaseFlag)
 
 			client, err := mongo.Connect(clientOps)
 			cobra.CheckErr(err)
@@ -47,24 +61,18 @@ in a more intuitive way.`,
 	cmd.Flags().IntVar(&portFlag, "port", 0, "Port to connect to")
 	cmd.Flags().StringVarP(&usernameFlag, "username", "u", "", "Username for authentication")
 	cmd.Flags().StringVarP(&passwordFlag, "password", "p", "", "Password for authentication")
-	cmd.Flags().StringVar(&authMechanismFlag, "authenticationMechanism ", "", "Authentication mechanism to use") // TODO restrict this to a set of valid values
+	cmd.Flags().StringVar(&authMechanismFlag, "authenticationMechanism", "", "Authentication mechanism to use")
+	cmd.Flags().StringVar(&authDatabaseFlag, "authenticationDatabase", "", "User source (defaults to dbname)")
 
 	return cmd
 }
 
-// generateConnectionOptions takes in the connectionString and any auth based flags and returns the clientOptions
-// necessary to connect to mongodb.
-// TODO more flags need to be added to fully support auth. Hardcoded to always use an auth database of admin for now
-func generateConnectionOptions(connectionString, usernameFlag, passwordFlag, authMechanism string) (*options.ClientOptions, error) {
-	clientOps := options.Client().ApplyURI(connectionString)
-	clientOps.SetTimeout(mongoengine.Timeout)
-
-	if clientOps.Auth == nil && (usernameFlag != "" || passwordFlag != "") {
-		clientOps.Auth = &options.Credential{
-			AuthSource: "admin",
-		}
+func applyAuthConfig(clientOps *options.ClientOptions, usernameFlag, passwordFlag, authMechanism, authDatabaseFlag string) {
+	if clientOps.Auth == nil && (usernameFlag != "" || passwordFlag != "" || authMechanism != "" || authDatabaseFlag != "") {
+		clientOps.Auth = &options.Credential{}
+	} else if clientOps.Auth == nil {
+		return
 	}
-
 	// Overwrite the host and port from dbAddress if they are provided as flags
 	if usernameFlag != "" {
 		clientOps.Auth.Username = usernameFlag
@@ -75,44 +83,20 @@ func generateConnectionOptions(connectionString, usernameFlag, passwordFlag, aut
 	if authMechanism != "" {
 		clientOps.Auth.AuthMechanism = authMechanism
 	}
-
-	return clientOps, nil
+	if authDatabaseFlag != "" {
+		clientOps.Auth.AuthMechanism = authMechanism
+	}
 }
 
 // getConnectionString takes in the dbAddress that can contain the entire connection string as well as the connection based flags
 // passed in from the UI to allow for overriding or setting of the different connection values.
-func getConnectionString(dbAddress, hostFlag string, portFlag int) (string, error) {
-	if !strings.Contains(dbAddress, "://") {
-		dbAddress = "mongodb://" + dbAddress
-	}
-	parsedUrl, err := url.Parse(dbAddress)
-	if err != nil {
-		return "", err
-	}
-
-	parsedHost, parsedPort, err := net.SplitHostPort(parsedUrl.Host)
-	if err != nil {
-		parsedHost = parsedUrl.Host
-	}
+func applyHostConfig(clientOps *options.ClientOptions, hostFlag string, portFlag int) {
 	if hostFlag != "" {
-		parsedHost = hostFlag
+		if portFlag != 0 {
+			clientOps.SetHosts([]string{fmt.Sprintf("%s:%s", hostFlag, portFlag)})
+		}
+		clientOps.SetHosts([]string{fmt.Sprintf("%s:27017", hostFlag)})
 	}
-	if parsedHost == "" {
-		return "", fmt.Errorf("no host provided") // TODO display help menu if this error is displayed
-	}
-
-	if portFlag == 0 && parsedPort == "" {
-		parsedPort = "27017"
-	} else if portFlag != 0 {
-		parsedPort = fmt.Sprintf("%d", portFlag)
-	}
-
-	parsedUrl.Host = fmt.Sprintf("%s:%s", parsedHost, parsedPort)
-	if parsedUrl.Scheme == "" {
-		parsedUrl.Scheme = "mongodb"
-	}
-
-	return parsedUrl.String(), nil
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -121,7 +105,6 @@ func Execute() {
 	rootCmd := genRootCmd()
 	err := rootCmd.Execute()
 	if err != nil {
-		fmt.Printf("failed to initialize the cli: %v\n", err)
 		os.Exit(1)
 	}
 }
