@@ -14,17 +14,11 @@ import (
 )
 
 func genRootCmd() *cobra.Command {
-	var hostFlag string
-	var portFlag int
-
-	var usernameFlag string
-	var passwordFlag string
-	var authDatabaseFlag string
-	var authMechanismFlag string
-	var awsIamSessionTokenFlag string
-	var gssApiServiceNameFlag string
-	var sspiHostnameCanonicalizationFlag string
-	var sspiRealmOverrideFlag string
+	flags := flagOptions{
+		baseOptions:           baseOptions{},
+		authenticationOptions: authenticationOptions{},
+		tlsOptions:            tlsOptions{},
+	}
 
 	var cmd = &cobra.Command{
 		Use:   "mtui <db-address>",
@@ -32,19 +26,19 @@ func genRootCmd() *cobra.Command {
 		Long:  `mongotui is a MongoDB Terminal User Interface`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			// Verify that a host has been provided
-			if len(args) != 1 && hostFlag == "" {
+			if len(args) != 1 && flags.baseOptions.host == "" {
 				return fmt.Errorf("you must provide a valid hostname")
 			}
-			// Verify that authMechanism is a supported value if provided
+			// Verify that authenticationMechanism is a supported value if provided
 			validAuthMechs := []string{"", "SCRAM-SHA-1", "SCRAM-SHA-256", "MONGODB-X509", "GSSAPI", "PLAIN"}
-			if ok := slices.Contains(validAuthMechs, authMechanismFlag); !ok {
-				return fmt.Errorf("invalid authenticationMechanism of %s provided. Must be one of %v", authMechanismFlag, validAuthMechs)
+			if ok := slices.Contains(validAuthMechs, flags.authenticationOptions.authenticationMechanism); !ok {
+				return fmt.Errorf("invalid authenticationMechanism of %s provided. Must be one of %v", flags.authenticationOptions.authenticationMechanism, validAuthMechs[1:])
 			}
 
 			validSspiHostnameCanonicalization := []string{"", "forward", "none"}
-			if ok := slices.Contains(validSspiHostnameCanonicalization, sspiHostnameCanonicalizationFlag); !ok {
+			if ok := slices.Contains(validSspiHostnameCanonicalization, flags.authenticationOptions.sspiHostnameCanonicalization); !ok {
 				return fmt.Errorf("invalid validSspiHostnameCanonicalization of %s provided. Must be one of %v",
-					sspiHostnameCanonicalizationFlag, validSspiHostnameCanonicalization,
+					flags.authenticationOptions.sspiHostnameCanonicalization, validSspiHostnameCanonicalization[1:],
 				)
 			}
 
@@ -61,17 +55,8 @@ func genRootCmd() *cobra.Command {
 				}
 			}
 
-			applyHostConfig(clientOps, hostFlag, portFlag)
-			applyAuthConfig(clientOps,
-				usernameFlag,
-				passwordFlag,
-				authDatabaseFlag,
-				authMechanismFlag,
-				awsIamSessionTokenFlag,
-				gssApiServiceNameFlag,
-				sspiHostnameCanonicalizationFlag,
-				sspiRealmOverrideFlag,
-			)
+			applyHostConfig(clientOps, flags.baseOptions)
+			applyAuthConfig(clientOps, flags.authenticationOptions)
 
 			client, err := mongo.Connect(clientOps)
 			cobra.CheckErr(err)
@@ -82,20 +67,33 @@ func genRootCmd() *cobra.Command {
 	var flagSets []namedFlagSet
 	// First group of flags when running mongosh --help
 	regularFlags := pflag.NewFlagSet("regularFlags", pflag.ExitOnError)
-	regularFlags.StringVar(&hostFlag, "host", "", "Server to connect to")
-	regularFlags.IntVar(&portFlag, "port", 0, "Port to connect to")
+	regularFlags.StringVar(&flags.baseOptions.host, "host", "", "Server to connect to")
+	regularFlags.IntVar(&flags.baseOptions.port, "port", 0, "Port to connect to")
 	flagSets = append(flagSets, namedFlagSet{name: "Options", flagset: regularFlags})
 
 	authenticationFlags := pflag.NewFlagSet("authenticationFlags", pflag.ExitOnError)
-	authenticationFlags.StringVarP(&usernameFlag, "username", "u", "", "Username for authentication")
-	authenticationFlags.StringVarP(&passwordFlag, "password", "p", "", "Password for authentication")
-	authenticationFlags.StringVar(&authDatabaseFlag, "authenticationDatabase", "", "User source (defaults to dbname)")
-	authenticationFlags.StringVar(&authMechanismFlag, "authenticationMechanism", "", "Authentication mechanism to use")
-	authenticationFlags.StringVar(&awsIamSessionTokenFlag, "awsIamSessionToken", "", "AWS IAM Temporary Session Token ID")
-	authenticationFlags.StringVar(&gssApiServiceNameFlag, "gssapiServiceName", "", "Service name to use when authenticating using GSSAPI/Kerberos")
-	authenticationFlags.StringVar(&sspiHostnameCanonicalizationFlag, "sspiHostnameCanonicalization", "", "Specify the SSPI hostname canonicalization (none or forward, available on Windows)")
-	authenticationFlags.StringVar(&sspiRealmOverrideFlag, "sspiRealmOverride", "", "Specify the SSPI server realm (available on Windows)")
+	authenticationFlags.StringVarP(&flags.authenticationOptions.username, "username", "u", "", "Username for authentication")
+	authenticationFlags.StringVarP(&flags.authenticationOptions.password, "password", "p", "", "Password for authentication")
+	authenticationFlags.StringVar(&flags.authenticationOptions.authenticationDatabase, "authenticationDatabase", "", "User source (defaults to dbname)")
+	authenticationFlags.StringVar(&flags.authenticationOptions.authenticationMechanism, "authenticationMechanism", "", "Authentication mechanism to use")
+	authenticationFlags.StringVar(&flags.authenticationOptions.awsIamSessionToken, "awsIamSessionToken", "", "AWS IAM Temporary Session Token ID")
+	authenticationFlags.StringVar(&flags.authenticationOptions.gssApiServiceName, "gssapiServiceName", "", "Service name to use when authenticating using GSSAPI/Kerberos")
+	authenticationFlags.StringVar(&flags.authenticationOptions.sspiHostnameCanonicalization, "sspiHostnameCanonicalization", "", "Specify the SSPI hostname canonicalization (none or forward, available on Windows)")
+	authenticationFlags.StringVar(&flags.authenticationOptions.sspiRealmOverride, "sspiRealmOverride", "", "Specify the SSPI server realm (available on Windows)")
 	flagSets = append(flagSets, namedFlagSet{name: "Authentication Options", flagset: authenticationFlags})
+
+	tlsFlags := pflag.NewFlagSet("tlsFlags", pflag.ExitOnError)
+	tlsFlags.BoolVar(&flags.tlsOptions.tls, "tls", false, "Use TLS for all connections")
+	tlsFlags.StringVar(&flags.tlsOptions.tlsCertificateKeyFile, "tlsCertificateKeyFile", "", "PEM certificate/key file for TLS")
+	tlsFlags.StringVar(&flags.tlsOptions.tlsCertificateKeyFilePassword, "tlsCertificateKeyFilePassword", "", "Password for key in PEM file for TLS")
+	tlsFlags.StringVar(&flags.tlsOptions.tlsCAFile, "tlsCAFile", "", "Certificate Authority file for TLS")
+	tlsFlags.BoolVar(&flags.tlsOptions.tlsAllowInvalidHostnames, "tlsAllowInvalidHostnames", false, "Allow connections to servers with non-matching hostnames")
+	tlsFlags.BoolVar(&flags.tlsOptions.tlsAllowInvalidCertificates, "tlsAllowInvalidCertificates", false, "Allow connections to servers with invalid certificates")
+	tlsFlags.StringVar(&flags.tlsOptions.tlsCertificateSelector, "tlsCertificateSelector", "", "TLS Certificate in system store (Windows and macOS only)")
+	tlsFlags.StringVar(&flags.tlsOptions.tlsCRLFile, "tlsCRLFile", "", "Specifies the .pem file that contains the Certificate Revocation List")
+	tlsFlags.StringVar(&flags.tlsOptions.tlsDisabledProtocols, "tlsDisabledProtocols", "", "Comma separated list of TLS protocols to disable [TLS1_0,TLS1_1,TLS1_2]")
+	tlsFlags.StringVar(&flags.tlsOptions.tlsFIPSMode, "tlsFIPSMode", "", "Enable the system TLS library's FIPS mode")
+	//flagSets = append(flagSets, namedFlagSet{name: "TLS Options", flagset: tlsFlags})
 
 	addFlagsAndSetHelpMenu(cmd, flagSets)
 
