@@ -46,5 +46,4 @@ func applyAuthConfig(clientOps *options.ClientOptions, username, password, authD
 	if sspiRealmOverride != "" {
 		clientOps.Auth.AuthMechanismProperties["SERVICE_REALM"] = sspiRealmOverride
 	}
-
 }

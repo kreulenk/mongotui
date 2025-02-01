@@ -78,13 +78,13 @@ func genRootCmd() *cobra.Command {
 			tui.Initialize(client)
 		},
 	}
-	cmd.SetUsageTemplate(usageTemplate)
 
+	var flagSets []namedFlagSet
 	// First group of flags when running mongosh --help
 	regularFlags := pflag.NewFlagSet("regularFlags", pflag.ExitOnError)
 	regularFlags.StringVar(&hostFlag, "host", "", "Server to connect to")
 	regularFlags.IntVar(&portFlag, "port", 0, "Port to connect to")
-	cmd.Flags().AddFlagSet(regularFlags)
+	flagSets = append(flagSets, namedFlagSet{name: "Options", flagset: regularFlags})
 
 	authenticationFlags := pflag.NewFlagSet("authenticationFlags", pflag.ExitOnError)
 	authenticationFlags.StringVarP(&usernameFlag, "username", "u", "", "Username for authentication")
@@ -95,7 +95,9 @@ func genRootCmd() *cobra.Command {
 	authenticationFlags.StringVar(&gssApiServiceNameFlag, "gssapiServiceName", "", "Service name to use when authenticating using GSSAPI/Kerberos")
 	authenticationFlags.StringVar(&sspiHostnameCanonicalizationFlag, "sspiHostnameCanonicalization", "", "Specify the SSPI hostname canonicalization (none or forward, available on Windows)")
 	authenticationFlags.StringVar(&sspiRealmOverrideFlag, "sspiRealmOverride", "", "Specify the SSPI server realm (available on Windows)")
-	cmd.Flags().AddFlagSet(authenticationFlags)
+	flagSets = append(flagSets, namedFlagSet{name: "Authentication Options", flagset: authenticationFlags})
+
+	addFlagsAndSetHelpMenu(cmd, flagSets)
 
 	return cmd
 }
