@@ -78,6 +78,7 @@ func genRootCmd() *cobra.Command {
 			tui.Initialize(client)
 		},
 	}
+	cmd.SetUsageTemplate(usageTemplate)
 
 	// First group of flags when running mongosh --help
 	regularFlags := pflag.NewFlagSet("regularFlags", pflag.ExitOnError)
