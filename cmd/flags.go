@@ -21,7 +21,7 @@ func addFlagsAndSetHelpMenu(cmd *cobra.Command, sets []namedFlagSet) {
 		cmd.Flags().AddFlagSet(set.flagset)
 		usages.WriteString(fmt.Sprintf("%s:\n%s\n", set.name, set.flagset.FlagUsages()))
 	}
-	cmd.SetUsageTemplate(fmt.Sprintf(usageTemplate, usages.String()))
+	cmd.SetUsageTemplate(strings.TrimSpace(fmt.Sprintf(usageTemplate, usages.String())))
 }
 
 // usageTemplate is a custom template
