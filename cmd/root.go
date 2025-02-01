@@ -5,6 +5,7 @@ import (
 	"github.com/kreulenk/mongotui/pkg/mongoengine"
 	"github.com/kreulenk/mongotui/pkg/tui"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"os"
@@ -15,10 +16,11 @@ import (
 func genRootCmd() *cobra.Command {
 	var hostFlag string
 	var portFlag int
+
 	var usernameFlag string
 	var passwordFlag string
-	var authMechanismFlag string
 	var authDatabaseFlag string
+	var authMechanismFlag string
 
 	var cmd = &cobra.Command{
 		Use:   "mtui <db-address>",
@@ -57,46 +59,20 @@ func genRootCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&hostFlag, "host", "", "Server to connect to")
-	cmd.Flags().IntVar(&portFlag, "port", 0, "Port to connect to")
+	// First group of flags when running mongosh --help
+	regularFlags := pflag.NewFlagSet("regularFlags", pflag.ExitOnError)
+	regularFlags.StringVar(&hostFlag, "host", "", "Server to connect to")
+	regularFlags.IntVar(&portFlag, "port", 0, "Port to connect to")
+	cmd.Flags().AddFlagSet(regularFlags)
+
+	authenticationFlags := pflag.NewFlagSet("authenticationFlags", pflag.ExitOnError)
 	cmd.Flags().StringVarP(&usernameFlag, "username", "u", "", "Username for authentication")
 	cmd.Flags().StringVarP(&passwordFlag, "password", "p", "", "Password for authentication")
-	cmd.Flags().StringVar(&authMechanismFlag, "authenticationMechanism", "", "Authentication mechanism to use")
 	cmd.Flags().StringVar(&authDatabaseFlag, "authenticationDatabase", "", "User source (defaults to dbname)")
+	cmd.Flags().StringVar(&authMechanismFlag, "authenticationMechanism", "", "Authentication mechanism to use")
+	cmd.Flags().AddFlagSet(authenticationFlags)
 
 	return cmd
-}
-
-func applyAuthConfig(clientOps *options.ClientOptions, usernameFlag, passwordFlag, authMechanism, authDatabaseFlag string) {
-	if clientOps.Auth == nil && (usernameFlag != "" || passwordFlag != "" || authMechanism != "" || authDatabaseFlag != "") {
-		clientOps.Auth = &options.Credential{}
-	} else if clientOps.Auth == nil {
-		return
-	}
-	// Overwrite the host and port from dbAddress if they are provided as flags
-	if usernameFlag != "" {
-		clientOps.Auth.Username = usernameFlag
-	}
-	if passwordFlag != "" {
-		clientOps.Auth.Password = passwordFlag
-	}
-	if authMechanism != "" {
-		clientOps.Auth.AuthMechanism = authMechanism
-	}
-	if authDatabaseFlag != "" {
-		clientOps.Auth.AuthMechanism = authMechanism
-	}
-}
-
-// getConnectionString takes in the dbAddress that can contain the entire connection string as well as the connection based flags
-// passed in from the UI to allow for overriding or setting of the different connection values.
-func applyHostConfig(clientOps *options.ClientOptions, hostFlag string, portFlag int) {
-	if hostFlag != "" {
-		if portFlag != 0 {
-			clientOps.SetHosts([]string{fmt.Sprintf("%s:%s", hostFlag, portFlag)})
-		}
-		clientOps.SetHosts([]string{fmt.Sprintf("%s:27017", hostFlag)})
-	}
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
