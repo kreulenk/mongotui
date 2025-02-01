@@ -31,15 +31,22 @@ type tlsOptions struct {
 	tlsAllowInvalidHostnames      bool
 	tlsAllowInvalidCertificates   bool
 	//tlsCertificateSelector        string
-	//tlsCRLFile           string
-	//tlsDisabledProtocols string
-	//tlsFIPSMode          string
+	//tlsCRLFile                    string
+	//tlsDisabledProtocols          string
+	//tlsFIPSMode                   string
+}
+
+type apiVersionOptions struct {
+	apiVersion           options.ServerAPIVersion
+	apiStrict            bool
+	apiDeprecationErrors bool
 }
 
 type flagOptions struct {
 	baseOptions           baseOptions
 	authenticationOptions authenticationOptions
 	tlsOptions            tlsOptions
+	apiVersionOptions     apiVersionOptions
 }
 
 func applyHostConfig(clientOps *options.ClientOptions, flags baseOptions) {
@@ -132,4 +139,20 @@ func applyTlsConfig(clientOps *options.ClientOptions, flags tlsOptions) error {
 		clientOps.TLSConfig.InsecureSkipVerify = true
 	}
 	return nil
+}
+
+func applyApiVersionConfig(clientOps *options.ClientOptions, flags apiVersionOptions) {
+	if clientOps.ServerAPIOptions == nil {
+		clientOps.ServerAPIOptions = options.ServerAPI(options.ServerAPIVersion1)
+	}
+	// Mongo currently only has v1 but supporting this flag to resemble mongosh.. Could be useful in the future
+	if flags.apiVersion != "" {
+		clientOps.ServerAPIOptions.ServerAPIVersion = flags.apiVersion
+	}
+	if flags.apiStrict {
+		clientOps.ServerAPIOptions.Strict = &flags.apiStrict
+	}
+	if flags.apiDeprecationErrors {
+		clientOps.ServerAPIOptions.DeprecationErrors = &flags.apiDeprecationErrors
+	}
 }

@@ -18,6 +18,7 @@ func genRootCmd() *cobra.Command {
 		baseOptions:           baseOptions{},
 		authenticationOptions: authenticationOptions{},
 		tlsOptions:            tlsOptions{},
+		apiVersionOptions:     apiVersionOptions{},
 	}
 
 	var cmd = &cobra.Command{
@@ -37,9 +38,14 @@ func genRootCmd() *cobra.Command {
 
 			validSspiHostnameCanonicalization := []string{"", "forward", "none"}
 			if ok := slices.Contains(validSspiHostnameCanonicalization, flags.authenticationOptions.sspiHostnameCanonicalization); !ok {
-				return fmt.Errorf("invalid validSspiHostnameCanonicalization of %s provided. Must be one of %v",
+				return fmt.Errorf("invalid --validSspiHostnameCanonicalization of %s provided. Must be one of %v",
 					flags.authenticationOptions.sspiHostnameCanonicalization, validSspiHostnameCanonicalization[1:],
 				)
+			}
+
+			// Supporting this option as it's in mongosh but mongo only has v1 of its API
+			if flags.apiVersionOptions.apiVersion != "" && flags.apiVersionOptions.apiVersion != options.ServerAPIVersion1 {
+				return fmt.Errorf("invalid --apiVersion of %s provided. Must be set to 1", flags.apiVersionOptions.apiVersion)
 			}
 
 			return nil
@@ -59,6 +65,7 @@ func genRootCmd() *cobra.Command {
 			applyAuthConfig(clientOps, flags.authenticationOptions)
 			err := applyTlsConfig(clientOps, flags.tlsOptions)
 			cobra.CheckErr(err)
+			applyApiVersionConfig(clientOps, flags.apiVersionOptions)
 
 			client, err := mongo.Connect(clientOps)
 			cobra.CheckErr(err)
@@ -97,6 +104,12 @@ func genRootCmd() *cobra.Command {
 	//tlsFlags.StringVar(&flags.tlsOptions.tlsFIPSMode, "tlsFIPSMode", "", "Enable the system TLS library's FIPS mode")
 	//flagSets = append(flagSets, namedFlagSet{name: "TLS Options", flagset: tlsFlags})
 	flagSets = append(flagSets, namedFlagSet{name: "TLS Options", flagset: tlsFlags})
+
+	apiVersionFlags := pflag.NewFlagSet("apiVersion", pflag.ExitOnError)
+	apiVersionFlags.StringVar((*string)(&flags.apiVersionOptions.apiVersion), "apiVersion", "", "Specifies the API version to connect with")
+	apiVersionFlags.BoolVar(&flags.apiVersionOptions.apiStrict, "apiStrict", false, "Use strict API version mode")
+	apiVersionFlags.BoolVar(&flags.apiVersionOptions.apiDeprecationErrors, "apiDeprecationErrors", false, "Fail deprecated commands for the specified API version")
+	flagSets = append(flagSets, namedFlagSet{name: "API version Options", flagset: apiVersionFlags})
 
 	addFlagsAndSetHelpMenu(cmd, flagSets)
 	return cmd
