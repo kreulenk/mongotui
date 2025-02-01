@@ -57,6 +57,8 @@ func genRootCmd() *cobra.Command {
 
 			applyHostConfig(clientOps, flags.baseOptions)
 			applyAuthConfig(clientOps, flags.authenticationOptions)
+			err := applyTlsConfig(clientOps, flags.tlsOptions)
+			cobra.CheckErr(err)
 
 			client, err := mongo.Connect(clientOps)
 			cobra.CheckErr(err)
@@ -66,12 +68,12 @@ func genRootCmd() *cobra.Command {
 
 	var flagSets []namedFlagSet
 	// First group of flags when running mongosh --help
-	regularFlags := pflag.NewFlagSet("regularFlags", pflag.ExitOnError)
-	regularFlags.StringVar(&flags.baseOptions.host, "host", "", "Server to connect to")
-	regularFlags.IntVar(&flags.baseOptions.port, "port", 0, "Port to connect to")
-	flagSets = append(flagSets, namedFlagSet{name: "Options", flagset: regularFlags})
+	baseFlags := pflag.NewFlagSet("base", pflag.ExitOnError)
+	baseFlags.StringVar(&flags.baseOptions.host, "host", "", "Server to connect to")
+	baseFlags.IntVar(&flags.baseOptions.port, "port", 0, "Port to connect to")
+	flagSets = append(flagSets, namedFlagSet{name: "Options", flagset: baseFlags})
 
-	authenticationFlags := pflag.NewFlagSet("authenticationFlags", pflag.ExitOnError)
+	authenticationFlags := pflag.NewFlagSet("authentication", pflag.ExitOnError)
 	authenticationFlags.StringVarP(&flags.authenticationOptions.username, "username", "u", "", "Username for authentication")
 	authenticationFlags.StringVarP(&flags.authenticationOptions.password, "password", "p", "", "Password for authentication")
 	authenticationFlags.StringVar(&flags.authenticationOptions.authenticationDatabase, "authenticationDatabase", "", "User source (defaults to dbname)")
@@ -82,21 +84,21 @@ func genRootCmd() *cobra.Command {
 	authenticationFlags.StringVar(&flags.authenticationOptions.sspiRealmOverride, "sspiRealmOverride", "", "Specify the SSPI server realm (available on Windows)")
 	flagSets = append(flagSets, namedFlagSet{name: "Authentication Options", flagset: authenticationFlags})
 
-	tlsFlags := pflag.NewFlagSet("tlsFlags", pflag.ExitOnError)
+	tlsFlags := pflag.NewFlagSet("tls", pflag.ExitOnError)
 	tlsFlags.BoolVar(&flags.tlsOptions.tls, "tls", false, "Use TLS for all connections")
 	tlsFlags.StringVar(&flags.tlsOptions.tlsCertificateKeyFile, "tlsCertificateKeyFile", "", "PEM certificate/key file for TLS")
 	tlsFlags.StringVar(&flags.tlsOptions.tlsCertificateKeyFilePassword, "tlsCertificateKeyFilePassword", "", "Password for key in PEM file for TLS")
 	tlsFlags.StringVar(&flags.tlsOptions.tlsCAFile, "tlsCAFile", "", "Certificate Authority file for TLS")
 	tlsFlags.BoolVar(&flags.tlsOptions.tlsAllowInvalidHostnames, "tlsAllowInvalidHostnames", false, "Allow connections to servers with non-matching hostnames")
 	tlsFlags.BoolVar(&flags.tlsOptions.tlsAllowInvalidCertificates, "tlsAllowInvalidCertificates", false, "Allow connections to servers with invalid certificates")
-	tlsFlags.StringVar(&flags.tlsOptions.tlsCertificateSelector, "tlsCertificateSelector", "", "TLS Certificate in system store (Windows and macOS only)")
-	tlsFlags.StringVar(&flags.tlsOptions.tlsCRLFile, "tlsCRLFile", "", "Specifies the .pem file that contains the Certificate Revocation List")
-	tlsFlags.StringVar(&flags.tlsOptions.tlsDisabledProtocols, "tlsDisabledProtocols", "", "Comma separated list of TLS protocols to disable [TLS1_0,TLS1_1,TLS1_2]")
-	tlsFlags.StringVar(&flags.tlsOptions.tlsFIPSMode, "tlsFIPSMode", "", "Enable the system TLS library's FIPS mode")
+	//tlsFlags.StringVar(&flags.tlsOptions.tlsCertificateSelector, "tlsCertificateSelector", "", "TLS Certificate in system store (Windows and macOS only)")
+	//tlsFlags.StringVar(&flags.tlsOptions.tlsCRLFile, "tlsCRLFile", "", "Specifies the .pem file that contains the Certificate Revocation List")
+	//tlsFlags.StringVar(&flags.tlsOptions.tlsDisabledProtocols, "tlsDisabledProtocols", "", "Comma separated list of TLS protocols to disable [TLS1_0,TLS1_1,TLS1_2]")
+	//tlsFlags.StringVar(&flags.tlsOptions.tlsFIPSMode, "tlsFIPSMode", "", "Enable the system TLS library's FIPS mode")
 	//flagSets = append(flagSets, namedFlagSet{name: "TLS Options", flagset: tlsFlags})
+	flagSets = append(flagSets, namedFlagSet{name: "TLS Options", flagset: tlsFlags})
 
 	addFlagsAndSetHelpMenu(cmd, flagSets)
-
 	return cmd
 }
 

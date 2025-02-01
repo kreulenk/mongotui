@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"crypto/tls"
 	"fmt"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
@@ -21,6 +22,7 @@ type authenticationOptions struct {
 	sspiRealmOverride            string
 }
 
+// Commented out options are options that exist in mongosh but have not been added to mongotui
 type tlsOptions struct {
 	tls                           bool
 	tlsCertificateKeyFile         string
@@ -28,10 +30,10 @@ type tlsOptions struct {
 	tlsCAFile                     string
 	tlsAllowInvalidHostnames      bool
 	tlsAllowInvalidCertificates   bool
-	tlsCertificateSelector        string
-	tlsCRLFile                    string
-	tlsDisabledProtocols          string
-	tlsFIPSMode                   string
+	//tlsCertificateSelector        string
+	//tlsCRLFile           string
+	//tlsDisabledProtocols string
+	//tlsFIPSMode          string
 }
 
 type flagOptions struct {
@@ -50,7 +52,9 @@ func applyHostConfig(clientOps *options.ClientOptions, flags baseOptions) {
 }
 
 func applyAuthConfig(clientOps *options.ClientOptions, flags authenticationOptions) {
-	if clientOps.Auth == nil && (flags.username != "" || flags.password != "" || flags.authenticationDatabase != "" || flags.authenticationMechanism != "") {
+	if clientOps.Auth == nil && (flags.username != "" || flags.password != "" || flags.authenticationDatabase != "" ||
+		flags.authenticationMechanism != "" || flags.awsIamSessionToken != "" || flags.gssApiServiceName != "" ||
+		flags.sspiHostnameCanonicalization != "" || flags.sspiRealmOverride != "") {
 		clientOps.Auth = &options.Credential{}
 	} else if clientOps.Auth == nil {
 		return
@@ -74,10 +78,58 @@ func applyAuthConfig(clientOps *options.ClientOptions, flags authenticationOptio
 		clientOps.Auth.AuthMechanismProperties["SERVICE_NAME"] = flags.gssApiServiceName
 	}
 	// flag description in mongosh reads 'Specify the SSPI hostname canonicalization (none or forward, available on Windows)'
+	// TODO mongo docs imply that there are other options. Will need to investigate
+	// https://www.mongodb.com/docs/drivers/node/v5.6/fundamentals/authentication/enterprise-mechanisms/
 	if flags.sspiHostnameCanonicalization == "forward" {
 		clientOps.Auth.AuthMechanismProperties["CANONICALIZE_HOST_NAME"] = "true"
 	}
 	if flags.sspiRealmOverride != "" {
 		clientOps.Auth.AuthMechanismProperties["SERVICE_REALM"] = flags.sspiRealmOverride
 	}
+}
+
+func applyTlsConfig(clientOps *options.ClientOptions, flags tlsOptions) error {
+	if !flags.tls {
+		return nil
+	}
+	if clientOps.TLSConfig == nil {
+		clientOps.TLSConfig = &tls.Config{}
+		if clientOps.Auth != nil {
+			if clientOps.Auth.AuthMechanism != "" && clientOps.Auth.AuthMechanism != "MONGODB-X509" {
+				return fmt.Errorf("--authenticationMechanism must be set to MONGODB-X509 when tls is enabled")
+			}
+			clientOps.Auth.AuthMechanism = "MONGODB-X509"
+		} else {
+			clientOps.Auth = &options.Credential{AuthMechanism: "MONGODB-X509"}
+		}
+	}
+	tlsOpts := make(map[string]interface{})
+	if flags.tlsCertificateKeyFile != "" {
+		tlsOpts["tlsCertificateKeyFile"] = flags.tlsCertificateKeyFile
+	}
+	if flags.tlsCertificateKeyFilePassword != "" {
+		tlsOpts["tlsCertificateKeyFilePassword"] = flags.tlsCertificateKeyFilePassword
+	}
+	if flags.tlsCAFile != "" {
+		tlsOpts["tlsCAFile"] = flags.tlsCAFile
+	}
+	// We will use the BuildTLSConfig function from the options package to handle the certificate related configuration
+	builtConf, err := options.BuildTLSConfig(tlsOpts)
+	if err != nil {
+		return fmt.Errorf("failed to generate tls configuration: %w", err)
+	}
+
+	// Assign the fields that were set during BuildTLSConfig
+	clientOps.TLSConfig.MinVersion = builtConf.MinVersion
+	clientOps.TLSConfig.Certificates = builtConf.Certificates
+	clientOps.TLSConfig.RootCAs = builtConf.RootCAs
+
+	// Not sure that both AllowInvalidHostnames and AllowInvalidCertificates these should map to InsecureSkipVerify
+	if flags.tlsAllowInvalidHostnames {
+		clientOps.TLSConfig.InsecureSkipVerify = true
+	}
+	if flags.tlsAllowInvalidCertificates {
+		clientOps.TLSConfig.InsecureSkipVerify = true
+	}
+	return nil
 }
