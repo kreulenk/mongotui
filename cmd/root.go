@@ -110,8 +110,6 @@ func genRootCmd() *cobra.Command {
 	return cmd
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the genRootCmd.
 func Execute() {
 	rootCmd := genRootCmd()
 	err := rootCmd.Execute()
