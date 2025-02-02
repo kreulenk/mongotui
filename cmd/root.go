@@ -31,7 +31,7 @@ func genRootCmd() *cobra.Command {
 				return fmt.Errorf("you must provide a valid hostname")
 			}
 			// Verify that authenticationMechanism is a supported value if provided
-			validAuthMechs := []string{"", "SCRAM-SHA-1", "SCRAM-SHA-256", "MONGODB-X509", "GSSAPI", "PLAIN"}
+			validAuthMechs := []string{"", "SCRAM-SHA-1", "SCRAM-SHA-256", "MONGODB-X509", "GSSAPI", "PLAIN", "MONGODB-OIDC"}
 			if ok := slices.Contains(validAuthMechs, flags.authenticationOptions.authenticationMechanism); !ok {
 				return fmt.Errorf("invalid authenticationMechanism of %s provided. Must be one of %v", flags.authenticationOptions.authenticationMechanism, validAuthMechs[1:])
 			}
