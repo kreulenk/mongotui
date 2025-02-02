@@ -19,6 +19,7 @@ func genRootCmd() *cobra.Command {
 		authenticationOptions: authenticationOptions{},
 		tlsOptions:            tlsOptions{},
 		apiVersionOptions:     apiVersionOptions{},
+		fleOptions:            fleOptions{},
 	}
 
 	var cmd = &cobra.Command{
@@ -31,7 +32,7 @@ func genRootCmd() *cobra.Command {
 				return fmt.Errorf("you must provide a valid hostname")
 			}
 			// Verify that authenticationMechanism is a supported value if provided
-			validAuthMechs := []string{"", "SCRAM-SHA-1", "SCRAM-SHA-256", "MONGODB-X509", "GSSAPI", "PLAIN", "MONGODB-OIDC"}
+			validAuthMechs := []string{"", "SCRAM-SHA-1", "SCRAM-SHA-256", "MONGODB-X509", "GSSAPI", "PLAIN", "MONGODB-OIDC", "MONGODB-AWS"}
 			if ok := slices.Contains(validAuthMechs, flags.authenticationOptions.authenticationMechanism); !ok {
 				return fmt.Errorf("invalid authenticationMechanism of %s provided. Must be one of %v", flags.authenticationOptions.authenticationMechanism, validAuthMechs[1:])
 			}
@@ -61,6 +62,8 @@ func genRootCmd() *cobra.Command {
 			err := applyTlsConfig(clientOps, flags.tlsOptions)
 			cobra.CheckErr(err)
 			applyApiVersionConfig(clientOps, flags.apiVersionOptions)
+			err = applyFleConfig(clientOps, flags.fleOptions)
+			cobra.CheckErr(err)
 
 			client, err := mongo.Connect(clientOps)
 			cobra.CheckErr(err)
@@ -105,6 +108,14 @@ func genRootCmd() *cobra.Command {
 	apiVersionFlags.BoolVar(&flags.apiVersionOptions.apiStrict, "apiStrict", false, "Use strict API version mode")
 	apiVersionFlags.BoolVar(&flags.apiVersionOptions.apiDeprecationErrors, "apiDeprecationErrors", false, "Fail deprecated commands for the specified API version")
 	flagSets = append(flagSets, namedFlagSet{name: "API version Options", flagset: apiVersionFlags})
+
+	fleFlags := pflag.NewFlagSet("fle", pflag.ExitOnError)
+	fleFlags.StringVar(&flags.fleOptions.awsAccessKeyId, "awsAccessKeyId", "", "AWS Access Key for FLE Amazon KMS")
+	fleFlags.StringVar(&flags.fleOptions.awsSecretAccessKey, "awsSecretAccessKey", "", "AWS Secret Key for FLE Amazon KMS")
+	fleFlags.StringVar(&flags.fleOptions.awsSessionToken, "awsSessionToken", "", "Optional AWS Session Token ID")
+	fleFlags.StringVar(&flags.fleOptions.keyVaultNamespace, "keyVaultNamespace", "", "database.collection to store encrypted FLE parameters")
+	//fleFlags.StringVar(&flags.fleOptions.kmsURL, "kmsURL", "", "Test parameter to override the URL of the KMS endpoint")
+	flagSets = append(flagSets, namedFlagSet{name: "FLE Options", flagset: fleFlags})
 
 	addFlagsAndSetHelpMenu(cmd, flagSets)
 	return cmd

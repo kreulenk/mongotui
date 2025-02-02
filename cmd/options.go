@@ -42,11 +42,20 @@ type apiVersionOptions struct {
 	apiDeprecationErrors bool
 }
 
+type fleOptions struct {
+	awsAccessKeyId     string
+	awsSecretAccessKey string
+	awsSessionToken    string
+	keyVaultNamespace  string
+	//kmsURL             string
+}
+
 type flagOptions struct {
 	baseOptions           baseOptions
 	authenticationOptions authenticationOptions
 	tlsOptions            tlsOptions
 	apiVersionOptions     apiVersionOptions
+	fleOptions            fleOptions
 }
 
 func applyHostConfig(clientOps *options.ClientOptions, flags baseOptions) {
@@ -155,4 +164,33 @@ func applyApiVersionConfig(clientOps *options.ClientOptions, flags apiVersionOpt
 	if flags.apiDeprecationErrors {
 		clientOps.ServerAPIOptions.DeprecationErrors = &flags.apiDeprecationErrors
 	}
+}
+
+func applyFleConfig(clientOps *options.ClientOptions, flags fleOptions) error {
+	if flags.awsAccessKeyId == "" && flags.awsSecretAccessKey == "" && flags.awsSessionToken == "" && flags.keyVaultNamespace == "" {
+		return nil
+	}
+	if clientOps.Auth != nil {
+		if clientOps.Auth.AuthMechanism != "" && clientOps.Auth.AuthMechanism != "MONGODB-AWS" {
+			return fmt.Errorf("--authenticationMechanism must be set to MONGODB-AWS when FLE options are enabled")
+		}
+		clientOps.Auth.AuthMechanism = "MONGODB-AWS"
+	} else {
+		clientOps.Auth = &options.Credential{AuthMechanism: "MONGODB-AWS"}
+	}
+
+	if flags.awsAccessKeyId != "" {
+		clientOps.Auth.Username = flags.awsAccessKeyId
+	}
+	if flags.awsSecretAccessKey != "" {
+		clientOps.Auth.Password = flags.awsSecretAccessKey
+	}
+	if flags.awsSessionToken != "" {
+		clientOps.Auth.AuthMechanismProperties["AWS_SESSION_TOKEN"] = flags.awsSessionToken
+	}
+	if flags.keyVaultNamespace != "" {
+		clientOps.Auth.AuthSource = flags.keyVaultNamespace
+	}
+
+	return nil
 }
