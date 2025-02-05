@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-const Timeout = 5 * time.Second
+const Timeout = 15 * time.Second
 
 type Server struct {
 	Databases           map[string]Database

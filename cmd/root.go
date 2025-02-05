@@ -61,8 +61,8 @@ func genRootCmd() *cobra.Command {
 				dbAddress := args[0]
 				if !strings.Contains(dbAddress, "://") {
 					dbAddress = "mongodb://" + dbAddress
-					clientOps.ApplyURI(dbAddress) // May or may not be set
 				}
+				clientOps.ApplyURI(dbAddress) // May or may not be set
 			}
 
 			applyHostConfig(clientOps, flags.baseOptions)
