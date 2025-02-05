@@ -1,4 +1,5 @@
 bin/
+certs/
 .idea/
 .DS_Store
 mongotui.log
