@@ -20,6 +20,7 @@ func genRootCmd() *cobra.Command {
 		tlsOptions:            tlsOptions{},
 		apiVersionOptions:     apiVersionOptions{},
 		fleOptions:            fleOptions{},
+		//oidcOptions:           oidcOptions{},
 	}
 
 	var cmd = &cobra.Command{
@@ -41,6 +42,13 @@ func genRootCmd() *cobra.Command {
 			if ok := slices.Contains(validSspiHostnameCanonicalization, flags.authenticationOptions.sspiHostnameCanonicalization); !ok {
 				return fmt.Errorf("invalid --validSspiHostnameCanonicalization of %s provided. Must be one of %v",
 					flags.authenticationOptions.sspiHostnameCanonicalization, validSspiHostnameCanonicalization[1:],
+				)
+			}
+
+			validOidcFlows := []string{"", "auth-code", "device-auth"}
+			if ok := slices.Contains(validOidcFlows, flags.oidcOptions.oidcFlows); !ok {
+				return fmt.Errorf("invalid --oidcFlows of %s provided. Must be one of %v",
+					flags.oidcOptions.oidcFlows, validOidcFlows[1:],
 				)
 			}
 
@@ -116,6 +124,15 @@ func genRootCmd() *cobra.Command {
 	fleFlags.StringVar(&flags.fleOptions.keyVaultNamespace, "keyVaultNamespace", "", "database.collection to store encrypted FLE parameters")
 	//fleFlags.StringVar(&flags.fleOptions.kmsURL, "kmsURL", "", "Test parameter to override the URL of the KMS endpoint")
 	flagSets = append(flagSets, namedFlagSet{name: "FLE Options", flagset: fleFlags})
+
+	//oidcFlags := pflag.NewFlagSet("oidc", pflag.ExitOnError)
+	//oidcFlags.StringVar(&flags.oidcOptions.oidcFlows, "oidcFlows", "", "Supported OIDC auth flows [auth-code,device-auth]")
+	//oidcFlags.StringVar(&flags.oidcOptions.oidcRedirectUri, "oidcRedirectUri", "http://localhost:27097/redirect", "Local auth code flow redirect URL")
+	//oidcFlags.BoolVar(&flags.oidcOptions.oidcTrustedEndpoint, "oidcTrustedEndpoint", false, "Treat the cluster/database mongosh as a trusted endpoint")
+	//oidcFlags.BoolVar(&flags.oidcOptions.oidcIdTokenAsAccessToken, "oidcIdTokenAsAccessToken", false, "Use ID tokens in place of access tokens for auth")
+	//oidcFlags.StringVar(&flags.oidcOptions.oidcDumpTokens, "oidcDumpTokens", "", "Debug OIDC by printing tokens to mongosh's output [full|include-secrets]")
+	//oidcFlags.BoolVar(&flags.oidcOptions.oidcNoNonce, "oidcNoNonce", false, "Don't send a nonce argument in the OIDC auth request")
+	//flagSets = append(flagSets, namedFlagSet{name: "OIDC auth options:", flagset: oidcFlags})
 
 	addFlagsAndSetHelpMenu(cmd, flagSets)
 	return cmd
