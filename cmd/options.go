@@ -120,14 +120,6 @@ func applyTlsConfig(clientOps *options.ClientOptions, flags tlsOptions) error {
 	}
 	if clientOps.TLSConfig == nil {
 		clientOps.TLSConfig = &tls.Config{}
-		if clientOps.Auth != nil {
-			if clientOps.Auth.AuthMechanism != "" && clientOps.Auth.AuthMechanism != "MONGODB-X509" {
-				return fmt.Errorf("--authenticationMechanism must be set to MONGODB-X509 when tls is enabled")
-			}
-			clientOps.Auth.AuthMechanism = "MONGODB-X509"
-		} else {
-			clientOps.Auth = &options.Credential{AuthMechanism: "MONGODB-X509"}
-		}
 	}
 	tlsOpts := make(map[string]interface{})
 	if flags.tlsCertificateKeyFile != "" {
