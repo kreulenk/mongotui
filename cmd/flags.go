@@ -2,10 +2,14 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"os"
 	"strings"
 )
+
+var yellowSPrint = color.New(color.FgYellow).SprintFunc()
 
 // namedFlagSet allows us to group sets of flags together so that they can be displayed in groups
 // under a common name for each group.
@@ -19,15 +23,16 @@ func addFlagsAndSetHelpMenu(cmd *cobra.Command, sets []namedFlagSet) {
 	var usages strings.Builder
 	for _, set := range sets {
 		cmd.Flags().AddFlagSet(set.flagset)
-		usages.WriteString(fmt.Sprintf("%s:\n%s\n", set.name, set.flagset.FlagUsages()))
+		usages.WriteString(fmt.Sprintf("%s:\n%s\n", yellowSPrint(set.name), set.flagset.FlagUsages()))
 	}
+	os.WriteFile("test", []byte(usages.String()), 0644)
 	cmd.SetUsageTemplate(strings.TrimSpace(fmt.Sprintf(usageTemplate, usages.String())))
 }
 
 // usageTemplate is a custom template
-// Its difference from the default cobra template is that it allows for the grouping of flags by flagSets
+// It is difference from the default cobra template in that it allows for the grouping of flags by flagSets
 // The single %s will have the custom flagUsages from addFlagsAndSetHelpMenu templated in
-const usageTemplate = `Usage:{{if .Runnable}}
+const usageTemplate = `[33mUsage[0m:{{if .Runnable}}
   {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
   {{.CommandPath}} [command]{{end}}{{if gt (len .Aliases) 0}}
 

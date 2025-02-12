@@ -24,7 +24,7 @@ func genRootCmd() *cobra.Command {
 	}
 
 	var cmd = &cobra.Command{
-		Use:   "mtui <db-address>",
+		Use:   "mongotui <connection-string>",
 		Short: "A MongoDB Terminal User Interface",
 		Long:  `mongotui is a MongoDB Terminal User Interface`,
 		Args: func(cmd *cobra.Command, args []string) error {
