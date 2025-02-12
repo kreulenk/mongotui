@@ -5,7 +5,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"os"
 	"strings"
 )
 
@@ -25,7 +24,6 @@ func addFlagsAndSetHelpMenu(cmd *cobra.Command, sets []namedFlagSet) {
 		cmd.Flags().AddFlagSet(set.flagset)
 		usages.WriteString(fmt.Sprintf("%s:\n%s\n", yellowSPrint(set.name), set.flagset.FlagUsages()))
 	}
-	os.WriteFile("test", []byte(usages.String()), 0644)
 	cmd.SetUsageTemplate(strings.TrimSpace(fmt.Sprintf(usageTemplate, usages.String())))
 }
 
