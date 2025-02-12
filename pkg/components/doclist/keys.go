@@ -8,10 +8,10 @@ type keyMap struct {
 	Esc        key.Binding
 	LineUp     key.Binding
 	LineDown   key.Binding
-	PageUp     key.Binding
-	PageDown   key.Binding // TODO get page/half-page/line/go-to to work with new larger cells
 	GotoTop    key.Binding
 	GotoBottom key.Binding
+	NextPage   key.Binding // pagination
+	PrevPage   key.Binding // pagination
 	Left       key.Binding
 	Edit       key.Binding
 	View       key.Binding
@@ -26,7 +26,7 @@ func (m *Model) HelpView() string {
 }
 
 func (km keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{km.LineUp, km.LineDown, km.Edit, km.View, km.Delete}
+	return []key.Binding{km.LineUp, km.LineDown, km.PrevPage, km.NextPage, km.Edit, km.View, km.Delete}
 }
 
 // FullHelp is needed to satisfy the keyMap interface
@@ -49,14 +49,6 @@ var keys = keyMap{
 		key.WithKeys("down", "j"),
 		key.WithHelp("↓/j", "down"),
 	),
-	PageUp: key.NewBinding(
-		key.WithKeys("b", "pgup"),
-		key.WithHelp("b/pgup", "page up"),
-	),
-	PageDown: key.NewBinding(
-		key.WithKeys("f", "pgdown", " "),
-		key.WithHelp("f/pgdn", "page down"),
-	),
 	GotoTop: key.NewBinding(
 		key.WithKeys("home", "g"),
 		key.WithHelp("g/home", "go to start"),
@@ -64,6 +56,14 @@ var keys = keyMap{
 	GotoBottom: key.NewBinding(
 		key.WithKeys("end", "G"),
 		key.WithHelp("G/end", "go to end"),
+	),
+	NextPage: key.NewBinding(
+		key.WithKeys("]"),
+		key.WithHelp("]", "next page"),
+	),
+	PrevPage: key.NewBinding(
+		key.WithKeys("["),
+		key.WithHelp("[", "previous page"),
 	),
 	Left: key.NewBinding(
 		key.WithKeys("left", "h"),

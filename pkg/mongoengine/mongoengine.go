@@ -13,10 +13,13 @@ import (
 )
 
 const Timeout = 15 * time.Second
+const limit = 25 // Page size for doclist component
 
 type Server struct {
-	Databases          map[string]Database
-	cachedDocSummaries []DocSummary // Used to display information about each doc in the doclist component
+	Databases map[string]Database
+
+	// Info about docs being displayed in doclist component
+	cachedDocSummaries []DocSummary
 	cachedDocs         []*bson.M
 }
 
@@ -24,7 +27,7 @@ type Database struct {
 	collections []string
 }
 
-type DocSummary []FieldSummary // Used to display a little information about each doc in the doclist component
+type DocSummary []FieldSummary // Used to display information about each doc in the doclist component
 
 type FieldSummary struct {
 	Name  string
@@ -40,7 +43,9 @@ type Engine struct {
 	selectedCollection string
 	selectedDoc        *bson.M
 
-	lastExecutedQuery bson.D // Used to refresh db after deletion operation
+	lastExecutedQuery bson.D // Used to refresh db after deletion operation and for pagination
+	skip              int    // Used for pagination when querying docs
+	docCount          int    // Used for pagination
 }
 
 func New(client *mongo.Client) *Engine {

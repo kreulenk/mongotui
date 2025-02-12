@@ -64,16 +64,18 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 			m.MoveUp(1)
 		case key.Matches(msg, keys.LineDown):
 			m.MoveDown(1)
-		case key.Matches(msg, keys.PageUp):
-			m.MoveUp(m.viewport.Height)
-		case key.Matches(msg, keys.PageDown):
-			m.MoveDown(m.viewport.Height)
 		case key.Matches(msg, keys.LineDown):
 			m.MoveDown(1)
 		case key.Matches(msg, keys.GotoTop):
 			m.GotoTop()
 		case key.Matches(msg, keys.GotoBottom):
 			m.GotoBottom()
+		case key.Matches(msg, keys.NextPage):
+			m.cursor = 0
+			return m, m.engine.NextPage()
+		case key.Matches(msg, keys.PrevPage):
+			m.cursor = 0
+			return m, m.engine.PreviousPage()
 		case key.Matches(msg, keys.Left):
 			m.state.SetActiveComponent(state.DbColTable)
 			m.blur()
