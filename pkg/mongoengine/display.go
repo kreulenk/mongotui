@@ -28,7 +28,7 @@ func (m *Engine) GetDatabases() []string {
 // mongotui given the last database set by SetSelectedDatabase
 func (m *Engine) GetSelectedCollections() []string {
 	if db, ok := m.Server.Databases[m.selectedDb]; ok {
-		return db.cachedSortedCollectionNames
+		return db.collections
 	} else {
 		return []string{}
 	}
@@ -37,11 +37,7 @@ func (m *Engine) GetSelectedCollections() []string {
 // GetDocumentSummaries will fetch a processed list of document summaries for each document
 // These documents are currently being used to be displayed within the doclist component
 func (m *Engine) GetDocumentSummaries() []DocSummary {
-	if cachedCol, ok := m.Server.Databases[m.selectedDb].Collections[m.selectedCollection]; ok {
-		return cachedCol.cachedDocSummaries
-	} else {
-		return []DocSummary{} // Return empty arr until data has loaded
-	}
+	return m.Server.cachedDocSummaries
 }
 
 // GetSelectedDocumentMarshalled will return a marshalled byte slice of the document that was
@@ -65,12 +61,5 @@ func (m *Engine) GetSelectedDocument() *bson.M {
 // GetQueriedDocs returns the a slice of all documents cached by mongotui given the collection
 // last selected via SetSelectedCollection
 func (m *Engine) GetQueriedDocs() []*bson.M {
-	db, ok := m.Server.Databases[m.selectedDb]
-	if ok {
-		collection, ok := db.Collections[m.selectedCollection]
-		if ok {
-			return collection.Documents
-		}
-	}
-	return nil
+	return m.Server.cachedDocs
 }

@@ -44,10 +44,7 @@ func (m *Engine) fetchCollectionsPerDb(dbName string) error {
 	if err != nil {
 		return fmt.Errorf("could not list collections for database %s: %v", dbName, err)
 	}
-	m.Server.Databases[dbName] = Database{Collections: make(map[string]Collection), cachedSortedCollectionNames: collectionNames} // zero out the Documents
-	for _, collectionName := range collectionNames {
-		m.Server.Databases[dbName].Collections[collectionName] = Collection{}
-	}
+	m.Server.Databases[dbName] = Database{collections: collectionNames} // zero out the Documents
 	return nil
 }
 
@@ -91,7 +88,8 @@ func (m *Engine) QueryCollection(query bson.D) tea.Cmd {
 			newDocsSummaries = append(newDocsSummaries, row)
 		}
 
-		m.Server.Databases[m.selectedDb].Collections[m.selectedCollection] = Collection{Documents: data, cachedDocSummaries: newDocsSummaries}
+		m.Server.cachedDocSummaries = newDocsSummaries
+		m.Server.cachedDocs = data
 		m.lastExecutedQuery = query
 		return RedrawMessage{}
 	}
