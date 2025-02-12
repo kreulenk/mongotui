@@ -40,10 +40,10 @@ func (m *Engine) fetchCollectionsPerDb(dbName string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
 	collectionNames, err := db.ListCollectionNames(ctx, bson.D{})
-	slices.Sort(collectionNames)
 	if err != nil {
 		return fmt.Errorf("could not list collections for database %s: %v", dbName, err)
 	}
+	slices.Sort(collectionNames)
 	m.Server.Databases[dbName] = Database{collections: collectionNames} // zero out the Documents
 	return nil
 }

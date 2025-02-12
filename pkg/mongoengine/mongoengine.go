@@ -15,17 +15,14 @@ import (
 const Timeout = 15 * time.Second
 
 type Server struct {
-	Databases           map[string]Database
-	cachedSortedDbNames []string
-	cachedDocSummaries  []DocSummary // Used to display information about each doc in the doclist component
-	cachedDocs          []*bson.M
+	Databases          map[string]Database
+	cachedDocSummaries []DocSummary // Used to display information about each doc in the doclist component
+	cachedDocs         []*bson.M
 }
 
 type Database struct {
 	collections []string
 }
-
-type Collection struct{}
 
 type DocSummary []FieldSummary // Used to display a little information about each doc in the doclist component
 

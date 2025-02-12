@@ -11,17 +11,12 @@ import (
 
 // GetDatabases will return a slice of all databases currently cached by mongotui
 func (m *Engine) GetDatabases() []string {
-	if m.Server.cachedSortedDbNames == nil {
-		databaseNames := make([]string, 0, len(m.Server.Databases))
-		for name := range m.Server.Databases {
-			databaseNames = append(databaseNames, name)
-		}
-		slices.Sort(databaseNames)
-		m.Server.cachedSortedDbNames = databaseNames
-		return databaseNames
+	databaseNames := make([]string, 0, len(m.Server.Databases))
+	for name := range m.Server.Databases {
+		databaseNames = append(databaseNames, name)
 	}
-
-	return m.Server.cachedSortedDbNames
+	slices.Sort(databaseNames)
+	return databaseNames
 }
 
 // GetSelectedCollections will return a slice of all of the collections currently cached by
