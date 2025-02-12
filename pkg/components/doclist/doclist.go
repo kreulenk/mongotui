@@ -168,8 +168,7 @@ func (m *Model) updateViewport() {
 			paginationTracker = fmt.Sprintf("viewing documents %d-%d of %d", m.engine.Skip+1, m.engine.Skip+mongoengine.Limit, m.engine.DocCount)
 		}
 		m.viewport.SetContent(
-			lipgloss.JoinVertical(lipgloss.Top, m.searchBar.View(), paginationTracker, joinedRows),
-		)
+			lipgloss.JoinVertical(lipgloss.Top, m.searchBar.View(), lipgloss.PlaceHorizontal(m.viewport.Width, lipgloss.Right, paginationTracker), joinedRows))
 	} else {
 		m.viewport.SetContent(
 			lipgloss.JoinVertical(lipgloss.Top, m.searchBar.View(), joinedRows),
