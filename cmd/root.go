@@ -45,24 +45,17 @@ func genRootCmd() *cobra.Command {
 				)
 			}
 
-			validOidcFlows := []string{"", "auth-code", "device-auth"}
-			if ok := slices.Contains(validOidcFlows, flags.oidcOptions.oidcFlows); !ok {
-				return fmt.Errorf("invalid --oidcFlows of %s provided. Must be one of %v",
-					flags.oidcOptions.oidcFlows, validOidcFlows[1:],
-				)
-			}
-
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			clientOps := options.Client()
 			clientOps.SetTimeout(mongoengine.Timeout)
 			if len(args) == 1 {
-				dbAddress := args[0]
-				if !strings.Contains(dbAddress, "://") {
-					dbAddress = "mongodb://" + dbAddress
+				connectionString := args[0]
+				if !strings.Contains(connectionString, "://") {
+					connectionString = "mongodb://" + connectionString
 				}
-				clientOps.ApplyURI(dbAddress) // May or may not be set
+				clientOps.ApplyURI(connectionString) // May or may not be set
 			}
 
 			applyHostConfig(clientOps, flags.baseOptions)

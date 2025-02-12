@@ -50,14 +50,14 @@ type fleOptions struct {
 	//kmsURL             string
 }
 
-type oidcOptions struct {
-	oidcFlows                string
-	oidcRedirectUri          string
-	oidcTrustedEndpoint      bool
-	oidcIdTokenAsAccessToken bool
-	//oidcDumpTokens           string
-	oidcNoNonce bool
-}
+//type oidcOptions struct {
+//	oidcFlows                string
+//	oidcRedirectUri          string
+//	oidcTrustedEndpoint      bool
+//	oidcIdTokenAsAccessToken bool
+//	oidcDumpTokens           string
+//	oidcNoNonce bool
+//}
 
 type flagOptions struct {
 	baseOptions           baseOptions
@@ -65,7 +65,7 @@ type flagOptions struct {
 	tlsOptions            tlsOptions
 	apiVersionOptions     apiVersionOptions
 	fleOptions            fleOptions
-	oidcOptions           oidcOptions
+	//oidcOptions           oidcOptions
 }
 
 func applyHostConfig(clientOps *options.ClientOptions, flags baseOptions) {
