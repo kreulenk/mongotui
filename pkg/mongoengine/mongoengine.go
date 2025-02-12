@@ -13,7 +13,7 @@ import (
 )
 
 const Timeout = 15 * time.Second
-const limit = 25 // Page size for doclist component
+const Limit = 25 // Page size for doclist component
 
 type Server struct {
 	Databases map[string]Database
@@ -44,8 +44,8 @@ type Engine struct {
 	selectedDoc        *bson.M
 
 	lastExecutedQuery bson.D // Used to refresh db after deletion operation and for pagination
-	skip              int    // Used for pagination when querying docs
-	docCount          int    // Used for pagination
+	Skip              int64  // Used for pagination when querying docs
+	DocCount          int64  // Used for pagination
 }
 
 func New(client *mongo.Client) *Engine {

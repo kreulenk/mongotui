@@ -148,21 +148,33 @@ func (m *Model) IsDocSelected() bool {
 func (m *Model) updateViewport() {
 	renderedRows := make([]string, 0, len(m.engine.GetDocumentSummaries()))
 	var startDocIndex = m.getStartIndex()
-	heightLeft := m.viewport.Height
+	heightLeft := m.viewport.Height - 2 // 2 to account for search bar and pagination info
+
 	for i := startDocIndex; i < len(m.engine.GetDocumentSummaries()) && heightLeft >= 3; i++ { // 3 as one cell is minimum 3 lines
 		newRow, heightUsed := m.renderDocSummary(i, heightLeft)
 		heightLeft -= heightUsed
 		renderedRows = append(renderedRows, newRow)
 	}
-
 	joinedRows := lipgloss.JoinVertical(lipgloss.Top, renderedRows...)
 	if len(m.engine.GetDocumentSummaries()) == 0 {
 		joinedRows = "\nNo documents found" // TODO make this centered
 	}
 
-	m.viewport.SetContent(
-		lipgloss.JoinVertical(lipgloss.Top, m.searchBar.View(), joinedRows),
-	)
+	if m.engine.DocCount > 0 {
+		var paginationTracker string
+		if m.engine.Skip+mongoengine.Limit > m.engine.DocCount {
+			paginationTracker = fmt.Sprintf("viewing documents %d-%d of %d", m.engine.Skip+1, m.engine.DocCount, m.engine.DocCount)
+		} else {
+			paginationTracker = fmt.Sprintf("viewing documents %d-%d of %d", m.engine.Skip+1, m.engine.Skip+mongoengine.Limit, m.engine.DocCount)
+		}
+		m.viewport.SetContent(
+			lipgloss.JoinVertical(lipgloss.Top, m.searchBar.View(), paginationTracker, joinedRows),
+		)
+	} else {
+		m.viewport.SetContent(
+			lipgloss.JoinVertical(lipgloss.Top, m.searchBar.View(), joinedRows),
+		)
+	}
 }
 
 // getStartIndex returns the index of the first row to be displayed in the viewport.

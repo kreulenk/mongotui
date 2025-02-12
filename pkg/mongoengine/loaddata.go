@@ -34,6 +34,7 @@ func (m *Engine) RefreshDbAndCollections() error {
 	}
 	m.Server.cachedDocs = nil
 	m.Server.cachedDocSummaries = nil
+	m.DocCount = 0
 	return nil
 }
 
@@ -54,8 +55,13 @@ func (m *Engine) fetchCollectionsPerDb(dbName string) error {
 // QueryCollection fetches all the data from a given collection in a given database
 func (m *Engine) QueryCollection(query bson.D) tea.Cmd {
 	return func() tea.Msg {
-		m.skip = 0
-		err := m.executeQuery(query)
+		m.Skip = 0
+		count, err := m.getDocCount(query)
+		if err != nil {
+			return modal.ErrModalMsg{Err: err}
+		}
+		m.DocCount = count
+		err = m.executeQuery(query)
 		if err != nil {
 			return modal.ErrModalMsg{Err: err}
 		}
@@ -67,13 +73,8 @@ func (m *Engine) QueryCollection(query bson.D) tea.Cmd {
 
 func (m *Engine) NextPage() tea.Cmd {
 	return func() tea.Msg {
-		// First determine count
-		count, err := m.getDocCount(m.lastExecutedQuery)
-		if err != nil {
-			return modal.ErrModalMsg{Err: err}
-		}
-		if int64(m.skip) < count {
-			m.skip += limit
+		if m.Skip < m.DocCount {
+			m.Skip += Limit
 			err := m.executeQuery(m.lastExecutedQuery)
 			if err != nil {
 				return modal.ErrModalMsg{Err: err}
@@ -87,8 +88,8 @@ func (m *Engine) NextPage() tea.Cmd {
 
 func (m *Engine) PreviousPage() tea.Cmd {
 	return func() tea.Msg {
-		if int64(m.skip) > 0 {
-			m.skip -= limit
+		if m.Skip > 0 {
+			m.Skip -= Limit
 			err := m.executeQuery(m.lastExecutedQuery)
 			if err != nil {
 				return modal.ErrModalMsg{Err: err}
@@ -117,7 +118,7 @@ func (m *Engine) executeQuery(query bson.D) error {
 	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
 
-	findOptions := options.Find().SetSkip(int64(m.skip)).SetLimit(int64(limit))
+	findOptions := options.Find().SetSkip(m.Skip).SetLimit(int64(Limit))
 	cur, err := coll.Find(ctx, query, findOptions)
 	if err != nil {
 		return err
