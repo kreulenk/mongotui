@@ -39,11 +39,6 @@ func main() {
 	}
 }
 
-type testDoc struct {
-	someNumber int
-	someString string
-}
-
 func generateDocuments() []bson.M {
 	var newDocs []bson.M
 	for i := range 1000 {
