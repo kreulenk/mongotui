@@ -36,5 +36,5 @@ The high level plan for this project before the v1.0 release is as follows:
 |  4  | View an entire document                                         |   ✅   |
 |  5  | Edit a document                                                 |   ✅   |
 |  6  | Delete a database/collection/document                           |   ✅   |
-|  7  | Advanced connection/authentication options                      |   ❌   |
+|  7  | Advanced connection/authentication options                      |   ✅   |
 |  8  | Pagination of documents displayed for larger collections        |   ❌   |
