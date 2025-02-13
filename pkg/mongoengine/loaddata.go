@@ -72,32 +72,32 @@ func (m *Engine) QueryCollection(query bson.D) tea.Cmd {
 }
 
 func (m *Engine) NextPage() tea.Cmd {
-	return func() tea.Msg {
-		if m.Skip < m.DocCount {
-			m.Skip += Limit
+	if m.Skip+Limit < m.DocCount {
+		m.Skip += Limit
+		return func() tea.Msg {
 			err := m.executeQuery(m.lastExecutedQuery)
 			if err != nil {
 				return modal.ErrModalMsg{Err: err}
 			}
 			return RedrawMessage{}
-		} else {
-			return modal.ErrModalMsg{Err: fmt.Errorf("already on last document page")}
 		}
+	} else {
+		return modal.DisplayErrorModal(fmt.Errorf("already on last document page"))
 	}
 }
 
 func (m *Engine) PreviousPage() tea.Cmd {
-	return func() tea.Msg {
-		if m.Skip > 0 {
-			m.Skip -= Limit
+	if m.Skip > 0 {
+		m.Skip -= Limit
+		return func() tea.Msg {
 			err := m.executeQuery(m.lastExecutedQuery)
 			if err != nil {
 				return modal.ErrModalMsg{Err: err}
 			}
 			return RedrawMessage{}
-		} else {
-			return modal.ErrModalMsg{Err: fmt.Errorf("already on first document page")}
 		}
+	} else {
+		return modal.DisplayErrorModal(fmt.Errorf("already on first document page"))
 	}
 }
 
