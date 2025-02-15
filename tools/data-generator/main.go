@@ -32,7 +32,7 @@ func main() {
 
 	ctx, cancel := context.WithTimeout(context.Background(), mongoengine.Timeout)
 	defer cancel()
-	_, err = client.Database("testDb").Collection("testCollection").InsertMany(ctx, docs)
+	_, err = client.Database("numDb").Collection("allTheNums").InsertMany(ctx, docs)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

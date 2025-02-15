@@ -6,7 +6,7 @@ Set FontSize 46
 Set Width 3600
 Set Height 1800
 
-Type@300ms "mongotui localhost"
+Type@300ms "mongotui raspberrypi"
 Sleep 500ms
 Enter
 Sleep 5s
@@ -16,7 +16,7 @@ Type@1500ms "llhh"
 Sleep 1s
 
 # Navigate to vendingMachine database
-Type@1s "jjj"
+Type@1s "jjjj"
 Sleep 1s
 
 # Navigate into the sodas collection
