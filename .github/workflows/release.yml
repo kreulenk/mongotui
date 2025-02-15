@@ -1,0 +1,77 @@
+name: Release
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.23'
+
+      - name: Build
+        run: |
+          go build -o mongotui ./cmd/mongotui
+
+      - name: Archive build
+        run: |
+          tar -czvf mongotui.tar.gz mongotui
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./mongotui.tar.gz
+          asset_name: mongotui.tar.gz
+          asset_content_type: application/gzip
+
+  homebrew:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout Homebrew tap repository
+        uses: actions/checkout@v4
+        with:
+          repository: kreulenk/mongotui
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: homebrew-tap
+
+      - name: Update Homebrew formula
+        run: |
+          version=${{ github.ref_name }}
+          sha256=$(sha256sum mongotui.tar.gz | awk '{ print $1 }')
+          sed -i "s|url \".*\"|url \"https://github.com/kreulenk/mongotui/releases/download/${version}/mongotui.tar.gz\"|g" homebrew-tap/Formula/mongotui.rb
+          sed -i "s|sha256 \".*\"|sha256 \"${sha256}\"|g" homebrew-tap/Formula/mongotui.rb
+
+      - name: Commit and push changes
+        run: |
+          cd homebrew-tap
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/mongotui.rb
+          git commit -m "Update mongotui to version ${{ github.ref_name }}"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
