@@ -39,7 +39,7 @@ mongotui --help
 
 ### MacOS
 ```bash
-brew tap kreulenk/mongotui https://github.com/kreulenk/mongotui.git
+brew tap kreulenk/brew
 brew install mongotui
 ```
 
@@ -56,7 +56,7 @@ mv ./mongotui /usr/local/bin/mongotui
 
 ### Build From Source
 
-Please ensure that you have at least Go 1.23 installed on your system.
+Ensure that you have at least Go 1.23 installed on your system.
 
 Then, install mongotui by running
 ```bash
