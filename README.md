@@ -51,7 +51,7 @@ processor architecture. Then, untar the executable and move it to `/usr/local/bi
 
 E.g.
 ```
-curl -OL https://github.com/kreulenk/mongotui/releases/download/v1.0.0/mongotui-linux-amd64.tar.gz
+curl -OL https://github.com/kreulenk/mongotui/releases/download/v1.0.1/mongotui-linux-amd64.tar.gz
 tar -xzvf mongotui-linux-amd64.tar.gz
 mv ./mongotui /usr/local/bin/mongotui
 ```
@@ -60,7 +60,7 @@ mv ./mongotui /usr/local/bin/mongotui
 
 Ensure that you have at least Go 1.23 installed on your system.
 
-Then, install mongotui by running
+Then, run
 ```bash
 make install
 ```
