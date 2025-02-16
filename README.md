@@ -38,6 +38,8 @@ mongotui --help
 ## Installation
 
 ### MacOS
+If you have HomeBrew installed, use the tap shown below.
+
 ```bash
 brew tap kreulenk/brew
 brew install mongotui
