@@ -1,4 +1,12 @@
-[{
+[
+  {
+    "_id": {
+      "$oid": "651cca9b448189f246d4c037"
+    },
+    "name": "George",
+    "bankBalance": 3
+  },
+  {
   "_id": {
     "$oid": "651a3fe55471824376fdb031"
   },
@@ -28,16 +36,9 @@
 },
 {
   "_id": {
-    "$oid": "651cca9b448189f246d4c037"
-  },
-  "name": "George",
-  "bankBalance": 3
-},
-{
-  "_id": {
     "$oid": "654657481e76207cd0dc6506"
   },
-  "name": "Burdell",
+  "name": "Dwight",
   "bankBalance": 14
 },
 {

@@ -6,14 +6,10 @@ Set FontSize 46
 Set Width 3600
 Set Height 1800
 
-Type@300ms "mongotui raspberrypi"
+Type@300ms "mongotui localhost"
 Sleep 500ms
 Enter
 Sleep 5s
-
-#Show first set of example docs from admin database
-Type@1500ms "llhh"
-Sleep 1s
 
 # Navigate to vendingMachine database
 Type@1s "jjjj"
@@ -39,20 +35,15 @@ Sleep 3s
 # Enter the users collection
 Type@1500ms "hjl"
 
-# Arrow around within the users collection
-Type@1s "jjjjjjkkkkkk"
-
 # Edit a document with vim
 Type "e"
 Sleep 2s
-Type@1s "/100"
+Type@1s "/Ge"
 Enter
 Sleep 1s
-Type "a"
+Type@500ms "f2ea"
 Sleep 500ms
-Backspace
-Sleep 500ms
-Type "2"
+Type@500ms " P. Burdell"
 Sleep 2s
 Escape
 Type@1s ":wq"
@@ -64,5 +55,19 @@ Type@500ms "kbadQuery"
 Sleep 1s
 Enter
 Sleep 3s
+Enter
+Sleep 3s
+
+# Navigate to the numDb collection
+Type@1s "hhkll"
+# Arrow around in the numDb collection
+Type@650ms "jjjjjjjjjkkkkkkkkk"
+# Demonstrate pagination
+Type@1200ms "]]][[["
+
+Sleep 2s
+# Delete a document in the numDb collection
+Type "d"
+Sleep 6s
 Enter
 Sleep 4s
