@@ -89,9 +89,9 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin https://github.com/kreulenk/homebrew-brew.git
+          git remote set-url origin https://<BREW_PAT_TOKEN>@github.com/kreulenk/homebrew-brew.git
           git add Formula/mongotui.rb
           git commit -m "Update homebrew to point to latest mongotui release"
           git push origin main
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BREW_PAT_TOKEN: ${{ secrets.BREW_PAT_TOKEN }}
