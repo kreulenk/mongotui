@@ -8,7 +8,7 @@ Mongotui is a terminal user interface MongoDB client that is designed to be easy
 Mongotui aims to make switching from mongosh easy as it aims to have a similar flags and commands when first connecting
 to the MongoDB server.
 
-If you have a local MongoDB server running on the default port and no authentication, you can run the following command to get up and running:
+If you have a local MongoDB server running on the default port and no authentication, you can run the following command to get up and running.
 ```bash
 mongotui localhost
 ```
@@ -16,7 +16,7 @@ mongotui localhost
 Mongotui also accepts full MongoDB connection strings.
 
 ```bash
-mongodb://user:password@localhost:27017
+mongotui mongodb://user:password@localhost:27017
 ```
 
 
