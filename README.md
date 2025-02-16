@@ -1,11 +1,11 @@
-# mongotui
+# Mongotui
 
-mongotui is a terminal based MongoDB client that is designed to be easy to use and fast.
+Mongotui is a terminal based MongoDB client that is designed to be easy to use and fast.
 
 ![demo.gif](./docs/demo/demo.gif)
 
 ## Usage
-mongotui aims to make switching from mongosh easy as it aims to have a similar flags and commands when first connecting
+Mongotui aims to make switching from mongosh easy as it aims to have a similar flags and commands when first connecting
 to the MongoDB server.
 
 If you have a local MongoDB server running on the default port and no authentication, you can run the following command to get up and running:
