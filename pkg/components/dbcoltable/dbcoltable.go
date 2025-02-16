@@ -151,7 +151,7 @@ func (m *Model) View() string {
 func (m *Model) updateViewport() {
 	// Database column
 	if m.cursorDatabase >= 0 {
-		m.databaseStart = renderutils.Clamp(m.cursorDatabase-m.viewport.Height, 0, m.cursorDatabase)
+		m.databaseStart = renderutils.Clamp(m.cursorDatabase-m.viewport.Height+1, 0, m.cursorDatabase)
 	} else {
 		m.databaseStart = 0
 	}
@@ -164,7 +164,7 @@ func (m *Model) updateViewport() {
 
 	// Collection column
 	if m.cursorCollection >= 0 {
-		m.collectionStart = renderutils.Clamp(m.cursorCollection-m.viewport.Height, 0, m.cursorCollection)
+		m.collectionStart = renderutils.Clamp(m.cursorCollection-m.viewport.Height+1, 0, m.cursorCollection)
 	} else {
 		m.collectionStart = 0
 	}
