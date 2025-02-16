@@ -1,12 +1,20 @@
 name: Release
 on:
-  push:
-    tags:
-      - 'v*.*.*'
+  release:
+    types:
+      - created
+
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        goarch: [amd64, arm64]
+        goos: [linux, darwin]
 
     steps:
       - name: Checkout code
@@ -19,31 +27,20 @@ jobs:
 
       - name: Build
         run: |
-          go build -o mongotui ./cmd/mongotui
+          GOARCH=${{ matrix.goarch }} GOOS=${{ matrix.goos }} go build -o mongotui ./main.go
 
       - name: Archive build
         run: |
-          tar -czvf mongotui.tar.gz mongotui
-
-      - name: Create GitHub Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
+          tar -czvf mongotui-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz mongotui
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./mongotui.tar.gz
-          asset_name: mongotui.tar.gz
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./mongotui-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
+          asset_name: mongotui-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
           asset_content_type: application/gzip
 
   homebrew:
@@ -51,27 +48,49 @@ jobs:
     needs: build
 
     steps:
-      - name: Checkout Homebrew tap repository
+      - name: Checkout homebrew-brew repository
         uses: actions/checkout@v4
         with:
-          repository: kreulenk/mongotui
+          repository: kreulenk/homebrew-brew
           token: ${{ secrets.GITHUB_TOKEN }}
-          path: homebrew-tap
+          ref: main
+
+      - name: Download Release Assets
+        run: |
+          curl -L -o mongotui-darwin-amd64.tar.gz https://github.com/kreulenk/mongotui/releases/download/${{ github.ref_name }}/mongotui-darwin-amd64.tar.gz
+          curl -L -o mongotui-darwin-arm64.tar.gz https://github.com/kreulenk/mongotui/releases/download/${{ github.ref_name }}/mongotui-darwin-arm64.tar.gz
 
       - name: Update Homebrew formula
         run: |
-          version=${{ github.ref_name }}
-          sha256=$(sha256sum mongotui.tar.gz | awk '{ print $1 }')
-          sed -i "s|url \".*\"|url \"https://github.com/kreulenk/mongotui/releases/download/${version}/mongotui.tar.gz\"|g" homebrew-tap/Formula/mongotui.rb
-          sed -i "s|sha256 \".*\"|sha256 \"${sha256}\"|g" homebrew-tap/Formula/mongotui.rb
+          cat <<EOF > Formula/mongotui.rb
+          class Mongotui < Formula
+            desc "A TUI for MongoDB"
+            homepage "https://github.com/kreulenk/mongotui"
+            url "https://github.com/kreulenk/mongotui/releases/download/${{ github.ref_name }}/mongotui-darwin-amd64.tar.gz"
+            sha256 "$(shasum -a 256 mongotui-darwin-amd64.tar.gz | awk '{print $1}')"
+            version "${{ github.ref_name }}"
+          
+            if Hardware::CPU.arm?
+              url "https://github.com/kreulenk/mongotui/releases/download/${{ github.ref_name }}/mongotui-darwin-arm64.tar.gz"
+              sha256 "$(shasum -a 256 mongotui-darwin-arm64.tar.gz | awk '{print $1}')"
+            end
+          
+            def install
+              bin.install "mongotui"
+            end
+          
+            test do
+              system "#{bin}/mongotui"
+            end
+          end
+          EOF
 
       - name: Commit and push changes
         run: |
-          cd homebrew-tap
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add Formula/mongotui.rb
-          git commit -m "Update mongotui to version ${{ github.ref_name }}"
-          git push
+          git commit -m "Update homebrew to point to latest mongotui release"
+          git push origin main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
