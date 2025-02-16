@@ -93,3 +93,5 @@ jobs:
           git add Formula/mongotui.rb
           git commit -m "Update homebrew to point to latest mongotui release"
           git push origin main
+        env:
+          BREW_PAT_TOKEN: ${{ secrets.BREW_PAT_TOKEN }}
