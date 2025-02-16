@@ -74,11 +74,11 @@ jobs:
               url "https://github.com/kreulenk/mongotui/releases/download/${{ github.ref_name }}/mongotui-darwin-arm64.tar.gz"
               sha256 "$(shasum -a 256 mongotui-darwin-arm64.tar.gz | awk '{print $1}')"
             end
-          
+
             def install
               bin.install "mongotui"
             end
-          
+
             test do
               system "#{bin}/mongotui"
             end
@@ -89,6 +89,7 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin https://github.com/kreulenk/homebrew-brew.git
           git add Formula/mongotui.rb
           git commit -m "Update homebrew to point to latest mongotui release"
           git push origin main
