@@ -22,6 +22,7 @@ type Model struct {
 
 	searchBar *searchbar.Model
 	styles    Styles
+	focused   bool
 
 	cursor   int
 	viewport viewport.Model
@@ -35,9 +36,10 @@ func New(engine *mongoengine.Engine, state *state.MainViewState) *Model {
 		state:     state,
 		Help:      help.New(),
 		searchBar: searchbar.New(),
-		viewport:  viewport.New(0, 20),
 
-		styles: defaultStyles(),
+		viewport: viewport.New(0, 20),
+		styles:   defaultStyles(),
+		focused:  false,
 
 		engine: engine,
 	}
@@ -121,10 +123,13 @@ func (m *Model) ResetSearchBar() {
 }
 
 func (m *Model) Focus() {
+	m.focused = true
 	m.styles.Table = m.styles.Table.BorderStyle(lipgloss.ThickBorder()).BorderForeground(lipgloss.Color("57"))
 }
 
 func (m *Model) blur() {
+	m.focused = false
+	m.cursor = 0
 	m.styles.Table = m.styles.Table.BorderStyle(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("240"))
 }
 
@@ -258,7 +263,7 @@ func (m *Model) renderDocSummary(docIndex, heightLeft int) (string, int) {
 	}
 
 	s := lipgloss.JoinVertical(lipgloss.Top, fields...)
-	if m.cursor == docIndex {
+	if m.cursor == docIndex && m.focused {
 		return m.styles.SelectedDoc.Width(m.viewport.Width - 2).Render(s), heightLeft
 	}
 	return m.styles.Doc.Width(m.viewport.Width - 2).Render(s), heightLeft

@@ -71,7 +71,6 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.state.GetActiveComponent() == state.DocList { // If the state switched, use a fresh docList
 			m.docList.ResetSearchBar()
 			m.docList.Focus()
-			cmds = append(cmds, m.docList.ExecuteQuery())
 		}
 	case state.DocList:
 		m.docList, cmd = m.docList.Update(msg)

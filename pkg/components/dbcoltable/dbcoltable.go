@@ -12,6 +12,7 @@ import (
 	"github.com/kreulenk/mongotui/pkg/mongoengine"
 	"github.com/kreulenk/mongotui/pkg/renderutils"
 	"github.com/mattn/go-runewidth"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"os"
 )
 
@@ -75,26 +76,27 @@ func New(engine *mongoengine.Engine, state *state.MainViewState) *Model {
 
 // Update is the Bubble Tea update loop.
 func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
-	var err error
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, keys.LineUp):
-			err = m.MoveUp(1)
+			return m, m.MoveUp(1)
 		case key.Matches(msg, keys.LineDown):
-			err = m.MoveDown(1)
+			return m, m.MoveDown(1)
 		case key.Matches(msg, keys.GotoTop):
-			err = m.GotoTop()
+			return m, m.GotoTop()
 		case key.Matches(msg, keys.GotoBottom):
-			err = m.GotoBottom()
+			return m, m.GotoBottom()
 		case key.Matches(msg, keys.Right):
-			err = m.GoRight()
+			return m, m.MoveRight()
 		case key.Matches(msg, keys.Left):
-			err = m.GoLeft()
+			m.MoveLeft()
+			return m, nil
 		case key.Matches(msg, keys.Enter):
 			if m.cursorColumn == collectionsColumn {
 				m.blur()
 			}
+			return m, nil
 		case key.Matches(msg, keys.Delete):
 			if m.cursorColumn == databasesColumn {
 				return m, modal.DisplayDatabaseDeleteModal(m.cursoredDatabase())
@@ -119,10 +121,6 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 		}
 		return m, m.engine.DropDatabase(msg.DbName)
 	}
-	if err != nil {
-		return m, modal.DisplayErrorModal(err)
-	}
-
 	return m, nil
 }
 
@@ -211,55 +209,55 @@ func (m *Model) SetHeight(h int) {
 
 // MoveUp moves the selection up by any number of rows.
 // It can not go above the first row.
-func (m *Model) MoveUp(n int) error {
+func (m *Model) MoveUp(n int) tea.Cmd {
 	if m.cursorColumn == databasesColumn {
 		m.cursorDatabase = renderutils.Clamp(m.cursorDatabase-n, 0, len(m.engine.GetDatabases())-1)
 		m.engine.SetSelectedDatabase(m.engine.GetDatabases()[m.cursorDatabase])
 	} else {
 		m.cursorCollection = renderutils.Clamp(m.cursorCollection-n, 0, len(m.engine.GetSelectedCollections())-1)
 		m.engine.SetSelectedCollection(m.engine.GetDatabases()[m.cursorDatabase], m.engine.GetSelectedCollections()[m.cursorCollection])
+		return m.engine.QueryCollection(bson.D{})
 	}
-
 	return nil
 }
 
 // MoveDown moves the selection down by any number of rows.
 // It can not go below the last row.
-func (m *Model) MoveDown(n int) error {
+func (m *Model) MoveDown(n int) tea.Cmd {
 	if m.cursorColumn == databasesColumn {
 		m.cursorDatabase = renderutils.Clamp(m.cursorDatabase+n, 0, len(m.engine.GetDatabases())-1)
 		m.engine.SetSelectedDatabase(m.engine.GetDatabases()[m.cursorDatabase])
 	} else {
 		m.cursorCollection = renderutils.Clamp(m.cursorCollection+n, 0, len(m.engine.GetSelectedCollections())-1)
 		m.engine.SetSelectedCollection(m.engine.GetDatabases()[m.cursorDatabase], m.engine.GetSelectedCollections()[m.cursorCollection])
+		return m.engine.QueryCollection(bson.D{})
 	}
 	return nil
 }
 
 // MoveRight moves the column to the right.
-func (m *Model) MoveRight() error {
+func (m *Model) MoveRight() tea.Cmd {
 	if m.cursorColumn == collectionsColumn {
 		m.blur()
-		return nil
 	} else if m.cursorColumn == databasesColumn {
 		m.cursorColumn = collectionsColumn
 		m.cursorCollection = 0
 		m.engine.SetSelectedCollection(m.engine.GetDatabases()[m.cursorDatabase], m.engine.GetSelectedCollections()[m.cursorCollection])
+		return m.engine.QueryCollection(bson.D{})
 	}
 	return nil
 }
 
 // MoveLeft moves the column to the left.
-func (m *Model) MoveLeft() error {
+func (m *Model) MoveLeft() {
 	if m.cursorColumn == collectionsColumn {
 		m.cursorCollection = 0
 	}
 	m.cursorColumn = databasesColumn
-	return nil
 }
 
 // GotoTop moves the selection to the first row.
-func (m *Model) GotoTop() error {
+func (m *Model) GotoTop() tea.Cmd {
 	if m.cursorColumn == databasesColumn {
 		return m.MoveUp(m.cursorDatabase)
 	} else {
@@ -268,21 +266,12 @@ func (m *Model) GotoTop() error {
 }
 
 // GotoBottom moves the selection to the last row.
-func (m *Model) GotoBottom() error {
+func (m *Model) GotoBottom() tea.Cmd {
 	if m.cursorColumn == databasesColumn {
 		return m.MoveDown(len(m.engine.GetDatabases()))
 	} else {
 		return m.MoveDown(len(m.engine.GetSelectedCollections()))
 	}
-}
-
-// GoRight moves to the next column.
-func (m *Model) GoRight() error {
-	return m.MoveRight()
-}
-
-func (m *Model) GoLeft() error {
-	return m.MoveLeft()
 }
 
 func (m *Model) columnWidth() int {
