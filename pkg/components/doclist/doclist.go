@@ -82,9 +82,17 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 			m.state.SetActiveComponent(state.DbColTable)
 			m.blur()
 		case key.Matches(msg, keys.Edit):
-			m.EditDoc()
+			if len(m.engine.GetDocumentSummaries()) > 0 {
+				m.EditDoc()
+			} else {
+				return m, modal.DisplayErrorModal(fmt.Errorf("cannot edit a document as none is selected"))
+			}
 		case key.Matches(msg, keys.View):
-			m.ViewDoc()
+			if len(m.engine.GetDocumentSummaries()) > 0 {
+				m.ViewDoc()
+			} else {
+				return m, modal.DisplayErrorModal(fmt.Errorf("cannot view a document as none is selected"))
+			}
 		case key.Matches(msg, keys.Delete):
 			m.engine.SetSelectedDocument(m.engine.GetQueriedDocs()[m.cursor])
 			return m, modal.DisplayDocDeleteModal(m.engine.GetSelectedDocument())

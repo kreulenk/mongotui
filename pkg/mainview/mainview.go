@@ -85,14 +85,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if err := m.singleDocEditor.OpenFileInEditor(); err != nil {
 				return m, modal.DisplayErrorModal(err)
 			}
-			cmds = append(cmds, m.docList.ExecuteQuery())
+			cmds = append(cmds, m.engine.RerunLastCollectionQuery())
 		}
 		cmds = append(cmds, cmd)
 	case state.SingleDocViewer:
 		m.singleDocViewer, cmd = m.singleDocViewer.Update(msg)
 		if m.state.GetActiveComponent() == state.DocList {
 			m.docList.Focus()
-			cmds = append(cmds, m.docList.ExecuteQuery())
 		}
 		cmds = append(cmds, cmd)
 	case state.SingleDocEditor:

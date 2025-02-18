@@ -52,7 +52,7 @@ func (m *Engine) fetchCollectionsPerDb(dbName string) error {
 	return nil
 }
 
-// QueryCollection fetches all the data from a given collection in a given database
+// QueryCollection fetches all the data from a given collection in a given database given a particular query
 func (m *Engine) QueryCollection(query bson.D) tea.Cmd {
 	return func() tea.Msg {
 		m.Skip = 0
@@ -66,7 +66,19 @@ func (m *Engine) QueryCollection(query bson.D) tea.Cmd {
 			return modal.ErrModalMsg{Err: err}
 		}
 
-		m.lastExecutedQuery = query
+		m.LastExecutedQuery = query
+		return RedrawMessage{}
+	}
+}
+
+// RerunLastCollectionQuery will rerun the last query that was just run against the database. This is useful
+// after doc edits or pagination
+func (m *Engine) RerunLastCollectionQuery() tea.Cmd {
+	return func() tea.Msg {
+		err := m.executeQuery(m.LastExecutedQuery)
+		if err != nil {
+			return modal.ErrModalMsg{Err: err}
+		}
 		return RedrawMessage{}
 	}
 }
@@ -75,11 +87,7 @@ func (m *Engine) NextPage() tea.Cmd {
 	if m.Skip+Limit < m.DocCount {
 		m.Skip += Limit
 		return func() tea.Msg {
-			err := m.executeQuery(m.lastExecutedQuery)
-			if err != nil {
-				return modal.ErrModalMsg{Err: err}
-			}
-			return RedrawMessage{}
+			return m.RerunLastCollectionQuery()
 		}
 	} else {
 		return modal.DisplayErrorModal(fmt.Errorf("already on last document page"))
@@ -90,11 +98,7 @@ func (m *Engine) PreviousPage() tea.Cmd {
 	if m.Skip > 0 {
 		m.Skip -= Limit
 		return func() tea.Msg {
-			err := m.executeQuery(m.lastExecutedQuery)
-			if err != nil {
-				return modal.ErrModalMsg{Err: err}
-			}
-			return RedrawMessage{}
+			return m.RerunLastCollectionQuery()
 		}
 	} else {
 		return modal.DisplayErrorModal(fmt.Errorf("already on first document page"))
@@ -111,7 +115,7 @@ func (m *Engine) getDocCount(query bson.D) (int64, error) {
 }
 
 // executeQuery is used internally to handle an initial query sent by QueryCollection as well as the nextPage and
-// previousPage pagination functions that use the m.lastExecutedQuery variable
+// previousPage pagination functions that use the m.LastExecutedQuery variable
 func (m *Engine) executeQuery(query bson.D) error {
 	db := m.Client.Database(m.selectedDb)
 	coll := db.Collection(m.selectedCollection)
