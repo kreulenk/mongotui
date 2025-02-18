@@ -37,6 +37,7 @@ func (m *Model) Init() tea.Cmd {
 }
 
 func (m *Model) Focus() error {
+	m.Viewport.GotoTop()
 	selectedDoc, err := m.engine.GetSelectedDocumentMarshalled()
 	if err != nil {
 		return fmt.Errorf("could not get selected document: %v", err)
