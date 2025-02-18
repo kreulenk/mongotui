@@ -66,7 +66,7 @@ func (m *Engine) QueryCollection(query bson.D) tea.Cmd {
 			return modal.ErrModalMsg{Err: err}
 		}
 
-		m.LastExecutedQuery = query
+		m.lastExecutedQuery = query
 		return RedrawMessage{}
 	}
 }
@@ -75,7 +75,7 @@ func (m *Engine) QueryCollection(query bson.D) tea.Cmd {
 // after doc edits or pagination
 func (m *Engine) RerunLastCollectionQuery() tea.Cmd {
 	return func() tea.Msg {
-		err := m.executeQuery(m.LastExecutedQuery)
+		err := m.executeQuery(m.lastExecutedQuery)
 		if err != nil {
 			return modal.ErrModalMsg{Err: err}
 		}
@@ -86,9 +86,7 @@ func (m *Engine) RerunLastCollectionQuery() tea.Cmd {
 func (m *Engine) NextPage() tea.Cmd {
 	if m.Skip+Limit < m.DocCount {
 		m.Skip += Limit
-		return func() tea.Msg {
-			return m.RerunLastCollectionQuery()
-		}
+		return m.RerunLastCollectionQuery()
 	} else {
 		return modal.DisplayErrorModal(fmt.Errorf("already on last document page"))
 	}
@@ -97,9 +95,7 @@ func (m *Engine) NextPage() tea.Cmd {
 func (m *Engine) PreviousPage() tea.Cmd {
 	if m.Skip > 0 {
 		m.Skip -= Limit
-		return func() tea.Msg {
-			return m.RerunLastCollectionQuery()
-		}
+		return m.RerunLastCollectionQuery()
 	} else {
 		return modal.DisplayErrorModal(fmt.Errorf("already on first document page"))
 	}
@@ -115,7 +111,7 @@ func (m *Engine) getDocCount(query bson.D) (int64, error) {
 }
 
 // executeQuery is used internally to handle an initial query sent by QueryCollection as well as the nextPage and
-// previousPage pagination functions that use the m.LastExecutedQuery variable
+// previousPage pagination functions that use the m.lastExecutedQuery variable
 func (m *Engine) executeQuery(query bson.D) error {
 	db := m.Client.Database(m.selectedDb)
 	coll := db.Collection(m.selectedCollection)

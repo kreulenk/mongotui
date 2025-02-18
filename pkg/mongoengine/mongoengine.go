@@ -43,7 +43,7 @@ type Engine struct {
 	selectedCollection string
 	selectedDoc        *bson.M
 
-	LastExecutedQuery bson.D // Used to refresh db after deletion operation and for pagination
+	lastExecutedQuery bson.D // Used to refresh db after deletion operation and for pagination
 	Skip              int64  // Used for pagination when querying docs
 	DocCount          int64  // Used for pagination
 }
@@ -123,7 +123,7 @@ func (m *Engine) DropDocument(doc *bson.M) tea.Cmd {
 		if res.DeletedCount == 0 {
 			return modal.ErrModalMsg{Err: fmt.Errorf("no document was deleted")}
 		}
-		return m.QueryCollection(m.LastExecutedQuery)() // Double call as we are already calling it in a query
+		return m.RerunLastCollectionQuery()() // Double call as we are already calling it in a query
 	}
 }
 
