@@ -175,7 +175,9 @@ func (m *Model) updateViewport() {
 
 	if m.engine.DocCount > 0 {
 		var paginationTracker string
-		if m.engine.Skip+mongoengine.Limit > m.engine.DocCount {
+		if m.engine.DocCount == 1 {
+			paginationTracker = "viewing document 1 of 1"
+		} else if m.engine.Skip+mongoengine.Limit > m.engine.DocCount {
 			paginationTracker = fmt.Sprintf("viewing documents %d-%d of %d", m.engine.Skip+1, m.engine.DocCount, m.engine.DocCount)
 		} else {
 			paginationTracker = fmt.Sprintf("viewing documents %d-%d of %d", m.engine.Skip+1, m.engine.Skip+mongoengine.Limit, m.engine.DocCount)
