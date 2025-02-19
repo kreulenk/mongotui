@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/fatih/color"
+	"github.com/muesli/termenv"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"strings"
@@ -24,13 +26,17 @@ func addFlagsAndSetHelpMenu(cmd *cobra.Command, sets []namedFlagSet) {
 		cmd.Flags().AddFlagSet(set.flagset)
 		usages.WriteString(fmt.Sprintf("%s:\n%s\n", yellowSPrint(set.name), set.flagset.FlagUsages()))
 	}
-	cmd.SetUsageTemplate(strings.TrimSpace(fmt.Sprintf(usageTemplate, usages.String())))
+	if lipgloss.ColorProfile() == termenv.Ascii { // Ensure that the 'Usage' text is only yellow if the terminal has colors enabled
+		cmd.SetUsageTemplate(strings.TrimSpace(fmt.Sprintf(usageTemplate, "Usage", usages.String()))) // The text Usage, and the the usages of all flags
+	} else {
+		cmd.SetUsageTemplate(strings.TrimSpace(fmt.Sprintf(usageTemplate, "\u001B[33mUsage\u001B[0m", usages.String()))) // The text Usage, and the the usages of all flags
+	}
 }
 
 // usageTemplate is a custom template
 // It is difference from the default cobra template in that it allows for the grouping of flags by flagSets
 // The single %s will have the custom flagUsages from addFlagsAndSetHelpMenu templated in
-const usageTemplate = `[33mUsage[0m:{{if .Runnable}}
+const usageTemplate = `%s:{{if .Runnable}}
   {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
   {{.CommandPath}} [command]{{end}}{{if gt (len .Aliases) 0}}
 
