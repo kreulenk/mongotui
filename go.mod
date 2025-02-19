@@ -6,10 +6,12 @@ require (
 	github.com/alecthomas/chroma v0.10.0
 	github.com/charmbracelet/bubbles v0.20.0
 	github.com/charmbracelet/bubbletea v1.3.3
-	github.com/charmbracelet/lipgloss v1.0.1-0.20250110214317-ecc1bd014d51
+	github.com/charmbracelet/lipgloss v1.0.0
+	github.com/fatih/color v1.18.0
 	github.com/mattn/go-runewidth v0.0.16
 	github.com/rmhubbert/bubbletea-overlay v0.3.2
 	github.com/spf13/cobra v1.8.1
+	github.com/spf13/pflag v1.0.6
 	go.mongodb.org/mongo-driver/v2 v2.0.0
 )
 
@@ -20,7 +22,6 @@ require (
 	github.com/charmbracelet/x/term v0.2.1 // indirect
 	github.com/dlclark/regexp2 v1.11.5 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
-	github.com/fatih/color v1.18.0 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/klauspost/compress v1.16.7 // indirect
@@ -32,7 +33,6 @@ require (
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/termenv v0.15.2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.2 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect

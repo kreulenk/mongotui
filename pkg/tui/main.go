@@ -7,9 +7,11 @@ import (
 	"context"
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/kreulenk/mongotui/pkg/components/modal"
 	"github.com/kreulenk/mongotui/pkg/mainview"
 	"github.com/kreulenk/mongotui/pkg/mongoengine"
+	"github.com/muesli/termenv"
 	overlay "github.com/rmhubbert/bubbletea-overlay"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"os"
@@ -23,6 +25,7 @@ type baseModel struct {
 }
 
 func Initialize(client *mongo.Client) {
+	lipgloss.SetColorProfile(termenv.TrueColor)
 	p := tea.NewProgram(initialModel(client))
 	defer client.Disconnect(context.TODO())
 	if _, err := p.Run(); err != nil {
