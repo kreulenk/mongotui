@@ -2,11 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/fatih/color"
-	"github.com/muesli/termenv"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"os"
 	"strings"
 )
 
@@ -26,7 +25,8 @@ func addFlagsAndSetHelpMenu(cmd *cobra.Command, sets []namedFlagSet) {
 		cmd.Flags().AddFlagSet(set.flagset)
 		usages.WriteString(fmt.Sprintf("%s:\n%s\n", yellowSPrint(set.name), set.flagset.FlagUsages()))
 	}
-	if lipgloss.ColorProfile() == termenv.Ascii { // Ensure that the 'Usage' text is only yellow if the terminal has colors enabled
+
+	if os.Getenv("NO_COLOR") != "" { // Ensure that the 'Usage' text is only yellow if the terminal has colors enabled
 		cmd.SetUsageTemplate(strings.TrimSpace(fmt.Sprintf(usageTemplate, "Usage", usages.String()))) // The text Usage, and the the usages of all flags
 	} else {
 		cmd.SetUsageTemplate(strings.TrimSpace(fmt.Sprintf(usageTemplate, "\u001B[33mUsage\u001B[0m", usages.String()))) // The text Usage, and the the usages of all flags
