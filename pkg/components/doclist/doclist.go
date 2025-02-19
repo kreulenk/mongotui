@@ -13,6 +13,7 @@ import (
 	"github.com/kreulenk/mongotui/pkg/mongoengine"
 	"github.com/kreulenk/mongotui/pkg/renderutils"
 	"github.com/mattn/go-runewidth"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"strings"
 )
 
@@ -81,6 +82,8 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 		case key.Matches(msg, keys.Left):
 			m.state.SetActiveComponent(state.DbColTable)
 			m.blur()
+			m.searchBar.ResetValue()
+			return m, m.engine.QueryCollection(bson.D{})
 		case key.Matches(msg, keys.Edit):
 			if len(m.engine.GetDocumentSummaries()) > 0 {
 				m.EditDoc()
@@ -124,10 +127,6 @@ func (m *Model) ExecuteQuery() tea.Cmd {
 	}
 	m.cursor = 0
 	return m.engine.QueryCollection(val)
-}
-
-func (m *Model) ResetSearchBar() {
-	m.searchBar.ResetValue()
 }
 
 func (m *Model) Focus() {
