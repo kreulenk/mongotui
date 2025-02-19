@@ -89,7 +89,6 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			cmds = append(cmds, m.engine.RerunLastCollectionQuery())
 		}
-		cmds = append(cmds, cmd)
 	case state.SingleDocViewer:
 		m.singleDocViewer, cmd = m.singleDocViewer.Update(msg)
 		if m.state.GetActiveComponent() == state.DocList {
