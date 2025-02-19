@@ -25,7 +25,7 @@ type baseModel struct {
 }
 
 func Initialize(client *mongo.Client) {
-	lipgloss.SetColorProfile(termenv.TrueColor)
+	lipgloss.SetColorProfile(termenv.ANSI256)
 	p := tea.NewProgram(initialModel(client))
 	defer client.Disconnect(context.TODO())
 	if _, err := p.Run(); err != nil {
