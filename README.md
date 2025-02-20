@@ -56,7 +56,7 @@ processor architecture. Then, untar the executable and move it to `/usr/local/bi
 
 E.g.
 ```
-curl -OL https://github.com/kreulenk/mongotui/releases/download/v1.1.3/mongotui-linux-amd64.tar.gz
+curl -OL https://github.com/kreulenk/mongotui/releases/download/v1.2.0/mongotui-linux-amd64.tar.gz
 tar -xzvf mongotui-linux-amd64.tar.gz
 mv ./mongotui /usr/local/bin/mongotui
 ```
