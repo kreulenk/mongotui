@@ -1,5 +1,10 @@
 # Mongotui
 
+<p>
+    <a href="https://github.com/kreulenk/mongotui/releases"><img src="https://img.shields.io/github/release/kreulenk/mongotui.svg" alt="Latest Release"></a>
+    <a href="https://goreportcard.com/report/github.com/kreulenk/mongotui"><img src="https://goreportcard.com/badge/github.com/kreulenk/mongotui"></a>
+</p>
+
 Mongotui is a terminal user interface MongoDB client that is designed to be easy to use and fast.
 
 ![demo.gif](./docs/demo/demo.gif)
