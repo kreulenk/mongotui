@@ -68,19 +68,19 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case state.DbColTable:
 		m.dbColTable, cmd = m.dbColTable.Update(msg)
 		cmds = append(cmds, cmd)
-		if m.state.GetActiveComponent() == state.DocList { // If the state switched, use a fresh docList
+		if m.state.IsComponentActive(state.DocList) { // If the state switched, use a fresh docList
 			m.docList.Focus()
 		}
 	case state.DocList:
 		m.docList, cmd = m.docList.Update(msg)
 		cmds = append(cmds, cmd)
-		if m.state.GetActiveComponent() == state.DbColTable {
+		if m.state.IsComponentActive(state.DbColTable) {
 			m.dbColTable.Focus()
-		} else if m.state.GetActiveComponent() == state.SingleDocViewer {
+		} else if m.state.IsComponentActive(state.SingleDocViewer) {
 			if err := m.singleDocViewer.Focus(); err != nil {
 				return m, modal.DisplayErrorModal(err)
 			}
-		} else if m.state.GetActiveComponent() == state.SingleDocEditor {
+		} else if m.state.IsComponentActive(state.SingleDocEditor) {
 			err := m.singleDocEditor.OpenFileInEditor()
 			cmds = append(cmds, tea.ClearScreen)
 			if err != nil {
@@ -90,11 +90,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case state.SingleDocViewer:
 		m.singleDocViewer, cmd = m.singleDocViewer.Update(msg)
-		if m.state.GetActiveComponent() == state.DocList {
+		if m.state.IsComponentActive(state.DocList) {
 			m.docList.Focus()
 		}
 		cmds = append(cmds, cmd)
-	case state.SingleDocEditor:
+	case state.SingleDocEditor: // This shouldn't happen
 		panic("SingleDocEditor should only be selected after an update to DocList")
 	default:
 		panic("unhandled default case")
@@ -103,6 +103,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+// Init is used to satisfy the tea.Model interface
 func (m *Model) Init() tea.Cmd {
 	return nil
 }
@@ -116,6 +117,5 @@ func (m *Model) View() string {
 		return lipgloss.JoinVertical(lipgloss.Top, tables, m.dbColTable.HelpView())
 	} else {
 		return lipgloss.JoinVertical(lipgloss.Top, tables, m.docList.HelpView())
-
 	}
 }

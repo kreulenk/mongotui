@@ -9,27 +9,28 @@ import (
 	"github.com/kreulenk/mongotui/pkg/components/modal"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"sync"
 	"time"
 )
 
-const Timeout = 15 * time.Second
+const Timeout = 10 * time.Second
 const Limit = 25 // Page size for doclist component
 
-type Server struct {
-	Databases map[string]Database
+type server struct {
+	databases map[string]database
 
 	// Info about docs being displayed in doclist component
-	cachedDocSummaries []DocSummary
+	cachedDocSummaries []docSummary
 	cachedDocs         []*bson.M
 }
 
-type Database struct {
+type database struct {
 	collections []string
 }
 
-type DocSummary []FieldSummary // Used to display information about each doc in the doclist component
+type docSummary []fieldSummary // Used to display information about each doc in the doclist component
 
-type FieldSummary struct {
+type fieldSummary struct {
 	Name  string
 	Type  string // TODO restrict to a set of types
 	Value string
@@ -37,7 +38,7 @@ type FieldSummary struct {
 
 type Engine struct {
 	Client *mongo.Client
-	Server *Server
+	server *server
 
 	selectedDb         string
 	selectedCollection string
@@ -46,60 +47,70 @@ type Engine struct {
 	lastExecutedQuery bson.D // Used to refresh db after deletion operation and for pagination
 	Skip              int64  // Used for pagination when querying docs
 	DocCount          int64  // Used for pagination
+
+	mu sync.RWMutex // bubbletea sends updates in go routines concurrently
 }
 
 func New(client *mongo.Client) *Engine {
 	return &Engine{
 		Client: client,
-		Server: &Server{
-			Databases: make(map[string]Database),
+		server: &server{
+			databases: make(map[string]database),
 		},
 	}
 }
 
-func (m *Engine) SetSelectedCollection(d, c string) {
-	m.selectedDb = d
-	m.selectedCollection = c
+func (e *Engine) SetSelectedCollection(d, c string) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.selectedDb = d
+	e.selectedCollection = c
 }
 
-func (m *Engine) SetSelectedDatabase(d string) {
-	m.selectedDb = d
-	m.selectedCollection = ""
+func (e *Engine) SetSelectedDatabase(d string) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.selectedDb = d
+	e.selectedCollection = ""
 }
 
-func (m *Engine) SetSelectedDocument(d *bson.M) {
-	m.selectedDoc = d
+func (e *Engine) SetSelectedDocument(d *bson.M) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.selectedDoc = d
 }
 
-func (m *Engine) DropDatabase(databaseName string) tea.Cmd {
+func (e *Engine) DropDatabase(databaseName string) tea.Cmd {
 	return func() tea.Msg {
-		db := m.Client.Database(databaseName)
+		db := e.Client.Database(databaseName)
 		ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 		defer cancel()
+
 		if err := db.Drop(ctx); err != nil {
 			return modal.ErrModalMsg{Err: err}
 		}
-		if err := m.RefreshDbAndCollections(); err != nil {
+		if err := e.RefreshDbAndCollections(); err != nil {
 			return modal.ErrModalMsg{Err: err}
 		}
 		return RedrawMessage{}
 	}
 }
 
-func (m *Engine) DropCollection(databaseName, collectionName string) tea.Cmd {
+func (e *Engine) DropCollection(databaseName, collectionName string) tea.Cmd {
 	return func() tea.Msg {
-		db := m.Client.Database(databaseName)
+		db := e.Client.Database(databaseName)
 		col := db.Collection(collectionName)
 		ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 		defer cancel()
+
 		if err := col.Drop(ctx); err != nil {
 			return modal.ErrModalMsg{Err: err}
 		}
 
-		if len(m.GetSelectedCollections()) == 1 { // If we just dropped the last collection, reset selectedCollection
-			m.SetSelectedDatabase(databaseName)
+		if len(e.GetSelectedCollections()) == 1 { // If we just dropped the last collection, reset selectedCollection
+			e.SetSelectedDatabase(databaseName)
 		}
-		if err := m.RefreshDbAndCollections(); err != nil {
+		if err := e.RefreshDbAndCollections(); err != nil {
 			return modal.ErrModalMsg{Err: err}
 		}
 		return RedrawMessage{}
@@ -109,10 +120,10 @@ func (m *Engine) DropCollection(databaseName, collectionName string) tea.Cmd {
 // DropDocument will drop a document from the collection that was selected using SetSelectedCollection
 // We do not use _id as not every doc will have one so we match the entire doc
 // currentQuery is used to requery the database after the drop has been performed
-func (m *Engine) DropDocument(doc *bson.M) tea.Cmd {
+func (e *Engine) DropDocument(doc *bson.M) tea.Cmd {
 	return func() tea.Msg {
-		db := m.Client.Database(m.selectedDb)
-		coll := db.Collection(m.selectedCollection)
+		db := e.Client.Database(e.selectedDb)
+		coll := db.Collection(e.selectedCollection)
 		ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 		defer cancel()
 
@@ -123,14 +134,14 @@ func (m *Engine) DropDocument(doc *bson.M) tea.Cmd {
 		if res.DeletedCount == 0 {
 			return modal.ErrModalMsg{Err: fmt.Errorf("no document was deleted")}
 		}
-		return m.RerunLastCollectionQuery()() // Double call as we are already calling it in a query
+		return e.RerunLastCollectionQuery()() // Double call as we are already calling it in a query
 	}
 }
 
 // UpdateDocument will find and replace a given oldDoc with a newDoc within the db/collection
 // that was selected using the SetSelectedCollection method
 // We do not use _id as not every doc will have one so we match the entire doc
-func (m *Engine) UpdateDocument(oldDoc, newDoc []byte) error {
+func (e *Engine) UpdateDocument(oldDoc, newDoc []byte) error {
 	var oldDocBson bson.M
 	if err := bson.UnmarshalExtJSON(oldDoc, false, &oldDocBson); err != nil {
 		return fmt.Errorf("failed to parse the original document needed for the replacement: %w", err)
@@ -140,8 +151,8 @@ func (m *Engine) UpdateDocument(oldDoc, newDoc []byte) error {
 		return fmt.Errorf("failed to parse the new document needed for the replacement: %w", err)
 	}
 
-	db := m.Client.Database(m.selectedDb)
-	coll := db.Collection(m.selectedCollection)
+	db := e.Client.Database(e.selectedDb)
+	coll := db.Collection(e.selectedCollection)
 	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
 

@@ -10,19 +10,23 @@ import (
 // been loaded in and cached to the Server struct
 
 // GetDatabases will return a slice of all databases currently cached by mongotui
-func (m *Engine) GetDatabases() []string {
-	databaseNames := make([]string, 0, len(m.Server.Databases))
-	for name := range m.Server.Databases {
+func (e *Engine) GetDatabases() []string {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	databaseNames := make([]string, 0, len(e.server.databases))
+	for name := range e.server.databases {
 		databaseNames = append(databaseNames, name)
 	}
 	slices.Sort(databaseNames)
 	return databaseNames
 }
 
-// GetSelectedCollections will return a slice of all of the collections currently cached by
+// GetSelectedCollections will return a slice of all collections currently cached by
 // mongotui given the last database set by SetSelectedDatabase
-func (m *Engine) GetSelectedCollections() []string {
-	if db, ok := m.Server.Databases[m.selectedDb]; ok {
+func (e *Engine) GetSelectedCollections() []string {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	if db, ok := e.server.databases[e.selectedDb]; ok {
 		return db.collections
 	} else {
 		return []string{}
@@ -31,14 +35,18 @@ func (m *Engine) GetSelectedCollections() []string {
 
 // GetDocumentSummaries will fetch a processed list of document summaries for each document
 // These documents are currently being used to be displayed within the doclist component
-func (m *Engine) GetDocumentSummaries() []DocSummary {
-	return m.Server.cachedDocSummaries
+func (e *Engine) GetDocumentSummaries() []docSummary {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.server.cachedDocSummaries
 }
 
 // GetSelectedDocumentMarshalled will return a marshalled byte slice of the document that was
 // last selected via SetSelectedDocument
-func (m *Engine) GetSelectedDocumentMarshalled() ([]byte, error) {
-	data := m.selectedDoc
+func (e *Engine) GetSelectedDocumentMarshalled() ([]byte, error) {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	data := e.selectedDoc
 	parsedDoc, err := bson.MarshalExtJSONIndent(data, false, false, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("could not parse document: %v", err)
@@ -49,12 +57,16 @@ func (m *Engine) GetSelectedDocumentMarshalled() ([]byte, error) {
 
 // GetSelectedDocument will return a reference to the bson of the highlighted doc
 // last selected via SetSelectedDocument
-func (m *Engine) GetSelectedDocument() *bson.M {
-	return m.selectedDoc
+func (e *Engine) GetSelectedDocument() *bson.M {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.selectedDoc
 }
 
 // GetQueriedDocs returns a slice of all documents cached by mongotui given the collection
 // last selected via SetSelectedCollection
-func (m *Engine) GetQueriedDocs() []*bson.M {
-	return m.Server.cachedDocs
+func (e *Engine) GetQueriedDocs() []*bson.M {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.server.cachedDocs
 }

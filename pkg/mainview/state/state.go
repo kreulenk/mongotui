@@ -29,3 +29,7 @@ func (m *MainViewState) SetActiveComponent(componentName ActiveComponent) {
 func (m *MainViewState) GetActiveComponent() ActiveComponent {
 	return m.activeComponent
 }
+
+func (m *MainViewState) IsComponentActive(c ActiveComponent) bool {
+	return m.activeComponent == c
+}
