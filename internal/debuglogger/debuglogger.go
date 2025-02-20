@@ -10,7 +10,7 @@ import (
 )
 
 func Initialize() *os.File {
-	if _, exists := os.LookupEnv("MONGOTUI_DEBUG"); exists {
+	if _, ok := os.LookupEnv("MONGOTUI_DEBUG"); ok {
 		file, err := os.Create("mongotui.log")
 		if err != nil {
 			fmt.Println("unable to create debug log file")

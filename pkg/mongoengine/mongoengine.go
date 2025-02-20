@@ -119,7 +119,6 @@ func (e *Engine) DropCollection(databaseName, collectionName string) tea.Cmd {
 
 // DropDocument will drop a document from the collection that was selected using SetSelectedCollection
 // We do not use _id as not every doc will have one so we match the entire doc
-// currentQuery is used to requery the database after the drop has been performed
 func (e *Engine) DropDocument(doc *bson.M) tea.Cmd {
 	return func() tea.Msg {
 		db := e.Client.Database(e.selectedDb)

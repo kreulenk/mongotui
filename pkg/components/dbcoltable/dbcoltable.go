@@ -44,11 +44,7 @@ type Model struct {
 	engine *mongoengine.Engine
 }
 
-func (m *Model) Init() tea.Cmd {
-	return nil
-}
-
-// New creates a new baseModel for the dbcoltable widget.
+// New creates a new baseModel for the dbcoltable component
 func New(engine *mongoengine.Engine, state *state.MainViewState) *Model {
 	if err := engine.RefreshDbAndCollections(); err != nil {
 		fmt.Printf("could not initialize data: %v\n", err)
@@ -144,8 +140,7 @@ func (m *Model) View() string {
 	return m.styles.Table.Render(m.headersView() + "\n" + m.viewport.View())
 }
 
-// updateViewport updates the list content based on the previously defined
-// columns and rows.
+// updateViewport renders all of the cells for the databases and collections that are displayed within the dbcoltable
 func (m *Model) updateViewport() {
 	// Database column
 	if m.cursorDatabase >= 0 {
@@ -277,6 +272,7 @@ func (m *Model) GotoBottom() tea.Cmd {
 func (m *Model) columnWidth() int {
 	return m.viewport.Width / len(m.headersText)
 }
+
 func (m *Model) headersView() string {
 	s := make([]string, 0, len(m.headersText))
 	for _, col := range m.headersText {

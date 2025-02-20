@@ -40,7 +40,7 @@ func (m *Model) Focus() error {
 	m.Viewport.GotoTop()
 	selectedDoc, err := m.engine.GetSelectedDocumentMarshalled()
 	if err != nil {
-		return fmt.Errorf("could not get selected document: %v", err)
+		return fmt.Errorf("could not fetch selected document: %v", err)
 	}
 
 	buf := new(bytes.Buffer)

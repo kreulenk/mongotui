@@ -132,8 +132,8 @@ SOFTWARE.
 ## github.com/charmbracelet/bubbletea
 
 * Name: github.com/charmbracelet/bubbletea
-* Version: v1.2.4
-* License: [MIT](https://github.com/charmbracelet/bubbletea/blob/v1.2.4/LICENSE)
+* Version: v1.3.3
+* License: [MIT](https://github.com/charmbracelet/bubbletea/blob/v1.3.3/LICENSE)
 
 ```
 MIT License
@@ -163,8 +163,8 @@ SOFTWARE.
 ## github.com/charmbracelet/lipgloss
 
 * Name: github.com/charmbracelet/lipgloss
-* Version: v1.0.1-0.20250110214317-ecc1bd014d51
-* License: [MIT](https://github.com/charmbracelet/lipgloss/blob/ecc1bd014d51/LICENSE)
+* Version: v1.0.0
+* License: [MIT](https://github.com/charmbracelet/lipgloss/blob/v1.0.0/LICENSE)
 
 ```
 MIT License
@@ -194,8 +194,8 @@ SOFTWARE.
 ## github.com/charmbracelet/x/ansi
 
 * Name: github.com/charmbracelet/x/ansi
-* Version: v0.6.1-0.20250107110353-48b574af22a5
-* License: [MIT](https://github.com/charmbracelet/x/blob/48b574af22a5/ansi/LICENSE)
+* Version: v0.8.0
+* License: [MIT](https://github.com/charmbracelet/x/blob/ansi/v0.8.0/ansi/LICENSE)
 
 ```
 MIT License
@@ -256,8 +256,8 @@ SOFTWARE.
 ## github.com/dlclark/regexp2
 
 * Name: github.com/dlclark/regexp2
-* Version: v1.4.0
-* License: [MIT](https://github.com/dlclark/regexp2/blob/v1.4.0/LICENSE)
+* Version: v1.11.5
+* License: [MIT](https://github.com/dlclark/regexp2/blob/v1.11.5/LICENSE)
 
 ```
 The MIT License (MIT)
@@ -989,8 +989,8 @@ SOFTWARE.
 ## github.com/rmhubbert/bubbletea-overlay
 
 * Name: github.com/rmhubbert/bubbletea-overlay
-* Version: v0.3.0
-* License: [MIT](https://github.com/rmhubbert/bubbletea-overlay/blob/v0.3.0/LICENSE)
+* Version: v0.3.2
+* License: [MIT](https://github.com/rmhubbert/bubbletea-overlay/blob/v0.3.2/LICENSE)
 
 ```
 MIT License
@@ -1020,8 +1020,8 @@ SOFTWARE.
 ## github.com/spf13/cobra
 
 * Name: github.com/spf13/cobra
-* Version: v1.8.1
-* License: [Apache-2.0](https://github.com/spf13/cobra/blob/v1.8.1/LICENSE.txt)
+* Version: v1.9.1
+* License: [Apache-2.0](https://github.com/spf13/cobra/blob/v1.9.1/LICENSE.txt)
 
 ```
                                 Apache License
@@ -1204,8 +1204,8 @@ SOFTWARE.
 ## github.com/spf13/pflag
 
 * Name: github.com/spf13/pflag
-* Version: v1.0.5
-* License: [BSD-3-Clause](https://github.com/spf13/pflag/blob/v1.0.5/LICENSE)
+* Version: v1.0.6
+* License: [BSD-3-Clause](https://github.com/spf13/pflag/blob/v1.0.6/LICENSE)
 
 ```
 Copyright (c) 2012 Alex Ogier. All rights reserved.
@@ -2075,8 +2075,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ## golang.org/x/sync
 
 * Name: golang.org/x/sync
-* Version: v0.10.0
-* License: [BSD-3-Clause](https://cs.opensource.google/go/x/sync/+/v0.10.0:LICENSE)
+* Version: v0.11.0
+* License: [BSD-3-Clause](https://cs.opensource.google/go/x/sync/+/v0.11.0:LICENSE)
 
 ```
 Copyright 2009 The Go Authors.
@@ -2112,8 +2112,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ## golang.org/x/sys/unix
 
 * Name: golang.org/x/sys/unix
-* Version: v0.29.0
-* License: [BSD-3-Clause](https://cs.opensource.google/go/x/sys/+/v0.29.0:LICENSE)
+* Version: v0.30.0
+* License: [BSD-3-Clause](https://cs.opensource.google/go/x/sys/+/v0.30.0:LICENSE)
 
 ```
 Copyright 2009 The Go Authors.
@@ -2149,8 +2149,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ## golang.org/x/text
 
 * Name: golang.org/x/text
-* Version: v0.21.0
-* License: [BSD-3-Clause](https://cs.opensource.google/go/x/text/+/v0.21.0:LICENSE)
+* Version: v0.22.0
+* License: [BSD-3-Clause](https://cs.opensource.google/go/x/text/+/v0.22.0:LICENSE)
 
 ```
 Copyright 2009 The Go Authors.

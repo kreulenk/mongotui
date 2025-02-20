@@ -18,7 +18,11 @@ func defaultStyles() Styles {
 			Padding(0, 1).
 			Width(40).
 			AlignHorizontal(lipgloss.Center),
-		ErrorHeader:    lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("9")),
-		DeletionHeader: lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("10")),
+		ErrorHeader: lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("9")),
+		DeletionHeader: lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("10")),
 	}
 }

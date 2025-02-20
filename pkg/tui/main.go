@@ -27,7 +27,7 @@ type baseModel struct {
 func Initialize(client *mongo.Client) {
 	lipgloss.SetColorProfile(termenv.ANSI256)
 	p := tea.NewProgram(initialModel(client))
-	defer client.Disconnect(context.TODO())
+	defer client.Disconnect(context.Background())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error: %v", err)
 		os.Exit(1)
