@@ -52,7 +52,6 @@ func (e Editor) OpenFileInEditor() error {
 		return fmt.Errorf("failed to read the file that was just edited: %w", err)
 	}
 
-	e.state.SetActiveComponent(state.DocList)
 	if err = e.engine.UpdateDocument(oldDoc, newDoc); err != nil {
 		return err
 	}

@@ -32,10 +32,6 @@ func New(engine *mongoengine.Engine, state *state.MainViewState) *Model {
 	}
 }
 
-func (m *Model) Init() tea.Cmd {
-	return nil
-}
-
 func (m *Model) Focus() error {
 	m.Viewport.GotoTop()
 	selectedDoc, err := m.engine.GetSelectedDocumentMarshalled()
