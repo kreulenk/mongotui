@@ -7,8 +7,9 @@ import (
 )
 
 type baseOptions struct {
-	host string
-	port int
+	host    string
+	port    int
+	version bool
 }
 
 type authenticationOptions struct {

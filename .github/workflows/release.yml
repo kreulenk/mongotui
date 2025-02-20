@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -27,7 +29,7 @@ jobs:
 
       - name: Build
         run: |
-          GOARCH=${{ matrix.goarch }} GOOS=${{ matrix.goos }} go build -o mongotui ./main.go
+          GOARCH=${{ matrix.goarch }} GOOS=${{ matrix.goos }} go build -ldflags "-X 'github.com/kreulenk/mongotui/internal/build.Version=${{ github.ref_name }}' -X 'github.com/kreulenk/mongotui/internal/build.SHA=$(git rev-parse HEAD)'" -o mongotui ./main.go
 
       - name: Archive build
         run: |
@@ -69,7 +71,7 @@ jobs:
             url "https://github.com/kreulenk/mongotui/releases/download/${{ github.ref_name }}/mongotui-darwin-amd64.tar.gz"
             sha256 "$(shasum -a 256 mongotui-darwin-amd64.tar.gz | awk '{print $1}')"
             version "${{ github.ref_name }}"
-          
+
             if Hardware::CPU.arm?
               url "https://github.com/kreulenk/mongotui/releases/download/${{ github.ref_name }}/mongotui-darwin-arm64.tar.gz"
               sha256 "$(shasum -a 256 mongotui-darwin-arm64.tar.gz | awk '{print $1}')"

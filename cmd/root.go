@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/kreulenk/mongotui/internal/build"
 	"github.com/kreulenk/mongotui/pkg/mongoengine"
 	"github.com/kreulenk/mongotui/pkg/tui"
 	"github.com/spf13/cobra"
@@ -9,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"os"
+	"runtime"
 	"slices"
 	"strings"
 )
@@ -29,7 +31,7 @@ func genRootCmd() *cobra.Command {
 		Long:  `mongotui is a MongoDB Terminal User Interface`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			// Verify that a host has been provided
-			if len(args) != 1 && flags.baseOptions.host == "" {
+			if len(args) != 1 && flags.baseOptions.host == "" && !flags.baseOptions.version {
 				return fmt.Errorf("you must provide a valid hostname")
 			}
 			// Verify that authenticationMechanism is a supported value if provided
@@ -48,6 +50,11 @@ func genRootCmd() *cobra.Command {
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
+			if flags.baseOptions.version {
+				fmt.Printf("%s\n%s_%s\n%s\n", build.Version, runtime.GOOS, runtime.GOARCH, build.SHA)
+				return
+			}
+
 			clientOps := options.Client()
 			clientOps.SetTimeout(mongoengine.Timeout)
 			if len(args) == 1 {
@@ -77,6 +84,7 @@ func genRootCmd() *cobra.Command {
 	baseFlags := pflag.NewFlagSet("base", pflag.ExitOnError)
 	baseFlags.StringVar(&flags.baseOptions.host, "host", "", "Server to connect to")
 	baseFlags.IntVar(&flags.baseOptions.port, "port", 0, "Port to connect to")
+	baseFlags.BoolVar(&flags.baseOptions.version, "version", false, "Show version information")
 	flagSets = append(flagSets, namedFlagSet{name: "Options", flagset: baseFlags})
 
 	authenticationFlags := pflag.NewFlagSet("authentication", pflag.ExitOnError)

@@ -1,5 +1,5 @@
 build:
-	@go build -v -o bin/mongotui
+	@go build -v -ldflags="-X 'github.com/kreulenk/mongotui/internal/build.Version=makeFileBuild' -X 'github.com/kreulenk/mongotui/internal/build.SHA=makeFileBuild'" -o bin/mongotui
 
 install: build
 	 @cp ./bin/mongotui /usr/local/bin/
