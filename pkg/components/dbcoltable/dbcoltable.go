@@ -252,7 +252,7 @@ func (m *Model) cursoredCollection() string {
 // SetWidth sets the width of the viewport of the dbcoltable.
 func (m *Model) SetWidth(dbColWidth, fullTermWidth int) {
 	m.viewport.Width = dbColWidth
-	m.searchBar.SetWidth(fullTermWidth - 16) // filter help menu is 16 chars
+	m.searchBar.SetWidth(fullTermWidth - 23) // filter help menu is 23 chars
 }
 
 // SetHeight sets the height of the viewport of the dbcoltable.

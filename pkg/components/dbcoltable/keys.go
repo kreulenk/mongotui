@@ -64,8 +64,8 @@ var keys = keyMap{
 		key.WithHelp("/", "search"),
 	),
 	StopSearch: key.NewBinding(
-		key.WithKeys("esc"),
-		key.WithHelp("esc", "exit search"),
+		key.WithKeys("esc", "/"),
+		key.WithHelp("esc or '/'", "exit search"),
 	),
 }
 
