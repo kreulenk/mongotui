@@ -34,8 +34,9 @@ mongotui --help
 ## Features
 - 🔗 Similar connection flags/options to mongosh
 - 📂 Navigate between databases/collections/documents
+- 🗂 Filter displayed databases/collections
 - 🔍 Query for specific documents
-- 📄 Pagination of results
+- 📄 Pagination of document results
 - 👁️ View an entire document
 - ✏️ Edit a document using your `$EDITOR` of choice
 - 🗑️ Delete a database/collection/document

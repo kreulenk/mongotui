@@ -145,6 +145,11 @@ func (m *Model) handleSearchUpdate(msg tea.KeyMsg) tea.Cmd {
 		m.searchEnabled = false
 	} else if m.cursorColumn == databasesColumn {
 		m.searchBar.Update(msg)
+		// Reset value and return if search is too specific
+		if len(filterBySearch(m.engine.GetDatabases(), m.searchBar.GetValue())) == 0 {
+			m.searchBar.SetValue(m.databaseSearch)
+			return nil
+		}
 		m.databaseSearch = m.searchBar.GetValue()
 		dbMaxIndex := len(m.getFilteredDbs()) - 1
 		if m.cursorDatabase > dbMaxIndex {
@@ -154,6 +159,12 @@ func (m *Model) handleSearchUpdate(msg tea.KeyMsg) tea.Cmd {
 	} else {
 		originalCollection := m.cursoredCollection()
 		m.searchBar.Update(msg)
+		// Reset value and return if search is too specific
+		if len(filterBySearch(m.engine.GetSelectedCollections(), m.searchBar.GetValue())) == 0 {
+			m.searchBar.SetValue(m.collectionSearch)
+			return nil
+		}
+
 		m.collectionSearch = m.searchBar.GetValue()
 		colMaxIndex := len(m.getFilteredCollections()) - 1
 		if m.cursorCollection > colMaxIndex {
@@ -373,9 +384,6 @@ func filterBySearch(strSlice []string, filter string) []string {
 		if strings.Contains(s, filter) {
 			filteredSlice = append(filteredSlice, s)
 		}
-	}
-	if len(filteredSlice) == 0 {
-		return []string{""}
 	}
 	return filteredSlice
 }
