@@ -1,6 +1,7 @@
 package dbcoltable
 
 import (
+	"fmt"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -71,6 +72,11 @@ var keys = keyMap{
 func (m *Model) HelpView() string {
 	if m.searchEnabled {
 		return lipgloss.JoinHorizontal(lipgloss.Left, m.searchBar.View(), m.searchHelpView())
+	}
+	if m.cursorColumn == databasesColumn && m.databaseSearch != "" {
+		return lipgloss.JoinHorizontal(lipgloss.Left, m.Help.View(keys), fmt.Sprintf(" (%s)", m.databaseSearch))
+	} else if m.cursorColumn == collectionsColumn && m.collectionSearch != "" {
+		return lipgloss.JoinHorizontal(lipgloss.Left, m.Help.View(keys), fmt.Sprintf(" (%s)", m.collectionSearch))
 	}
 	return m.Help.View(keys)
 }
