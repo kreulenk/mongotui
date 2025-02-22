@@ -48,7 +48,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		leftRightBorderWidth := 2
 		topBottomBorderAndHelpHeight := 3
-		m.dbColTable.SetWidth((msg.Width / 3) - leftRightBorderWidth)
+		m.dbColTable.SetWidth((msg.Width/3)-leftRightBorderWidth, msg.Width-leftRightBorderWidth)
 		m.dbColTable.SetHeight(msg.Height - topBottomBorderAndHelpHeight)
 		m.docList.SetWidth((msg.Width * 2 / 3) - leftRightBorderWidth)
 		m.docList.SetHeight(msg.Height - topBottomBorderAndHelpHeight)
