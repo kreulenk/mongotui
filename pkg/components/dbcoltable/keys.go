@@ -61,22 +61,22 @@ var keys = keyMap{
 	),
 	StartSearch: key.NewBinding(
 		key.WithKeys("/"),
-		key.WithHelp("/", "search"),
+		key.WithHelp("/", "filter"),
 	),
 	StopSearch: key.NewBinding(
 		key.WithKeys("esc", "/"),
-		key.WithHelp("esc or '/'", "exit search"),
+		key.WithHelp("esc or '/'", "exit filter"),
 	),
 }
 
 func (m *Model) HelpView() string {
-	if m.searchEnabled {
+	if m.filterEnabled {
 		return lipgloss.JoinHorizontal(lipgloss.Left, m.searchBar.View(), m.searchHelpView())
 	}
-	if m.cursorColumn == databasesColumn && m.databaseSearch != "" {
-		return lipgloss.JoinHorizontal(lipgloss.Left, m.Help.View(keys), fmt.Sprintf(" (%s)", m.databaseSearch))
-	} else if m.cursorColumn == collectionsColumn && m.collectionSearch != "" {
-		return lipgloss.JoinHorizontal(lipgloss.Left, m.Help.View(keys), fmt.Sprintf(" (%s)", m.collectionSearch))
+	if m.cursorColumn == databasesColumn && m.databaseFilter != "" {
+		return lipgloss.JoinHorizontal(lipgloss.Left, m.Help.View(keys), fmt.Sprintf(" (%s)", m.databaseFilter))
+	} else if m.cursorColumn == collectionsColumn && m.collectionFilter != "" {
+		return lipgloss.JoinHorizontal(lipgloss.Left, m.Help.View(keys), fmt.Sprintf(" (%s)", m.collectionFilter))
 	}
 	return m.Help.View(keys)
 }

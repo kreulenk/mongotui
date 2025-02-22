@@ -1,4 +1,4 @@
-package dbcolsearch
+package dbcolfilter
 
 import (
 	"github.com/charmbracelet/bubbles/textinput"
@@ -24,7 +24,7 @@ func (m *Model) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-// SetWidth sets the width of the viewport of the dbcolsearch
+// SetWidth sets the width of the viewport of the dbcolfilter
 func (m *Model) SetWidth(w int) {
 	m.textInput.Width = w
 }

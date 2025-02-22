@@ -7,7 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/kreulenk/mongotui/pkg/components/dbcolsearch"
+	"github.com/kreulenk/mongotui/pkg/components/dbcolfilter"
 	"github.com/kreulenk/mongotui/pkg/components/modal"
 	"github.com/kreulenk/mongotui/pkg/mainview/state"
 	"github.com/kreulenk/mongotui/pkg/mongoengine"
@@ -42,10 +42,10 @@ type Model struct {
 	collectionStart int
 	collectionEnd   int
 
-	searchBar        *dbcolsearch.Model
-	searchEnabled    bool
-	databaseSearch   string // Used to filter the database list
-	collectionSearch string
+	searchBar        *dbcolfilter.Model
+	filterEnabled    bool
+	databaseFilter   string // Used to filter the database list
+	collectionFilter string
 
 	engine *mongoengine.Engine
 }
@@ -70,7 +70,7 @@ func New(engine *mongoengine.Engine, state *state.MainViewState) *Model {
 		cursorColumn:   databasesColumn,
 		cursorDatabase: 0,
 
-		searchBar: dbcolsearch.New(),
+		searchBar: dbcolfilter.New(),
 
 		engine: engine,
 	}
@@ -81,7 +81,7 @@ func New(engine *mongoengine.Engine, state *state.MainViewState) *Model {
 func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if m.searchEnabled {
+		if m.filterEnabled {
 			return m, m.handleSearchUpdate(msg)
 		}
 
@@ -112,11 +112,11 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 			}
 		case key.Matches(msg, keys.StartSearch):
 			if m.cursorColumn == databasesColumn {
-				m.searchBar.SetValue(m.databaseSearch)
+				m.searchBar.SetValue(m.databaseFilter)
 			} else {
-				m.searchBar.SetValue(m.collectionSearch)
+				m.searchBar.SetValue(m.collectionFilter)
 			}
-			m.searchEnabled = true
+			m.filterEnabled = true
 		}
 	case modal.ExecColDelete:
 		m.cursorCollection = renderutils.Max(0, m.cursorCollection-1)
@@ -140,15 +140,15 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 
 func (m *Model) handleSearchUpdate(msg tea.KeyMsg) tea.Cmd {
 	if key.Matches(msg, keys.StopSearch) {
-		m.searchEnabled = false
+		m.filterEnabled = false
 	} else if m.cursorColumn == databasesColumn {
 		m.searchBar.Update(msg)
 		// Reset value and return if search is too specific
 		if len(filterBySearch(m.engine.GetDatabases(), m.searchBar.GetValue())) == 0 {
-			m.searchBar.SetValue(m.databaseSearch)
+			m.searchBar.SetValue(m.databaseFilter)
 			return nil
 		}
-		m.databaseSearch = m.searchBar.GetValue()
+		m.databaseFilter = m.searchBar.GetValue()
 		dbMaxIndex := len(m.getFilteredDbs()) - 1
 		if m.cursorDatabase > dbMaxIndex {
 			m.cursorDatabase = dbMaxIndex
@@ -159,11 +159,11 @@ func (m *Model) handleSearchUpdate(msg tea.KeyMsg) tea.Cmd {
 		m.searchBar.Update(msg)
 		// Reset value and return if search is too specific
 		if len(filterBySearch(m.engine.GetSelectedCollections(), m.searchBar.GetValue())) == 0 {
-			m.searchBar.SetValue(m.collectionSearch)
+			m.searchBar.SetValue(m.collectionFilter)
 			return nil
 		}
 
-		m.collectionSearch = m.searchBar.GetValue()
+		m.collectionFilter = m.searchBar.GetValue()
 		colMaxIndex := len(m.getFilteredCollections()) - 1
 		if m.cursorCollection > colMaxIndex {
 			m.cursorCollection = colMaxIndex
@@ -305,7 +305,7 @@ func (m *Model) MoveRight() tea.Cmd {
 func (m *Model) MoveLeft() {
 	if m.cursorColumn == collectionsColumn {
 		m.cursorCollection = 0
-		m.collectionSearch = ""
+		m.collectionFilter = ""
 	}
 	m.cursorColumn = databasesColumn
 }
@@ -364,13 +364,13 @@ func (m *Model) renderCollectionCell(r int) string {
 // getFilteredDbs gets the latest list of databases from the mongoengine and then applies the filter that the user
 // has entered
 func (m *Model) getFilteredDbs() []string {
-	return filterBySearch(m.engine.GetDatabases(), m.databaseSearch)
+	return filterBySearch(m.engine.GetDatabases(), m.databaseFilter)
 }
 
 // getFilteredCollections gets the latest list of collections from the mongoengine and then applies the filter that the user
 // has entered
 func (m *Model) getFilteredCollections() []string {
-	return filterBySearch(m.engine.GetSelectedCollections(), m.collectionSearch)
+	return filterBySearch(m.engine.GetSelectedCollections(), m.collectionFilter)
 }
 
 // filterBySearch is used to filter what databases or collections are viewable or selectable based on the search query
