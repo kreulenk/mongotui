@@ -31,8 +31,7 @@ type Model struct {
 	Help   help.Model
 	styles Styles
 
-	viewport    viewport.Model
-	headersText []string
+	viewport viewport.Model
 
 	cursorColumn     cursorColumn
 	cursorDatabase   int
@@ -66,8 +65,7 @@ func New(engine *mongoengine.Engine, state *state.MainViewState) *Model {
 		Help:   help.New(),
 		styles: defaultStyles(),
 
-		viewport:    viewport.New(0, 20),
-		headersText: []string{"Databases", "Collections"},
+		viewport: viewport.New(0, 20),
 
 		cursorColumn:   databasesColumn,
 		cursorDatabase: 0,
@@ -331,17 +329,17 @@ func (m *Model) GotoBottom() tea.Cmd {
 }
 
 func (m *Model) columnWidth() int {
-	return m.viewport.Width / len(m.headersText)
+	return m.viewport.Width / 2
 }
 
 func (m *Model) headersView() string {
-	s := make([]string, 0, len(m.headersText))
-	for _, col := range m.headersText {
-		m.styles.Header = m.styles.Header.Width(m.columnWidth()).MaxWidth(m.columnWidth())
-		renderedCell := m.styles.Header.Render(runewidth.Truncate(col, m.columnWidth(), "…"))
-		s = append(s, renderedCell)
-	}
-	return lipgloss.JoinHorizontal(lipgloss.Top, s...)
+	m.styles.Header = m.styles.Header.Width(m.columnWidth()).MaxWidth(m.columnWidth())
+	dbText := fmt.Sprintf("Databases (%d)", len(m.getFilteredDbs()))
+	collectionText := fmt.Sprintf("Collections (%d)", len(m.getFilteredCollections()))
+
+	dbCell := m.styles.Header.Render(runewidth.Truncate(dbText, m.columnWidth(), "…"))
+	collectionCell := m.styles.Header.Render(runewidth.Truncate(collectionText, m.columnWidth(), "…"))
+	return lipgloss.JoinHorizontal(lipgloss.Top, dbCell, collectionCell)
 }
 
 func (m *Model) renderDatabaseCell(r int) string {
