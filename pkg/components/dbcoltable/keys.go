@@ -1,19 +1,24 @@
 package dbcoltable
 
-import "github.com/charmbracelet/bubbles/key"
+import (
+	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/lipgloss"
+)
 
 // keyMap defines keybindings. It satisfies to the help.KeyMap interface, which
 // is used to render the help menu.
 type keyMap struct {
-	Quit       key.Binding
-	LineUp     key.Binding
-	LineDown   key.Binding
-	GotoTop    key.Binding
-	GotoBottom key.Binding
-	Right      key.Binding
-	Left       key.Binding
-	Enter      key.Binding
-	Delete     key.Binding
+	Quit        key.Binding
+	LineUp      key.Binding
+	LineDown    key.Binding
+	GotoTop     key.Binding
+	GotoBottom  key.Binding
+	Right       key.Binding
+	Left        key.Binding
+	Enter       key.Binding
+	Delete      key.Binding
+	StartSearch key.Binding
+	StopSearch  key.Binding
 }
 
 var keys = keyMap{
@@ -53,15 +58,31 @@ var keys = keyMap{
 		key.WithKeys("d"),
 		key.WithHelp("d", "delete"),
 	),
+	StartSearch: key.NewBinding(
+		key.WithKeys("/"),
+		key.WithHelp("/", "search"),
+	),
+	StopSearch: key.NewBinding(
+		key.WithKeys("esc"),
+		key.WithHelp("esc", "exit search"),
+	),
 }
 
 func (m *Model) HelpView() string {
+	if m.searchEnabled {
+		return lipgloss.JoinHorizontal(lipgloss.Left, m.searchBar.View(), m.searchHelpView())
+	}
 	return m.Help.View(keys)
+}
+
+// searchHelpView is used when the user is in searchMode to filter the databases or collections
+func (m *Model) searchHelpView() string {
+	return m.Help.ShortHelpView([]key.Binding{keys.StopSearch})
 }
 
 // ShortHelp implements the keyMap interface.
 func (km keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{km.Quit, km.LineUp, km.LineDown, km.Right, km.Left, km.Delete}
+	return []key.Binding{km.Quit, km.LineUp, km.LineDown, km.Right, km.Left, km.Delete, km.StartSearch}
 }
 
 // FullHelp is required to satisfy the keyMap interface

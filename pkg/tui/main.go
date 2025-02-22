@@ -70,7 +70,7 @@ func (m *baseModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		return m, modCmd
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "q", "esc", "ctrl+c":
+		case "q", "ctrl+c":
 			return m, tea.Quit
 		}
 	}

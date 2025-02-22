@@ -8,7 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/kreulenk/mongotui/pkg/components/modal"
-	"github.com/kreulenk/mongotui/pkg/components/searchbar"
+	"github.com/kreulenk/mongotui/pkg/components/querysearch"
 	"github.com/kreulenk/mongotui/pkg/mainview/state"
 	"github.com/kreulenk/mongotui/pkg/mongoengine"
 	"github.com/kreulenk/mongotui/pkg/renderutils"
@@ -21,7 +21,7 @@ type Model struct {
 	state *state.MainViewState
 	Help  help.Model
 
-	searchBar *searchbar.Model
+	searchBar *querysearch.Model
 	styles    Styles
 	focused   bool
 
@@ -36,7 +36,7 @@ func New(engine *mongoengine.Engine, state *state.MainViewState) *Model {
 	m := Model{
 		state:     state,
 		Help:      help.New(),
-		searchBar: searchbar.New(),
+		searchBar: querysearch.New(),
 
 		viewport: viewport.New(0, 20),
 		styles:   defaultStyles(),

@@ -42,10 +42,6 @@ var keys = keyMap{
 		key.WithKeys("q"),
 		key.WithHelp("q", "quit"),
 	),
-	Esc: key.NewBinding(
-		key.WithKeys("esc"),
-		key.WithHelp("esc", "back"),
-	),
 	LineUp: key.NewBinding(
 		key.WithKeys("up", "k"),
 		key.WithHelp("↑/k", "up"),

@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/kreulenk/mongotui/pkg/components/dbcolsearch"
 	"github.com/kreulenk/mongotui/pkg/components/modal"
 	"github.com/kreulenk/mongotui/pkg/mainview/state"
 	"github.com/kreulenk/mongotui/pkg/mongoengine"
@@ -14,6 +15,7 @@ import (
 	"github.com/mattn/go-runewidth"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"os"
+	"strings"
 )
 
 type cursorColumn int
@@ -41,6 +43,11 @@ type Model struct {
 	collectionStart int
 	collectionEnd   int
 
+	searchBar        *dbcolsearch.Model
+	searchEnabled    bool
+	databaseSearch   string // Used to filter the database list
+	collectionSearch string
+
 	engine *mongoengine.Engine
 }
 
@@ -65,6 +72,8 @@ func New(engine *mongoengine.Engine, state *state.MainViewState) *Model {
 		cursorColumn:   databasesColumn,
 		cursorDatabase: 0,
 
+		searchBar: dbcolsearch.New(),
+
 		engine: engine,
 	}
 	return &m
@@ -74,6 +83,10 @@ func New(engine *mongoengine.Engine, state *state.MainViewState) *Model {
 func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		if m.searchEnabled {
+			return m, m.handleSearchUpdate(msg)
+		}
+
 		switch {
 		case key.Matches(msg, keys.LineUp):
 			return m, m.MoveUp(1)
@@ -99,25 +112,60 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 			} else {
 				return m, modal.DisplayCollectionDeleteModal(m.cursoredDatabase(), m.cursoredCollection())
 			}
+		case key.Matches(msg, keys.StartSearch):
+			if m.cursorColumn == databasesColumn {
+				m.searchBar.SetValue(m.databaseSearch)
+			} else {
+				m.searchBar.SetValue(m.collectionSearch)
+			}
+			m.searchEnabled = true
 		}
 	case modal.ExecColDelete:
 		m.cursorCollection = renderutils.Max(0, m.cursorCollection-1)
-		m.engine.SetSelectedCollection(msg.DbName, m.engine.GetSelectedCollections()[m.cursorCollection])
-		if len(m.engine.GetSelectedCollections()) == 1 { // If we are about to drop last collection making db disappear
+		m.engine.SetSelectedCollection(msg.DbName, m.getFilteredCollections()[m.cursorCollection])
+		if len(m.getFilteredCollections()) == 1 { // If we are about to drop last collection making db disappear
 			m.cursorColumn = databasesColumn
 		}
 		return m, m.engine.DropCollection(msg.DbName, msg.CollectionName)
 	case modal.ExecDbDelete:
 		m.cursorDatabase = renderutils.Max(0, m.cursorDatabase-1)
 		m.cursorCollection = renderutils.Max(0, m.cursorCollection-1)
-		if len(m.engine.GetDatabases()) == 1 { // If we are about to drop last collection making db disappear
+		if len(m.getFilteredDbs()) == 1 { // If we are about to drop last collection making db disappear
 			m.engine.SetSelectedDatabase("")
 		} else {
-			m.engine.SetSelectedDatabase(m.engine.GetDatabases()[m.cursorDatabase])
+			m.engine.SetSelectedDatabase(m.getFilteredDbs()[m.cursorDatabase])
 		}
 		return m, m.engine.DropDatabase(msg.DbName)
 	}
 	return m, nil
+}
+
+func (m *Model) handleSearchUpdate(msg tea.KeyMsg) tea.Cmd {
+	if key.Matches(msg, keys.StopSearch) {
+		m.searchEnabled = false
+	} else if m.cursorColumn == databasesColumn {
+		m.searchBar.Update(msg)
+		m.databaseSearch = m.searchBar.GetValue()
+		dbMaxIndex := len(m.getFilteredDbs()) - 1
+		if m.cursorDatabase > dbMaxIndex {
+			m.cursorDatabase = dbMaxIndex
+		}
+		m.engine.SetSelectedDatabase(m.cursoredDatabase())
+	} else {
+		originalCollection := m.cursoredCollection()
+		m.searchBar.Update(msg)
+		m.collectionSearch = m.searchBar.GetValue()
+		colMaxIndex := len(m.getFilteredCollections()) - 1
+		if m.cursorCollection > colMaxIndex {
+			m.cursorCollection = colMaxIndex
+		}
+
+		if originalCollection != m.cursoredCollection() {
+			m.engine.SetSelectedCollection(m.getFilteredDbs()[m.cursorDatabase], m.getFilteredCollections()[m.cursorCollection])
+			return m.engine.QueryCollection(bson.D{})
+		}
+	}
+	return nil
 }
 
 // Focus enables key use on the dbcoltable so that the user can navigate the dbcoltable again. This signal would
@@ -148,8 +196,8 @@ func (m *Model) updateViewport() {
 	} else {
 		m.databaseStart = 0
 	}
-	m.databaseEnd = renderutils.Clamp(m.cursorDatabase+m.viewport.Height, m.cursorDatabase, len(m.engine.GetDatabases()))
-	renderedDbCells := make([]string, 0, len(m.engine.GetDatabases()))
+	m.databaseEnd = renderutils.Clamp(m.cursorDatabase+m.viewport.Height, m.cursorDatabase, len(m.getFilteredDbs()))
+	renderedDbCells := make([]string, 0, len(m.getFilteredDbs()))
 	for i := m.databaseStart; i < m.databaseEnd; i++ {
 		renderedDbCells = append(renderedDbCells, m.renderDatabaseCell(i))
 	}
@@ -161,8 +209,8 @@ func (m *Model) updateViewport() {
 	} else {
 		m.collectionStart = 0
 	}
-	m.collectionEnd = renderutils.Clamp(m.cursorCollection+m.viewport.Height, m.cursorCollection, len(m.engine.GetSelectedCollections()))
-	renderedCollectionCells := make([]string, 0, len(m.engine.GetSelectedCollections()))
+	m.collectionEnd = renderutils.Clamp(m.cursorCollection+m.viewport.Height, m.cursorCollection, len(m.getFilteredCollections()))
+	renderedCollectionCells := make([]string, 0, len(m.getFilteredCollections()))
 	for i := m.collectionStart; i < m.collectionEnd; i++ {
 		renderedCollectionCells = append(renderedCollectionCells, m.renderCollectionCell(i))
 	}
@@ -175,25 +223,26 @@ func (m *Model) updateViewport() {
 
 // cursoredDatabase returns the database that is currently highlighted.
 func (m *Model) cursoredDatabase() string {
-	if m.cursorDatabase < 0 || m.cursorDatabase >= len(m.engine.GetDatabases()) {
+	if m.cursorDatabase < 0 || m.cursorDatabase >= len(m.getFilteredDbs()) {
 		return ""
 	}
-	return m.engine.GetDatabases()[m.cursorDatabase]
+	return m.getFilteredDbs()[m.cursorDatabase]
 }
 
 // cursoredCollection returns the collection that is currently highlighted.
 func (m *Model) cursoredCollection() string {
 	if m.cursorCollection < 0 ||
-		m.cursorCollection >= len(m.engine.GetSelectedCollections()) ||
+		m.cursorCollection >= len(m.getFilteredCollections()) ||
 		m.cursorColumn == databasesColumn {
 		return ""
 	}
 
-	return m.engine.GetSelectedCollections()[m.cursorCollection]
+	return m.getFilteredCollections()[m.cursorCollection]
 }
 
 // SetWidth sets the width of the viewport of the dbcoltable.
 func (m *Model) SetWidth(w int) {
+	m.searchBar.SetWidth(w / 2)
 	m.viewport.Width = w
 }
 
@@ -206,11 +255,11 @@ func (m *Model) SetHeight(h int) {
 // It can not go above the first row.
 func (m *Model) MoveUp(n int) tea.Cmd {
 	if m.cursorColumn == databasesColumn {
-		m.cursorDatabase = renderutils.Clamp(m.cursorDatabase-n, 0, len(m.engine.GetDatabases())-1)
-		m.engine.SetSelectedDatabase(m.engine.GetDatabases()[m.cursorDatabase])
+		m.cursorDatabase = renderutils.Clamp(m.cursorDatabase-n, 0, len(m.getFilteredDbs())-1)
+		m.engine.SetSelectedDatabase(m.getFilteredDbs()[m.cursorDatabase])
 	} else {
-		m.cursorCollection = renderutils.Clamp(m.cursorCollection-n, 0, len(m.engine.GetSelectedCollections())-1)
-		m.engine.SetSelectedCollection(m.engine.GetDatabases()[m.cursorDatabase], m.engine.GetSelectedCollections()[m.cursorCollection])
+		m.cursorCollection = renderutils.Clamp(m.cursorCollection-n, 0, len(m.getFilteredCollections())-1)
+		m.engine.SetSelectedCollection(m.getFilteredDbs()[m.cursorDatabase], m.getFilteredCollections()[m.cursorCollection])
 		return m.engine.QueryCollection(bson.D{})
 	}
 	return nil
@@ -220,11 +269,11 @@ func (m *Model) MoveUp(n int) tea.Cmd {
 // It can not go below the last row.
 func (m *Model) MoveDown(n int) tea.Cmd {
 	if m.cursorColumn == databasesColumn {
-		m.cursorDatabase = renderutils.Clamp(m.cursorDatabase+n, 0, len(m.engine.GetDatabases())-1)
-		m.engine.SetSelectedDatabase(m.engine.GetDatabases()[m.cursorDatabase])
+		m.cursorDatabase = renderutils.Clamp(m.cursorDatabase+n, 0, len(m.getFilteredDbs())-1)
+		m.engine.SetSelectedDatabase(m.getFilteredDbs()[m.cursorDatabase])
 	} else {
-		m.cursorCollection = renderutils.Clamp(m.cursorCollection+n, 0, len(m.engine.GetSelectedCollections())-1)
-		m.engine.SetSelectedCollection(m.engine.GetDatabases()[m.cursorDatabase], m.engine.GetSelectedCollections()[m.cursorCollection])
+		m.cursorCollection = renderutils.Clamp(m.cursorCollection+n, 0, len(m.getFilteredCollections())-1)
+		m.engine.SetSelectedCollection(m.getFilteredDbs()[m.cursorDatabase], m.getFilteredCollections()[m.cursorCollection])
 		return m.engine.QueryCollection(bson.D{})
 	}
 	return nil
@@ -237,7 +286,7 @@ func (m *Model) MoveRight() tea.Cmd {
 	} else if m.cursorColumn == databasesColumn {
 		m.cursorColumn = collectionsColumn
 		m.cursorCollection = 0
-		m.engine.SetSelectedCollection(m.engine.GetDatabases()[m.cursorDatabase], m.engine.GetSelectedCollections()[m.cursorCollection])
+		m.engine.SetSelectedCollection(m.getFilteredDbs()[m.cursorDatabase], m.getFilteredCollections()[m.cursorCollection])
 		return m.engine.QueryCollection(bson.D{})
 	}
 	return nil
@@ -263,9 +312,9 @@ func (m *Model) GotoTop() tea.Cmd {
 // GotoBottom moves the selection to the last row.
 func (m *Model) GotoBottom() tea.Cmd {
 	if m.cursorColumn == databasesColumn {
-		return m.MoveDown(len(m.engine.GetDatabases()))
+		return m.MoveDown(len(m.getFilteredDbs()))
 	} else {
-		return m.MoveDown(len(m.engine.GetSelectedCollections()))
+		return m.MoveDown(len(m.getFilteredCollections()))
 	}
 }
 
@@ -285,7 +334,7 @@ func (m *Model) headersView() string {
 
 func (m *Model) renderDatabaseCell(r int) string {
 	m.styles.Cell = m.styles.Cell.Width(m.columnWidth()).MaxWidth(m.columnWidth())
-	renderedCell := m.styles.Cell.Render(runewidth.Truncate(m.engine.GetDatabases()[r], m.columnWidth(), "…"))
+	renderedCell := m.styles.Cell.Render(runewidth.Truncate(m.getFilteredDbs()[r], m.columnWidth(), "…"))
 	if r == m.cursorDatabase {
 		renderedCell = m.styles.Selected.Render(renderedCell)
 	}
@@ -295,10 +344,38 @@ func (m *Model) renderDatabaseCell(r int) string {
 
 func (m *Model) renderCollectionCell(r int) string {
 	m.styles.Cell = m.styles.Cell.Width(m.columnWidth()).MaxWidth(m.columnWidth())
-	renderedCell := m.styles.Cell.Render(runewidth.Truncate(m.engine.GetSelectedCollections()[r], m.columnWidth(), "…"))
+	renderedCell := m.styles.Cell.Render(runewidth.Truncate(m.getFilteredCollections()[r], m.columnWidth(), "…"))
 	if r == m.cursorCollection && m.cursorColumn == collectionsColumn {
 		renderedCell = m.styles.Selected.Render(renderedCell)
 	}
-
 	return renderedCell
+}
+
+// getFilteredDbs gets the latest list of databases from the mongoengine and then applies the filter that the user
+// has entered
+func (m *Model) getFilteredDbs() []string {
+	return filterBySearch(m.engine.GetDatabases(), m.databaseSearch)
+}
+
+// getFilteredCollections gets the latest list of collections from the mongoengine and then applies the filter that the user
+// has entered
+func (m *Model) getFilteredCollections() []string {
+	return filterBySearch(m.engine.GetSelectedCollections(), m.collectionSearch)
+}
+
+// filterBySearch is used to filter what databases or collections are viewable or selectable based on the search query
+func filterBySearch(strSlice []string, filter string) []string {
+	if filter == "" {
+		return strSlice
+	}
+	var filteredSlice []string
+	for _, s := range strSlice {
+		if strings.Contains(s, filter) {
+			filteredSlice = append(filteredSlice, s)
+		}
+	}
+	if len(filteredSlice) == 0 {
+		return []string{""}
+	}
+	return filteredSlice
 }
