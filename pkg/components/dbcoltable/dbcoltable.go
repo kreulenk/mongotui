@@ -307,6 +307,7 @@ func (m *Model) MoveRight() tea.Cmd {
 func (m *Model) MoveLeft() {
 	if m.cursorColumn == collectionsColumn {
 		m.cursorCollection = 0
+		m.collectionSearch = ""
 	}
 	m.cursorColumn = databasesColumn
 }
