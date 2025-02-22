@@ -29,14 +29,6 @@ func (m *Model) SetWidth(w int) {
 	m.textInput.Width = w
 }
 
-//func (m *Model) Focus() {
-//	m.textInput.Focus()
-//}
-//
-//func (m *Model) Blur() {
-//	m.textInput.Blur()
-//}
-
 func (m *Model) Focused() bool {
 	return m.textInput.Focused()
 }

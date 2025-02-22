@@ -1827,8 +1827,8 @@ SOFTWARE.
 ## go.mongodb.org/mongo-driver/v2
 
 * Name: go.mongodb.org/mongo-driver/v2
-* Version: v2.0.0
-* License: [Apache-2.0](https://github.com/mongodb/mongo-go-driver/blob/v2.0.0/LICENSE)
+* Version: v2.0.1
+* License: [Apache-2.0](https://github.com/mongodb/mongo-go-driver/blob/v2.0.1/LICENSE)
 
 ```
                                  Apache License
@@ -2038,8 +2038,8 @@ SOFTWARE.
 ## golang.org/x/crypto
 
 * Name: golang.org/x/crypto
-* Version: v0.29.0
-* License: [BSD-3-Clause](https://cs.opensource.google/go/x/crypto/+/v0.29.0:LICENSE)
+* Version: v0.31.0
+* License: [BSD-3-Clause](https://cs.opensource.google/go/x/crypto/+/v0.31.0:LICENSE)
 
 ```
 Copyright 2009 The Go Authors.
