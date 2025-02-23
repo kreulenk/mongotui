@@ -81,13 +81,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, modal.DisplayErrorModal(err)
 			}
 		} else if m.state.IsComponentActive(state.SingleDocEditor) {
-			err := m.singleDocEditor.EditDoc()
+			cmd = m.singleDocEditor.EditDoc()
 			m.state.SetActiveComponent(state.DocList)
-			cmds = append(cmds, tea.ClearScreen)
-			if err != nil {
-				return m, modal.DisplayErrorModal(err)
-			}
-			cmds = append(cmds, m.engine.RerunLastCollectionQuery())
+			cmds = append(cmds, cmd, tea.ClearScreen)
 		} else if m.state.IsComponentActive(state.DocInsert) {
 			cmd = m.singleDocEditor.InsertDoc()
 			m.state.SetActiveComponent(state.DocList)

@@ -22,6 +22,8 @@ type baseModel struct {
 	msgModal tea.Model
 	mainView tea.Model
 	overlay  tea.Model
+
+	engine *mongoengine.Engine
 }
 
 func Initialize(client *mongo.Client) {
@@ -52,6 +54,8 @@ func initialModel(client *mongo.Client) tea.Model {
 		msgModal: msgModal,
 		mainView: mainView,
 		overlay:  view,
+
+		engine: engine,
 	}
 }
 
@@ -65,10 +69,15 @@ func (m *baseModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := message.(type) {
 	// First see if we need to redirect to the msgModal
 	// TODO simplify this case
-	case modal.ErrModalMsg, modal.ColDeleteModalMsg, modal.DbDeleteModalMsg, modal.DocDeleteModalMsg, modal.DocInsertModalMsg:
+	case modal.ErrModalMsg, modal.ColDeleteModalMsg, modal.DbDeleteModalMsg, modal.DocDeleteModalMsg, modal.DocInsertModalMsg, modal.DocEditModalMsg:
 		mod, modCmd := m.msgModal.Update(message)
 		m.msgModal = mod
 		return m, modCmd
+	case modal.ExecDocEdit:
+		if err := m.engine.UpdateDocument(msg.OldDoc, msg.NewDoc); err != nil {
+			return m, modal.DisplayErrorModal(err)
+		}
+		return m, m.engine.RerunLastCollectionQuery()
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q", "ctrl+c":

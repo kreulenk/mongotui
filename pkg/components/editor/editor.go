@@ -27,21 +27,26 @@ func New(engine *mongoengine.Engine, state *state.MainViewState) Editor {
 	}
 }
 
-func (e Editor) EditDoc() error {
+func (e Editor) EditDoc() tea.Cmd {
 	oldDoc, err := e.engine.GetSelectedDocumentMarshalled()
 	if err != nil {
-		return err
+		return modal.DisplayErrorModal(err)
 	}
 	newDoc, err := e.openFileInEditor(oldDoc)
 	if err != nil {
-		return err
+		return modal.DisplayErrorModal(err)
 	}
 
-	// TODO add confirmation modal
-	if err = e.engine.UpdateDocument(oldDoc, newDoc); err != nil {
-		return err
+	var oldDocBson bson.M
+	if err := bson.UnmarshalExtJSON(oldDoc, false, &oldDocBson); err != nil {
+		return modal.DisplayErrorModal(fmt.Errorf("failed to parse the original document needed for the replacement: %w", err))
 	}
-	return nil
+	var newDocBson bson.M
+	if err := bson.UnmarshalExtJSON(newDoc, false, &newDocBson); err != nil {
+		return modal.DisplayErrorModal(fmt.Errorf("failed to parse the new document needed for the replacement: %w", err))
+	}
+
+	return modal.DisplayDocEditModal(oldDocBson, newDocBson)
 }
 
 func (e Editor) InsertDoc() tea.Cmd {

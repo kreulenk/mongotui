@@ -13,6 +13,7 @@ type Model struct {
 	dbDeleteMsg  *DbDeleteModalMsg
 	docDeleteMsg *DocDeleteModalMsg
 	docInsertMsg *DocInsertModalMsg
+	docEditMsg   *DocEditModalMsg
 }
 
 // New returns a modal component with the default styles applied
@@ -25,6 +26,7 @@ func New() *Model {
 		dbDeleteMsg:  nil,
 		docDeleteMsg: nil,
 		docInsertMsg: nil,
+		docEditMsg:   nil,
 	}
 }
 
@@ -37,7 +39,8 @@ func (m *Model) IsModalDisplaying() bool {
 		m.colDeleteMsg != nil ||
 		m.dbDeleteMsg != nil ||
 		m.docDeleteMsg != nil ||
-		m.docInsertMsg != nil
+		m.docInsertMsg != nil ||
+		m.docEditMsg != nil
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -52,6 +55,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.docDeleteMsg = &msg
 	case DocInsertModalMsg:
 		m.docInsertMsg = &msg
+	case DocEditModalMsg:
+		m.docEditMsg = &msg
 	case tea.KeyMsg:
 		if !m.IsModalDisplaying() {
 			return m, nil
@@ -76,19 +81,18 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				execCmd := execDocInsert(m.docInsertMsg.doc)
 				m.docInsertMsg = nil
 				return m, execCmd
+			} else if m.docEditMsg != nil {
+				execCmd := execDocEdit(m.docEditMsg.oldDoc, m.docEditMsg.newDoc)
+				m.docEditMsg = nil
+				return m, execCmd
 			}
 		default: // If it is a confirmation modal and enter was not selected, exit the modal with no actions performed
-			if m.errMsg != nil {
-				m.errMsg = nil
-			} else if m.colDeleteMsg != nil {
-				m.colDeleteMsg = nil
-			} else if m.dbDeleteMsg != nil {
-				m.dbDeleteMsg = nil
-			} else if m.docDeleteMsg != nil {
-				m.docDeleteMsg = nil
-			} else if m.docInsertMsg != nil {
-				m.docInsertMsg = nil
-			}
+			m.errMsg = nil
+			m.colDeleteMsg = nil
+			m.dbDeleteMsg = nil
+			m.docDeleteMsg = nil
+			m.docInsertMsg = nil
+			m.docEditMsg = nil
 		}
 	}
 	return m, nil
@@ -113,6 +117,10 @@ func (m *Model) View() string {
 	} else if m.docInsertMsg != nil {
 		title := m.styles.ConfirmationHeader.Render("Confirm")
 		msg := fmt.Sprintf("%s\n\n"+"Are you sure you would like to insert the document you just created?\nPress Enter to confirm.", title)
+		return m.styles.Modal.Render(msg)
+	} else if m.docEditMsg != nil {
+		title := m.styles.ConfirmationHeader.Render("Confirm")
+		msg := fmt.Sprintf("%s\n\n"+"Are you sure you would like to make the edits you just made?\nPress Enter to confirm.", title)
 		return m.styles.Modal.Render(msg)
 	}
 	return ""

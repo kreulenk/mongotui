@@ -142,3 +142,34 @@ func execDocInsert(doc bson.M) tea.Cmd {
 		return ExecDocInsert{Doc: doc}
 	}
 }
+
+/*
+************************
+Document Edit Modal
+************************
+*/
+
+type DocEditModalMsg struct {
+	oldDoc bson.M
+	newDoc bson.M
+}
+
+func DisplayDocEditModal(oldDoc, newDoc bson.M) tea.Cmd {
+	return func() tea.Msg {
+		return DocEditModalMsg{
+			oldDoc: oldDoc,
+			newDoc: newDoc,
+		}
+	}
+}
+
+type ExecDocEdit struct {
+	OldDoc bson.M
+	NewDoc bson.M
+}
+
+func execDocEdit(oldDoc, newDoc bson.M) tea.Cmd {
+	return func() tea.Msg {
+		return ExecDocEdit{OldDoc: oldDoc, NewDoc: newDoc}
+	}
+}

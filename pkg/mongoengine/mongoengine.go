@@ -140,22 +140,13 @@ func (e *Engine) DropDocument(doc *bson.M) tea.Cmd {
 // UpdateDocument will find and replace a given oldDoc with a newDoc within the db/collection
 // that was selected using the SetSelectedCollection method
 // We do not use _id as not every doc will have one so we match the entire doc
-func (e *Engine) UpdateDocument(oldDoc, newDoc []byte) error {
-	var oldDocBson bson.M
-	if err := bson.UnmarshalExtJSON(oldDoc, false, &oldDocBson); err != nil {
-		return fmt.Errorf("failed to parse the original document needed for the replacement: %w", err)
-	}
-	var newDocBson bson.M
-	if err := bson.UnmarshalExtJSON(newDoc, false, &newDocBson); err != nil {
-		return fmt.Errorf("failed to parse the new document needed for the replacement: %w", err)
-	}
-
+func (e *Engine) UpdateDocument(oldDoc, newDoc bson.M) error {
 	db := e.Client.Database(e.selectedDb)
 	coll := db.Collection(e.selectedCollection)
 	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
 
-	res := coll.FindOneAndReplace(ctx, oldDocBson, newDocBson)
+	res := coll.FindOneAndReplace(ctx, oldDoc, newDoc)
 	if res.Err() != nil {
 		return fmt.Errorf("failed to update document: %w", res.Err())
 	}
