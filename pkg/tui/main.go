@@ -72,12 +72,12 @@ func (m *baseModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		mod, modCmd := m.msgModal.Update(message)
 		m.msgModal = mod
 		return m, modCmd
-	case modal.ExecDocEdit:
+	case modal.ExecDocEdit: // Edit does not require cursor updates so it can be executed from top tui component
 		if err := m.engine.UpdateDocument(msg.OldDoc, msg.NewDoc); err != nil {
 			return m, modal.DisplayErrorModal(err)
 		}
 		return m, m.engine.RerunLastCollectionQuery()
-	case modal.ExecDocInsert:
+	case modal.ExecDocInsert: // Insert does not require cursor updates so it can be executed from top tui component
 		if err := m.engine.InsertDocument(msg.Doc); err != nil {
 			return m, modal.DisplayErrorModal(err)
 		}

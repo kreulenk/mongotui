@@ -116,11 +116,11 @@ func (m *Model) View() string {
 		return m.styles.Modal.Render(msg)
 	} else if m.docInsertMsg != nil {
 		title := m.styles.ConfirmationHeader.Render("Confirm")
-		msg := fmt.Sprintf("%s\n\n"+"Are you sure you would like to insert the document you just created?\nPress Enter to confirm.", title)
+		msg := fmt.Sprintf("%s\n\n"+"Are you sure you would like to insert the new document?\nPress Enter to confirm.", title)
 		return m.styles.Modal.Render(msg)
 	} else if m.docEditMsg != nil {
 		title := m.styles.ConfirmationHeader.Render("Confirm")
-		msg := fmt.Sprintf("%s\n\n"+"Are you sure you would like to make the edits you just made?\nPress Enter to confirm.", title)
+		msg := fmt.Sprintf("%s\n\n"+"Are you sure you would like to make your edits?\nPress Enter to confirm.", title)
 		return m.styles.Modal.Render(msg)
 	}
 	return ""
