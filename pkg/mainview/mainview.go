@@ -59,7 +59,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case modal.ExecColDelete, modal.ExecDbDelete: // A deletion was confirmed via the modal component
 		m.dbColTable, cmd = m.dbColTable.Update(msg)
 		return m, cmd
-	case modal.ExecDocDelete:
+	case modal.ExecDocDelete, modal.ExecDocInsert:
 		m.docList, cmd = m.docList.Update(msg)
 		return m, cmd
 	}
@@ -81,13 +81,17 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, modal.DisplayErrorModal(err)
 			}
 		} else if m.state.IsComponentActive(state.SingleDocEditor) {
-			err := m.singleDocEditor.OpenFileInEditor()
+			err := m.singleDocEditor.EditDoc()
 			m.state.SetActiveComponent(state.DocList)
 			cmds = append(cmds, tea.ClearScreen)
 			if err != nil {
 				return m, modal.DisplayErrorModal(err)
 			}
 			cmds = append(cmds, m.engine.RerunLastCollectionQuery())
+		} else if m.state.IsComponentActive(state.DocInsert) {
+			cmd = m.singleDocEditor.InsertDoc()
+			m.state.SetActiveComponent(state.DocList)
+			cmds = append(cmds, cmd, tea.ClearScreen)
 		}
 	case state.SingleDocViewer:
 		m.singleDocViewer, cmd = m.singleDocViewer.Update(msg)

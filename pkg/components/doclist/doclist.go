@@ -84,6 +84,8 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 			m.blur()
 			m.searchBar.ResetValue()
 			return m, m.engine.QueryCollection(bson.D{})
+		case key.Matches(msg, keys.Insert):
+			m.state.SetActiveComponent(state.DocInsert)
 		case key.Matches(msg, keys.Edit):
 			if len(m.engine.GetDocumentSummaries()) > 0 {
 				m.EditDoc()
@@ -103,6 +105,8 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 	case modal.ExecDocDelete:
 		m.cursor = renderutils.Max(0, m.cursor-1)
 		return m, m.engine.DropDocument(msg.Doc)
+	case modal.ExecDocInsert:
+		return m, m.engine.InsertDocument(msg.Doc)
 	}
 
 	return m, nil

@@ -10,6 +10,7 @@ const (
 	DocList
 	SingleDocViewer
 	SingleDocEditor
+	DocInsert
 )
 
 func DefaultState() *MainViewState {

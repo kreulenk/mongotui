@@ -64,7 +64,8 @@ func (m *baseModel) Init() tea.Cmd {
 func (m *baseModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := message.(type) {
 	// First see if we need to redirect to the msgModal
-	case modal.ErrModalMsg, modal.ColDeleteModalMsg, modal.DbDeleteModalMsg, modal.DocDeleteModalMsg:
+	// TODO simplify this case
+	case modal.ErrModalMsg, modal.ColDeleteModalMsg, modal.DbDeleteModalMsg, modal.DocDeleteModalMsg, modal.DocInsertModalMsg:
 		mod, modCmd := m.msgModal.Update(message)
 		m.msgModal = mod
 		return m, modCmd

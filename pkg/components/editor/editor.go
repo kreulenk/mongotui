@@ -1,12 +1,15 @@
-// The editor package contains code to edit a mongo document and then push it back to the database. It is not a traditional
-// charmbracelet/bubbletea component as it needs to override stdout/stderr
+// The editor package contains code to insert/edit a mongo document and then push it back to the database.
+// It is not a traditional charmbracelet/bubbletea component as it needs to override stdout/stderr
 
 package editor
 
 import (
 	"fmt"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/kreulenk/mongotui/pkg/components/modal"
 	"github.com/kreulenk/mongotui/pkg/mainview/state"
 	"github.com/kreulenk/mongotui/pkg/mongoengine"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -24,14 +27,48 @@ func New(engine *mongoengine.Engine, state *state.MainViewState) Editor {
 	}
 }
 
-func (e Editor) OpenFileInEditor() error {
+func (e Editor) EditDoc() error {
 	oldDoc, err := e.engine.GetSelectedDocumentMarshalled()
 	if err != nil {
 		return err
 	}
+	newDoc, err := e.openFileInEditor(oldDoc)
+	if err != nil {
+		return err
+	}
+
+	// TODO add confirmation modal
+	if err = e.engine.UpdateDocument(oldDoc, newDoc); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (e Editor) InsertDoc() tea.Cmd {
+	newDoc := make(bson.M)
+	newDoc["_id"] = bson.NewObjectID()
+	newDocBytes, err := bson.MarshalExtJSONIndent(newDoc, false, false, "", "  ")
+	if err != nil {
+		return modal.DisplayErrorModal(fmt.Errorf("failed to marshal new document: %w", err))
+	}
+
+	editedDocBytes, err := e.openFileInEditor(newDocBytes)
+	if err != nil {
+		return modal.DisplayErrorModal(err)
+	}
+
+	var editedDoc bson.M
+	if err := bson.UnmarshalExtJSON(editedDocBytes, false, &editedDoc); err != nil {
+		return modal.DisplayErrorModal(fmt.Errorf("failed to unmarshal edited document: %w", err))
+	}
+
+	return modal.DisplayDocInsertModal(editedDoc)
+}
+
+func (e Editor) openFileInEditor(doc []byte) ([]byte, error) {
 	file := filepath.Join(os.TempDir(), "mongoEdit.json")
-	if err = os.WriteFile(file, oldDoc, 0600); err != nil {
-		return fmt.Errorf("failed to write file to allow for doc editing: %w", err)
+	if err := os.WriteFile(file, doc, 0600); err != nil {
+		return nil, fmt.Errorf("failed to write file to allow for doc editing: %w", err)
 	}
 	defer os.Remove(file)
 
@@ -43,18 +80,14 @@ func (e Editor) OpenFileInEditor() error {
 	openEditorCmd.Stdout = os.Stdout
 	openEditorCmd.Stdin = os.Stdin
 	openEditorCmd.Stderr = os.Stderr
-	if err = openEditorCmd.Run(); err != nil {
-		return fmt.Errorf("error opening %s editor: %v", editor, err)
+	if err := openEditorCmd.Run(); err != nil {
+		return nil, fmt.Errorf("error opening %s editor: %v", editor, err)
 	}
 
 	newDoc, err := os.ReadFile(file)
 	if err != nil {
-		return fmt.Errorf("failed to read the file that was just edited: %w", err)
+		return nil, fmt.Errorf("failed to read the file that was just edited: %w", err)
 	}
 
-	if err = e.engine.UpdateDocument(oldDoc, newDoc); err != nil {
-		return err
-	}
-
-	return nil
+	return newDoc, nil
 }

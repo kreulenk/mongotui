@@ -114,3 +114,31 @@ func execDocDelete(doc *bson.M) tea.Cmd {
 		return ExecDocDelete{Doc: doc}
 	}
 }
+
+/*
+************************
+Document Insert Modal
+************************
+*/
+
+type DocInsertModalMsg struct {
+	doc bson.M
+}
+
+func DisplayDocInsertModal(doc bson.M) tea.Cmd {
+	return func() tea.Msg {
+		return DocInsertModalMsg{
+			doc: doc,
+		}
+	}
+}
+
+type ExecDocInsert struct {
+	Doc bson.M
+}
+
+func execDocInsert(doc bson.M) tea.Cmd {
+	return func() tea.Msg {
+		return ExecDocInsert{Doc: doc}
+	}
+}

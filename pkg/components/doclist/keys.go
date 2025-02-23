@@ -14,6 +14,7 @@ type keyMap struct {
 	NextPage   key.Binding // pagination
 	PrevPage   key.Binding // pagination
 	Left       key.Binding
+	Insert     key.Binding
 	Edit       key.Binding
 	View       key.Binding
 	Delete     key.Binding
@@ -27,7 +28,7 @@ func (m *Model) HelpView() string {
 }
 
 func (km keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{km.Quit, km.LineUp, km.LineDown, km.PrevPage, km.NextPage, km.Edit, km.View, km.Delete}
+	return []key.Binding{km.Quit, km.LineUp, km.LineDown, km.PrevPage, km.NextPage, km.Insert, km.Edit, km.View, km.Delete}
 }
 
 // FullHelp is needed to satisfy the keyMap interface
@@ -69,6 +70,10 @@ var keys = keyMap{
 	Left: key.NewBinding(
 		key.WithKeys("left", "h"),
 		key.WithHelp("←/h", "left"),
+	),
+	Insert: key.NewBinding(
+		key.WithKeys("i"),
+		key.WithHelp("i", "insert"),
 	),
 	Edit: key.NewBinding(
 		key.WithKeys("e"),

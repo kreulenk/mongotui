@@ -162,6 +162,25 @@ func (e *Engine) UpdateDocument(oldDoc, newDoc []byte) error {
 	return nil
 }
 
+func (e *Engine) InsertDocument(doc bson.M) tea.Cmd {
+	return func() tea.Msg {
+		db := e.Client.Database(e.selectedDb)
+		coll := db.Collection(e.selectedCollection)
+		ctx, cancel := context.WithTimeout(context.Background(), Timeout)
+		defer cancel()
+
+		res, err := coll.InsertOne(ctx, doc)
+		if err != nil {
+			return modal.ErrModalMsg{Err: err}
+		}
+		if !res.Acknowledged {
+			return modal.ErrModalMsg{Err: fmt.Errorf("document insertion was not acknowledged")}
+		}
+
+		return e.RerunLastCollectionQuery()() // Double func call as we are already in a tea.Cmd func
+	}
+}
+
 // RedrawMessage is used to trigger a bubbletea update so that the components refresh their View functions
 // whenever the underlying data within mongoengine has updated
 type RedrawMessage struct{}
