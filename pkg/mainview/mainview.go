@@ -59,7 +59,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case modal.ExecColDelete, modal.ExecDbDelete: // A deletion was confirmed via the modal component
 		m.dbColTable, cmd = m.dbColTable.Update(msg)
 		return m, cmd
-	case modal.ExecDocDelete, modal.ExecDocInsert:
+	case modal.ExecDocDelete:
 		m.docList, cmd = m.docList.Update(msg)
 		return m, cmd
 	}

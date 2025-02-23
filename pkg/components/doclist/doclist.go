@@ -105,8 +105,6 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 	case modal.ExecDocDelete:
 		m.cursor = renderutils.Max(0, m.cursor-1)
 		return m, m.engine.DropDocument(msg.Doc)
-	case modal.ExecDocInsert:
-		return m, m.engine.InsertDocument(msg.Doc)
 	}
 
 	return m, nil
