@@ -27,25 +27,25 @@ Database Delete Modal
 ************************
 */
 
-type DbDeleteModalMsg struct {
+type DbDropModalMsg struct {
 	dbName string
 }
 
-func DisplayDatabaseDeleteModal(dbName string) tea.Cmd {
+func DisplayDatabaseDropModal(dbName string) tea.Cmd {
 	return func() tea.Msg {
-		return DbDeleteModalMsg{
+		return DbDropModalMsg{
 			dbName: dbName,
 		}
 	}
 }
 
-type ExecDbDelete struct {
+type ExecDbDrop struct {
 	DbName string
 }
 
-func execDatabaseDelete(dbName string) tea.Cmd {
+func execDatabaseDrop(dbName string) tea.Cmd {
 	return func() tea.Msg {
-		return ExecDbDelete{
+		return ExecDbDrop{
 			DbName: dbName,
 		}
 	}
@@ -57,30 +57,30 @@ Collection Delete Modal
 ************************
 */
 
-type ColDeleteModalMsg struct {
+type CollDropModalMsg struct {
 	dbName         string
 	collectionName string
 }
 
-func DisplayCollectionDeleteModal(dbName, collectionName string) tea.Cmd {
+func DisplayCollectionDropModal(dbName, collectionName string) tea.Cmd {
 	return func() tea.Msg {
-		return ColDeleteModalMsg{
+		return CollDropModalMsg{
 			dbName:         dbName,
 			collectionName: collectionName,
 		}
 	}
 }
 
-// ExecColDelete will be sent down to the dbcoltable to actually delete a collection after a modal confirmation as
+// ExecCollDrop will be sent down to the dbcoltable to actually drop a collection after a modal confirmation as
 // well as tell the table to refresh its data
-type ExecColDelete struct {
+type ExecCollDrop struct {
 	DbName         string
 	CollectionName string
 }
 
-func execCollectionDelete(dbName, collectionName string) tea.Cmd {
+func execCollectionDrop(dbName, collectionName string) tea.Cmd {
 	return func() tea.Msg {
-		return ExecColDelete{
+		return ExecCollDrop{
 			DbName:         dbName,
 			CollectionName: collectionName,
 		}

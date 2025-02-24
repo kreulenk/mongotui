@@ -28,7 +28,7 @@ func (m *Model) HelpView() string {
 }
 
 func (km keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{km.Quit, km.LineUp, km.LineDown, km.PrevPage, km.NextPage, km.Insert, km.Edit, km.View, km.Delete}
+	return []key.Binding{km.Quit, km.LineUp, km.LineDown, km.PrevPage, km.NextPage, km.Delete, km.Insert, km.Edit, km.View}
 }
 
 // FullHelp is needed to satisfy the keyMap interface

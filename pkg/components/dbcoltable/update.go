@@ -35,11 +35,11 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 				m.blur()
 			}
 			return m, nil
-		case key.Matches(msg, keys.Delete):
+		case key.Matches(msg, keys.Drop):
 			if m.cursorColumn == databasesColumn {
-				return m, modal.DisplayDatabaseDeleteModal(m.cursoredDatabase())
+				return m, modal.DisplayDatabaseDropModal(m.cursoredDatabase())
 			} else {
-				return m, modal.DisplayCollectionDeleteModal(m.cursoredDatabase(), m.cursoredCollection())
+				return m, modal.DisplayCollectionDropModal(m.cursoredDatabase(), m.cursoredCollection())
 			}
 		case key.Matches(msg, keys.StartSearch):
 			if m.cursorColumn == databasesColumn {
@@ -49,14 +49,14 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 			}
 			m.filterEnabled = true
 		}
-	case modal.ExecColDelete:
+	case modal.ExecCollDrop:
 		m.cursorCollection = renderutils.Max(0, m.cursorCollection-1)
 		m.engine.SetSelectedCollection(msg.DbName, m.getFilteredCollections()[m.cursorCollection])
 		if len(m.getFilteredCollections()) == 1 { // If we are about to drop last collection making db disappear
 			m.cursorColumn = databasesColumn
 		}
 		return m, m.engine.DropCollection(msg.DbName, msg.CollectionName)
-	case modal.ExecDbDelete:
+	case modal.ExecDbDrop:
 		m.cursorDatabase = renderutils.Max(0, m.cursorDatabase-1)
 		m.cursorCollection = renderutils.Max(0, m.cursorCollection-1)
 		if len(m.getFilteredDbs()) == 1 { // If we are about to drop last collection making db disappear

@@ -17,7 +17,7 @@ type keyMap struct {
 	Right       key.Binding
 	Left        key.Binding
 	Enter       key.Binding
-	Delete      key.Binding
+	Drop        key.Binding
 	StartSearch key.Binding
 	StopSearch  key.Binding
 }
@@ -55,9 +55,9 @@ var keys = keyMap{
 		key.WithKeys("enter"),
 		key.WithHelp("enter", "select collection"),
 	),
-	Delete: key.NewBinding(
+	Drop: key.NewBinding(
 		key.WithKeys("d"),
-		key.WithHelp("d", "delete"),
+		key.WithHelp("d", "drop"),
 	),
 	StartSearch: key.NewBinding(
 		key.WithKeys("/"),
@@ -88,7 +88,7 @@ func (m *Model) searchHelpView() string {
 
 // ShortHelp implements the keyMap interface.
 func (km keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{km.Quit, km.LineUp, km.LineDown, km.Right, km.Left, km.Delete, km.StartSearch}
+	return []key.Binding{km.Quit, km.LineUp, km.LineDown, km.Right, km.Left, km.Drop, km.StartSearch}
 }
 
 // FullHelp is required to satisfy the keyMap interface

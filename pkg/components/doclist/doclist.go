@@ -104,7 +104,7 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 		}
 	case modal.ExecDocDelete:
 		m.cursor = renderutils.Max(0, m.cursor-1)
-		return m, m.engine.DropDocument(msg.Doc)
+		return m, m.engine.DeleteDocument(msg.Doc)
 	}
 
 	return m, nil
