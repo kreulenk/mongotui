@@ -63,12 +63,7 @@ func (e *Engine) QueryCollection(query bson.D) tea.Cmd {
 		defer e.mu.Unlock()
 
 		e.Skip = 0
-		count, err := e.getDocCount(query)
-		if err != nil {
-			return modal.ErrModalMsg{Err: err}
-		}
-		e.DocCount = count
-		err = e.executeQuery(query)
+		err := e.executeQuery(query)
 		if err != nil {
 			return modal.ErrModalMsg{Err: err}
 		}
@@ -127,6 +122,12 @@ func (e *Engine) executeQuery(query bson.D) error {
 	coll := db.Collection(e.selectedCollection)
 	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
+
+	count, err := e.getDocCount(query)
+	if err != nil {
+		return err
+	}
+	e.DocCount = count
 
 	findOptions := options.Find().SetSkip(e.Skip).SetLimit(int64(Limit))
 	cur, err := coll.Find(ctx, query, findOptions)
