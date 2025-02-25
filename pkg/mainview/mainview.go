@@ -120,3 +120,7 @@ func (m *Model) View() string {
 		return lipgloss.JoinVertical(lipgloss.Top, tables, m.docList.HelpView())
 	}
 }
+
+func (m *Model) IsDbCollFilterOrSearchQueryFocused() bool {
+	return m.dbColTable.IsFilterEnabled() || m.docList.IsSearchFocused()
+}

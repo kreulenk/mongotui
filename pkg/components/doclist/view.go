@@ -85,7 +85,7 @@ func (m *Model) renderDocSummary(docIndex, heightLeft int) (string, int) {
 	}
 
 	s := lipgloss.JoinVertical(lipgloss.Top, fields...)
-	if m.cursor == docIndex && m.focused {
+	if m.cursor == docIndex && m.focused && !m.searchBar.Focused() {
 		return m.styles.SelectedDoc.Width(m.viewport.Width - 2).Render(s), heightLeft
 	}
 	return m.styles.Doc.Width(m.viewport.Width - 2).Render(s), heightLeft

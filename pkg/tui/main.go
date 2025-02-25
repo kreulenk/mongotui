@@ -84,8 +84,12 @@ func (m *baseModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.engine.RerunLastCollectionQuery()
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "q", "ctrl+c":
+		case "ctrl+c":
 			return m, tea.Quit
+		case "q":
+			if !m.mainView.(*mainview.Model).IsDbCollFilterOrSearchQueryFocused() {
+				return m, tea.Quit
+			}
 		}
 	}
 	if m.msgModal.(*modal.Model).IsModalDisplaying() {

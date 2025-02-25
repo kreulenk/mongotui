@@ -49,3 +49,7 @@ func (m *Model) blur() {
 	m.cursor = 0
 	m.styles.Table = m.styles.Table.BorderStyle(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("240"))
 }
+
+func (m *Model) IsSearchFocused() bool {
+	return m.searchBar.Focused()
+}

@@ -123,9 +123,13 @@ func filterBySearch(strSlice []string, filter string) []string {
 	}
 	var filteredSlice []string
 	for _, s := range strSlice {
-		if strings.Contains(s, filter) {
+		if strings.Contains(strings.ToLower(s), strings.ToLower(filter)) {
 			filteredSlice = append(filteredSlice, s)
 		}
 	}
 	return filteredSlice
+}
+
+func (m *Model) IsFilterEnabled() bool {
+	return m.filterEnabled
 }
