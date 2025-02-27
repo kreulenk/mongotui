@@ -38,7 +38,7 @@ mongotui --help
 - 🔍 Query for specific documents
 - 📄 Pagination of document results
 - 👁️ View an entire document
-- ➕ Insert a new document
+- ➕ Insert a new database/collection/document
 - ✏️ Edit a document using your `$EDITOR` of choice
 - 🗑️ Drop databases/collections and delete documents
 
