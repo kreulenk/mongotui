@@ -10,6 +10,8 @@ type Styles struct {
 	ConfirmationHeader lipgloss.Style
 	Button             lipgloss.Style
 	HighlightedButton  lipgloss.Style
+	InputTextBox       lipgloss.Style
+	InputTextBoxMsg    lipgloss.Style
 }
 
 func defaultStyles() Styles {
@@ -17,7 +19,6 @@ func defaultStyles() Styles {
 		Modal: lipgloss.NewStyle().
 			BorderStyle(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("6")).
-			Padding(0, 1).
 			Width(40).
 			AlignHorizontal(lipgloss.Center),
 		ErrorHeader: lipgloss.NewStyle().
@@ -38,5 +39,12 @@ func defaultStyles() Styles {
 			BorderStyle(lipgloss.ThickBorder()).
 			AlignHorizontal(lipgloss.Center).
 			BorderForeground(lipgloss.Color("57")),
+		InputTextBoxMsg: lipgloss.NewStyle().
+			AlignHorizontal(lipgloss.Center).
+			Height(3).
+			Width(40),
+		InputTextBox: lipgloss.NewStyle().
+			AlignHorizontal(lipgloss.Left).
+			Width(40),
 	}
 }

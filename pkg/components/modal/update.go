@@ -9,7 +9,19 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case ErrModalMsg:
 		m.errMsg = &msg
-		m.confirmationCursor = yesButtonCursor
+	case DbCollInsertModalMsg:
+		m.dbCollInsertMsg = &msg
+		m.dbInsertInput.SetValue(msg.databaseName)
+		m.collInsertInput.SetValue("")
+		if msg.databaseName == "" {
+			m.focusedDbCollInput = databaseInputFocused
+			m.dbInsertInput.Focus()
+			m.collInsertInput.Blur()
+		} else {
+			m.focusedDbCollInput = collectionInputFocused
+			m.dbInsertInput.Blur()
+			m.collInsertInput.Focus()
+		}
 	case CollDropModalMsg:
 		m.collDropMsg = &msg
 		m.confirmationCursor = yesButtonCursor
@@ -27,6 +39,41 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.confirmationCursor = yesButtonCursor
 	case tea.KeyMsg:
 		m.errMsg = nil // Any key clears error messages
+		if m.dbCollInsertMsg != nil {
+			switch {
+			case key.Matches(msg, keys.Enter):
+				m.dbCollInsertMsg = nil
+				return m, execDbCollectionInsert(m.dbInsertInput.Value(), m.collInsertInput.Value())
+			case key.Matches(msg, keys.Tab):
+				if m.focusedDbCollInput == databaseInputFocused {
+					m.focusedDbCollInput = collectionInputFocused
+					m.dbInsertInput.Blur()
+					m.collInsertInput.Focus()
+				} else {
+					m.focusedDbCollInput = databaseInputFocused
+					m.dbInsertInput.Focus()
+					m.collInsertInput.Blur()
+				}
+				return m, nil
+			case key.Matches(msg, keys.LineUp):
+				m.focusedDbCollInput = databaseInputFocused
+				m.dbInsertInput.Focus()
+				m.collInsertInput.Blur()
+				return m, nil
+			case key.Matches(msg, keys.LineDown):
+				m.focusedDbCollInput = collectionInputFocused
+				m.dbInsertInput.Blur()
+				m.collInsertInput.Focus()
+				return m, nil
+			default:
+				if m.focusedDbCollInput == databaseInputFocused {
+					m.dbInsertInput, _ = m.dbInsertInput.Update(msg)
+				} else {
+					m.collInsertInput, _ = m.collInsertInput.Update(msg)
+				}
+			}
+		}
+
 		switch {
 		case key.Matches(msg, keys.Left):
 			m.confirmationCursor = yesButtonCursor

@@ -23,6 +23,35 @@ func DisplayErrorModal(err error) tea.Cmd {
 
 /*
 ************************
+Insert Collection Modal
+************************
+*/
+
+type DbCollInsertModalMsg struct {
+	databaseName string
+}
+
+// DisplayDbCollInsertModal is called from dbcoltable. Is the user is already cursored into a collection
+// then a databaseName should be specified. If not, an empty string should be passed
+func DisplayDbCollInsertModal(databaseName string) tea.Cmd {
+	return func() tea.Msg {
+		return DbCollInsertModalMsg{databaseName: databaseName}
+	}
+}
+
+type ExecDbCollInsert struct {
+	DatabaseName   string
+	CollectionName string
+}
+
+func execDbCollectionInsert(databaseName, collectionName string) tea.Cmd {
+	return func() tea.Msg {
+		return ExecDbCollInsert{DatabaseName: databaseName, CollectionName: collectionName}
+	}
+}
+
+/*
+************************
 Database Delete Modal
 ************************
 */

@@ -68,7 +68,8 @@ func (m *baseModel) Init() tea.Cmd {
 func (m *baseModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := message.(type) {
 	// First see if we need to redirect to the msgModal
-	case modal.ErrModalMsg, modal.CollDropModalMsg, modal.DbDropModalMsg, modal.DocDeleteModalMsg, modal.DocInsertModalMsg, modal.DocEditModalMsg:
+	// TODO find a simpler way of finding all modal messages
+	case modal.ErrModalMsg, modal.DbCollInsertModalMsg, modal.CollDropModalMsg, modal.DbDropModalMsg, modal.DocDeleteModalMsg, modal.DocInsertModalMsg, modal.DocEditModalMsg:
 		mod, modCmd := m.msgModal.Update(message)
 		m.msgModal = mod
 		return m, modCmd
@@ -82,12 +83,19 @@ func (m *baseModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			return m, modal.DisplayErrorModal(err)
 		}
 		return m, m.engine.RerunLastCollectionQuery()
+	case modal.ExecDbCollInsert:
+		if err := m.engine.InsertDatabaseAndCollection(msg.DatabaseName, msg.CollectionName); err != nil {
+			return m, modal.DisplayErrorModal(err)
+		}
+		if err := m.engine.RefreshDbAndCollections(); err != nil {
+			return m, modal.DisplayErrorModal(fmt.Errorf("error refreshing data after database and collection insertion: %w", err))
+		}
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c":
 			return m, tea.Quit
 		case "q":
-			if !m.mainView.(*mainview.Model).IsDbCollFilterOrSearchQueryFocused() {
+			if !m.mainView.(*mainview.Model).IsDbCollFilterOrSearchQueryFocused() && !m.msgModal.(*modal.Model).IsTextInputFocused() {
 				return m, tea.Quit
 			}
 		}

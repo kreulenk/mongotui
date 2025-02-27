@@ -169,6 +169,14 @@ func (e *Engine) InsertDocument(doc bson.M) error {
 	return nil
 }
 
+func (e *Engine) InsertDatabaseAndCollection(databaseName, collectionName string) error {
+	db := e.Client.Database(databaseName)
+	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
+	defer cancel()
+
+	return db.CreateCollection(ctx, collectionName)
+}
+
 // RedrawMessage is used to trigger a bubbletea update so that the components refresh their View functions
 // whenever the underlying data within mongoengine has updated
 type RedrawMessage struct{}

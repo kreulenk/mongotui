@@ -3,9 +3,9 @@ package dbcoltable
 import (
 	"fmt"
 	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/kreulenk/mongotui/pkg/components/dbcolfilter"
 	"github.com/kreulenk/mongotui/pkg/mainview/state"
 	"github.com/kreulenk/mongotui/pkg/mongoengine"
 	"os"
@@ -36,7 +36,7 @@ type Model struct {
 	collectionStart int
 	collectionEnd   int
 
-	searchBar        *dbcolfilter.Model
+	searchBar        textinput.Model
 	filterEnabled    bool
 	databaseFilter   string // Used to filter the database list
 	collectionFilter string
@@ -54,6 +54,10 @@ func New(engine *mongoengine.Engine, state *state.MainViewState) *Model {
 		engine.SetSelectedDatabase(engine.GetDatabases()[0])
 	}
 
+	ti := textinput.New()
+	ti.Placeholder = "Filter"
+	ti.Focus()
+
 	m := Model{
 		state:  state,
 		Help:   help.New(),
@@ -64,7 +68,7 @@ func New(engine *mongoengine.Engine, state *state.MainViewState) *Model {
 		cursorColumn:   databasesColumn,
 		cursorDatabase: 0,
 
-		searchBar: dbcolfilter.New(),
+		searchBar: ti,
 
 		engine: engine,
 	}

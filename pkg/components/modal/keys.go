@@ -3,12 +3,27 @@ package modal
 import "github.com/charmbracelet/bubbles/key"
 
 type keyMap struct {
-	Right key.Binding
-	Left  key.Binding
-	Enter key.Binding
+	Tab      key.Binding
+	LineUp   key.Binding
+	LineDown key.Binding
+	Right    key.Binding
+	Left     key.Binding
+	Enter    key.Binding
 }
 
 var keys = keyMap{
+	Tab: key.NewBinding(
+		key.WithKeys("tab"),
+		key.WithHelp("tab", "tab"),
+	),
+	LineUp: key.NewBinding(
+		key.WithKeys("up", "k"),
+		key.WithHelp("↑/k", "up"),
+	),
+	LineDown: key.NewBinding(
+		key.WithKeys("down", "j"),
+		key.WithHelp("↓/j", "down"),
+	),
 	Right: key.NewBinding(
 		key.WithKeys("right", "l"),
 		key.WithHelp("→/l", "right"),

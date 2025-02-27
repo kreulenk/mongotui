@@ -30,6 +30,12 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 		case key.Matches(msg, keys.Left):
 			m.MoveLeft()
 			return m, nil
+		case key.Matches(msg, keys.Insert):
+			if m.cursorColumn == databasesColumn {
+				return m, modal.DisplayDbCollInsertModal("")
+			} else {
+				return m, modal.DisplayDbCollInsertModal(m.cursoredDatabase())
+			}
 		case key.Matches(msg, keys.Enter):
 			if m.cursorColumn == collectionsColumn {
 				m.blur()
@@ -73,13 +79,13 @@ func (m *Model) handleSearchUpdate(msg tea.KeyMsg) tea.Cmd {
 	if key.Matches(msg, keys.StopSearch) {
 		m.filterEnabled = false
 	} else if m.cursorColumn == databasesColumn {
-		m.searchBar.Update(msg)
+		m.searchBar, _ = m.searchBar.Update(msg)
 		// Reset value and return if search is too specific
-		if len(filterBySearch(m.engine.GetDatabases(), m.searchBar.GetValue())) == 0 {
+		if len(filterBySearch(m.engine.GetDatabases(), m.searchBar.Value())) == 0 {
 			m.searchBar.SetValue(m.databaseFilter)
 			return nil
 		}
-		m.databaseFilter = m.searchBar.GetValue()
+		m.databaseFilter = m.searchBar.Value()
 		dbMaxIndex := len(m.getFilteredDbs()) - 1
 		if m.cursorDatabase > dbMaxIndex {
 			m.cursorDatabase = dbMaxIndex
@@ -87,14 +93,14 @@ func (m *Model) handleSearchUpdate(msg tea.KeyMsg) tea.Cmd {
 		m.engine.SetSelectedDatabase(m.cursoredDatabase())
 	} else {
 		originalCollection := m.cursoredCollection()
-		m.searchBar.Update(msg)
+		m.searchBar, _ = m.searchBar.Update(msg)
 		// Reset value and return if search is too specific
-		if len(filterBySearch(m.engine.GetSelectedCollections(), m.searchBar.GetValue())) == 0 {
+		if len(filterBySearch(m.engine.GetSelectedCollections(), m.searchBar.Value())) == 0 {
 			m.searchBar.SetValue(m.collectionFilter)
 			return nil
 		}
 
-		m.collectionFilter = m.searchBar.GetValue()
+		m.collectionFilter = m.searchBar.Value()
 		colMaxIndex := len(m.getFilteredCollections()) - 1
 		if m.cursorCollection > colMaxIndex {
 			m.cursorCollection = colMaxIndex
