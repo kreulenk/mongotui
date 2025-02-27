@@ -4,6 +4,13 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+type confirmationButtonCursor int
+
+const (
+	yesButtonCursor confirmationButtonCursor = iota
+	noButtonCursor
+)
+
 type Model struct {
 	styles Styles
 
@@ -13,6 +20,8 @@ type Model struct {
 	docDeleteMsg *DocDeleteModalMsg
 	docInsertMsg *DocInsertModalMsg
 	docEditMsg   *DocEditModalMsg
+
+	confirmationCursor confirmationButtonCursor
 }
 
 // New returns a modal component with the default styles applied
