@@ -9,12 +9,14 @@ system to generate the gif yourself. More information on VHS can be found here -
 ## Setting Up DB for Demo gif generation
 
 In order to generate a demo gif you will first need to initialize your database with the proper data that is
-expected by the `demo.tape` script. The `vendingMachine.sodas.json` and `vendingMachine.users.json` files
-contain the collections found in the gif that exist under the vendingMachine database. Ensure that you have
+expected by the `demo.tape` script. The `onlineShop.products.json` and `onlineShop.users.json` files
+contain the collections found in the gif that exist under the onlineShop database. Ensure that you have
 an empty db besides these collections to record the gif. You can use the `mongoimport` tool to load
 the data onto your mongo server. E.g.
-`mongoimport -d vendingMachine -c sodas --jsonArray --maintainInsertionOrder mongodb://localhost docs/demo/vendingMachine.sodas.json`
-`mongoimport -d vendingMachine -c users --jsonArray --maintainInsertionOrder mongodb://localhost docs/demo/vendingMachine.users.json`
+```
+mongoimport -d onlineShop -c products --jsonArray --maintainInsertionOrder mongodb://localhost docs/demo/onlineShop.products.json
+mongoimport -d onlineShop -c users --jsonArray --maintainInsertionOrder mongodb://localhost docs/demo/onlineShop.users.json
+```
 
 Additionally, you will want to run the 'data generator' tool in this repository to generate the data necessary for
 the pagination section of the demo. E.g. `go run tools/data-generator/main.go localhost`

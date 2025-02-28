@@ -1,3 +1,6 @@
+// This tool is a quickly thrown together data generator so create data that is used during testing, development, and
+// the Demo gif in the README of this project
+
 package main
 
 import (
@@ -28,14 +31,14 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	docs := generateDocuments()
 
-	ctx, cancel := context.WithTimeout(context.Background(), mongoengine.Timeout)
-	defer cancel()
-	_, err = client.Database("numDb").Collection("allTheNums").InsertMany(ctx, docs)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+	for col := range 100 {
+		docs := generateDocuments()
+		_, err = client.Database("veryLargeDb").Collection(fmt.Sprintf("exampleCollection%d", col)).InsertMany(context.Background(), docs)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	}
 }
 

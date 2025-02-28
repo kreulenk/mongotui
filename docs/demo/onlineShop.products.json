@@ -1,0 +1,40 @@
+[{
+  "_id": {
+    "$oid": "651a3fc774fc746558517255"
+  },
+  "productName": "Computer",
+  "description": "A mid range computer with sufficient specs to accomplish everyday tasks.",
+  "cost": 500,
+  "currentQuantity": 23,
+  "maximumQuantity": 200
+},
+{
+  "_id": {
+    "$oid": "651a3fc774fc746558517256"
+  },
+  "productName": "Shoes",
+  "description": "An great pair of running shoes that will last many miles!",
+  "cost": 75,
+  "currentQuantity": 11,
+  "maximumQuantity": 100
+},
+{
+  "_id": {
+    "$oid": "651a3fc774fc746558517257"
+  },
+  "productName": "Book",
+  "description": "A short book to that is sure to entertain.",
+  "cost": 10,
+  "maximumQuantity": 50,
+  "currentQuantity": 3
+},
+{
+  "_id": {
+    "$oid": "651a3fc774fc746558517258"
+  },
+  "productName": "Fan",
+  "description": "Keeps you cool on a hot summer day!",
+  "cost": 4,
+  "maximumQuantity": 100,
+  "currentQuantity": 9
+}]
