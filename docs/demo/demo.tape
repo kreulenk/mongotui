@@ -67,7 +67,7 @@ Type@1s "hhjl"
 Sleep 1s
 Type "/"
 Sleep 1s
-Type@1s "30"
+Type@1500ms "30"
 Sleep 2s
 Type "/"
 Sleep 3s
