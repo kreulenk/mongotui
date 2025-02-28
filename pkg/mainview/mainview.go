@@ -13,6 +13,7 @@ import (
 	"github.com/kreulenk/mongotui/pkg/components/modal"
 	"github.com/kreulenk/mongotui/pkg/mainview/state"
 	"github.com/kreulenk/mongotui/pkg/mongoengine"
+	"os"
 )
 
 type Model struct {
@@ -47,6 +48,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		leftRightBorderWidth := 2
+		if os.Getenv("TERM_PROGRAM") == "Apple_Terminal" {
+			leftRightBorderWidth = 3 // The default mac terminal has occasional rendering issues if the full width is used
+		}
 		topBottomBorderAndHelpHeight := 3
 		m.dbColTable.SetWidth((msg.Width/3)-leftRightBorderWidth, msg.Width-leftRightBorderWidth)
 		m.dbColTable.SetHeight(msg.Height - topBottomBorderAndHelpHeight)
