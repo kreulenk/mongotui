@@ -19,6 +19,11 @@ func Initialize() *os.File {
 		logger := slog.New(handler)
 		slog.SetDefault(logger)
 		return file
+	} else {
+		file, _ := os.OpenFile(os.DevNull, os.O_WRONLY, 0644)
+		handler := slog.NewTextHandler(file, nil)
+		logger := slog.New(handler)
+		slog.SetDefault(logger)
+		return file
 	}
-	return nil
 }
