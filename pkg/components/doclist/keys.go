@@ -80,7 +80,7 @@ var keys = keyMap{
 		key.WithHelp("e", "edit"),
 	),
 	View: key.NewBinding(
-		key.WithKeys("v"),
+		key.WithKeys("v", "enter"),
 		key.WithHelp("v", "view"),
 	),
 	Delete: key.NewBinding(

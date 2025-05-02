@@ -9,18 +9,19 @@ import (
 // keyMap defines keybindings. It satisfies to the help.KeyMap interface, which
 // is used to render the help menu.
 type keyMap struct {
-	Quit        key.Binding
-	LineUp      key.Binding
-	LineDown    key.Binding
-	GotoTop     key.Binding
-	GotoBottom  key.Binding
-	Right       key.Binding
-	Left        key.Binding
-	Insert      key.Binding
-	Enter       key.Binding
-	Drop        key.Binding
-	StartSearch key.Binding
-	StopSearch  key.Binding
+	Quit                          key.Binding
+	LineUp                        key.Binding
+	LineDown                      key.Binding
+	GotoTop                       key.Binding
+	GotoBottom                    key.Binding
+	Right                         key.Binding
+	Left                          key.Binding
+	Insert                        key.Binding
+	Enter                         key.Binding
+	Drop                          key.Binding
+	StartSearch                   key.Binding
+	StopSearch                    key.Binding
+	StopSearchAndEnterHighlighted key.Binding
 }
 
 var keys = keyMap{
@@ -45,7 +46,7 @@ var keys = keyMap{
 		key.WithHelp("G/databaseEnd", "go to databaseEnd"),
 	),
 	Right: key.NewBinding(
-		key.WithKeys("right", "l"),
+		key.WithKeys("right", "l", "enter"),
 		key.WithHelp("→/l", "right"),
 	),
 	Left: key.NewBinding(
@@ -71,6 +72,9 @@ var keys = keyMap{
 	StopSearch: key.NewBinding(
 		key.WithKeys("esc", "/"),
 		key.WithHelp("esc or '/'", "to exit filter"),
+	),
+	StopSearchAndEnterHighlighted: key.NewBinding(
+		key.WithKeys("enter"),
 	),
 }
 

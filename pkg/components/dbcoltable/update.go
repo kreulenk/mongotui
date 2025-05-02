@@ -78,6 +78,13 @@ func (m *Model) Update(msg tea.Msg) (*Model, tea.Cmd) {
 func (m *Model) handleSearchUpdate(msg tea.KeyMsg) tea.Cmd {
 	if key.Matches(msg, keys.StopSearch) {
 		m.filterEnabled = false
+	} else if key.Matches(msg, keys.StopSearchAndEnterHighlighted) {
+		m.filterEnabled = false
+		if m.cursorColumn == databasesColumn {
+			return m.MoveRight()
+		} else {
+			return m.MoveRight()
+		}
 	} else if m.cursorColumn == databasesColumn {
 		m.searchBar, _ = m.searchBar.Update(msg)
 		// Reset value and return if search is too specific
