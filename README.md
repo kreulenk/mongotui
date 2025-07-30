@@ -58,14 +58,14 @@ processor architecture. Then, untar the executable and move it to `/usr/local/bi
 
 E.g.
 ```
-curl -OL https://github.com/kreulenk/mongotui/releases/download/v1.5.1/mongotui-linux-amd64.tar.gz
+curl -OL https://github.com/kreulenk/mongotui/releases/download/v1.6.1/mongotui-linux-amd64.tar.gz
 tar -xzvf mongotui-linux-amd64.tar.gz
 mv ./mongotui /usr/local/bin/mongotui
 ```
 
 ### Build From Source
 
-Ensure that you have at least Go 1.23 installed on your system.
+Ensure that you have at least Go 1.24.5 installed on your system.
 
 Then, run
 ```bash
