@@ -3,6 +3,7 @@ package jsonviewer
 import (
 	"bytes"
 	"fmt"
+
 	"github.com/alecthomas/chroma/quick"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"

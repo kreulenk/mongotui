@@ -32,15 +32,15 @@ mongotui --help
 
 
 ## Features
-- 🔗 Similar connection flags/options to mongosh
-- 📂 Navigate between databases/collections/documents
-- 🗂 Filter displayed databases/collections
-- 🔍 Query for specific documents
-- 📄 Pagination of document results
-- 👁️ View an entire document
-- ➕ Insert a new database/collection/document
-- ✏️ Edit a document using your `$EDITOR` of choice
-- 🗑️ Drop databases/collections and delete documents
+- Similar connection flags/options to mongosh
+- Navigate between databases/collections/documents
+- Filter displayed databases/collections
+- Query for specific documents
+- Pagination of document results
+- View an entire document
+- Insert a new database/collection/document
+- Edit a document using your `$EDITOR` of choice
+- Drop databases/collections and delete documents
 
 ## Installation
 

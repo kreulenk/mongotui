@@ -4,6 +4,8 @@
 package mainview
 
 import (
+	"os"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/kreulenk/mongotui/pkg/components/dbcoltable"
@@ -13,7 +15,6 @@ import (
 	"github.com/kreulenk/mongotui/pkg/components/modal"
 	"github.com/kreulenk/mongotui/pkg/mainview/state"
 	"github.com/kreulenk/mongotui/pkg/mongoengine"
-	"os"
 )
 
 type Model struct {
