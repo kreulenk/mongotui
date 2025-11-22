@@ -82,9 +82,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.state.IsComponentActive(state.DbColTable) {
 			m.dbColTable.Focus()
 		} else if m.state.IsComponentActive(state.SingleDocViewer) {
-			if err := m.singleDocViewer.Focus(); err != nil {
-				return m, modal.DisplayErrorModal(err)
-			}
+			cmd = m.singleDocEditor.ViewDoc()
+			m.state.SetActiveComponent(state.DocList)
+			cmds = append(cmds, cmd, tea.ClearScreen)
 		} else if m.state.IsComponentActive(state.SingleDocEditor) {
 			cmd = m.singleDocEditor.EditDoc()
 			m.state.SetActiveComponent(state.DocList)

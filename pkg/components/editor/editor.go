@@ -70,6 +70,36 @@ func (e Editor) InsertDoc() tea.Cmd {
 	return modal.DisplayDocInsertModal(editedDoc)
 }
 
+func (e Editor) ViewDoc() tea.Cmd {
+	doc := e.engine.GetSelectedDocumentMarshalled()
+	if err != nil {
+		return modal.DisplayErrorModal(err)
+	}
+
+	if err := e.openFileInViewer(doc); err != nil {
+		return modal.DisplayErrorModal(err)
+	}
+
+	return nil
+}
+
+func (e Editor) openFileInViewer(doc []byte) error {
+	file := filepath.Join(os.TempDir(), "mongoView.json")
+	if err := os.WriteFile(file, doc, 0600); err != nil {
+		return fmt.Errorf("failed to write file to allow for doc viewing: %w", err)
+	}
+	defer os.Remove(file)
+
+	openViewerCmd := exec.Command("vi", "-M", "-c", "syntax on", "-c", "set syntax=json", file)
+	openViewerCmd.Stdout = os.Stdout
+	openViewerCmd.Stdin = os.Stdin
+	openViewerCmd.Stderr = os.Stderr
+	// Ignore the error here as vi -M returns 1 if the user tries to edit the file
+	_ = openViewerCmd.Run()
+
+	return nil
+}
+
 func (e Editor) openFileInEditor(doc []byte) ([]byte, error) {
 	file := filepath.Join(os.TempDir(), "mongoEdit.json")
 	if err := os.WriteFile(file, doc, 0600); err != nil {
@@ -78,10 +108,13 @@ func (e Editor) openFileInEditor(doc []byte) ([]byte, error) {
 	defer os.Remove(file)
 
 	editor := os.Getenv("EDITOR")
+	var args []string
 	if editor == "" {
 		editor = "vi"
+		args = []string{"-c", "syntax on", "-c", "set syntax=json"}
 	}
-	openEditorCmd := exec.Command(editor, file)
+	args = append(args, file)
+	openEditorCmd := exec.Command(editor, args...)
 	openEditorCmd.Stdout = os.Stdout
 	openEditorCmd.Stdin = os.Stdin
 	openEditorCmd.Stderr = os.Stderr
