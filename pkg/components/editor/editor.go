@@ -71,7 +71,7 @@ func (e Editor) InsertDoc() tea.Cmd {
 }
 
 func (e Editor) ViewDoc() tea.Cmd {
-	doc := e.engine.GetSelectedDocumentMarshalled()
+	doc, err := e.engine.GetSelectedDocumentMarshalled()
 	if err != nil {
 		return modal.DisplayErrorModal(err)
 	}
